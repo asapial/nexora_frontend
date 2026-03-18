@@ -30,6 +30,7 @@ import {
   RiSparklingFill,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
+import SectionContainer from "@/utils/SectionContainer";
 
 // ─── Types ────────────────────────────────────────────────
 interface FeatureCard {
@@ -404,7 +405,7 @@ export default function FeaturesSection() {
   const activeCard = cards.find((c) => c.id === activeId) ?? null;
 
   return (
-    <section className="relative py-24 lg:py-32 bg-zinc-50 dark:bg-zinc-950 overflow-hidden">
+    <SectionContainer className="relative py-24 lg:py-32 bg-zinc-50 dark:bg-zinc-950 overflow-hidden">
 
       {/* ── Background texture ── */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_40%_at_50%_0%,rgba(20,184,166,0.05),transparent)] dark:bg-[radial-gradient(ellipse_70%_40%_at_50%_0%,rgba(20,184,166,0.08),transparent)] pointer-events-none" />
@@ -469,6 +470,6 @@ export default function FeaturesSection() {
           </a>
         </div>
       </div>
-    </section>
+    </SectionContainer>
   );
 }

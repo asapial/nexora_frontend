@@ -11,6 +11,7 @@ import {
   RiSparklingFill,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
+import SectionContainer from "@/utils/SectionContainer";
 
 // ─── Types ────────────────────────────────────────────────
 interface Step {
@@ -435,7 +436,7 @@ function EndMarker() {
 // ─── HOW IT WORKS SECTION (main export) ──────────────────
 export default function HowItWorksSection() {
   return (
-    <section className="relative py-24 lg:py-32 bg-white dark:bg-zinc-950 overflow-hidden">
+    <SectionContainer className="relative py-24 lg:py-32 bg-white dark:bg-zinc-950 overflow-hidden">
 
       {/* ── Background layers ── */}
       {/* Grid */}
@@ -471,6 +472,6 @@ export default function HowItWorksSection() {
 
         <EndMarker />
       </div>
-    </section>
+    </SectionContainer>
   );
 }
