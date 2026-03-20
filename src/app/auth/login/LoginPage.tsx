@@ -147,7 +147,7 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrors("");
+    setErrors({});
     const errs = validate();
     if (Object.keys(errs).length) { setErrors(errs); return; }
     setIsLoading(true);
@@ -166,19 +166,19 @@ export default function LoginPage() {
       const data = await res.json();
       console.log(data)
 
-      if (!res.ok) {
-        throw new Error(data.message || "Login failed");
-      }
+      // if (!res.ok) {
+      //   throw new Error(data.message || "Login failed");
+      // }
 
-            switch (data.user.role) {
+            switch (data.data.user.role) {
         case "ADMIN":
           window.location.href = "/dashboard/admin"
           break
-        case "SELLER":
-          window.location.href = "/seller/dashboard"
+        case "TEACHER":
+          window.location.href = "/dashboard/teacher"
           break
-        case "ADMIN":
-          window.location.href = "/admin"
+        case "STUDENT":
+          window.location.href = "/dashboard/student"
           break
         default:
           window.location.href = "/"
@@ -194,16 +194,12 @@ export default function LoginPage() {
     }
   };
 
-  const handleGoogle = async () => {
+  const handleGoogle = () => {
     setIsGoogleLoading(true);
-    try {
-            const res = await fetch(`/api/auth/login/google`, {
-        method: "GET",
-
-      });
-    } finally {
-      setIsGoogleLoading(false);
-    }
+    // Navigate to the backend EJS redirect page via Next.js proxy.
+    // The EJS page shows a "Connecting with Google…" UI, calls BetterAuth
+    // to get the Google OAuth URL, then redirects the browser to Google.
+    window.location.href = "/api/auth/login/google";
   };
 
   return (
