@@ -124,7 +124,7 @@ function AuthInput({
 }
 
 // ─── Page ─────────────────────────────────────────────────
-export default function LoginPage() {
+export default function SignInPage() {
   const router = useRouter();
   const [form, setForm] = useState<LoginForm>({ email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
@@ -170,7 +170,7 @@ export default function LoginPage() {
       //   throw new Error(data.message || "Login failed");
       // }
 
-            switch (data.data.user.role) {
+      switch (data.data.user.role) {
         case "ADMIN":
           window.location.href = "/dashboard/admin"
           break
@@ -201,6 +201,7 @@ export default function LoginPage() {
     // to get the Google OAuth URL, then redirects the browser to Google.
     window.location.href = "/api/auth/login/google";
   };
+
 
   return (
     <div className="min-h-screen flex bg-zinc-50 dark:bg-zinc-950">
@@ -352,7 +353,7 @@ export default function LoginPage() {
 
             {/* Forgot password */}
             <div className="flex justify-end -mt-1">
-              <Link href="/forgot-password" className="text-[12.5px] font-semibold text-teal-600 dark:text-teal-400 hover:underline">
+              <Link href="/auth/forgetPassword" className="text-[12.5px] font-semibold text-teal-600 dark:text-teal-400 hover:underline">
                 Forgot password?
               </Link>
             </div>

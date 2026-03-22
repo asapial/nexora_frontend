@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
  async rewrites() {
-      // এটা add করো
+
     console.log("backendBaseUrl:", process.env.BACKEND_URL);
     return [
       {

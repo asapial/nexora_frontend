@@ -107,11 +107,11 @@ const DEFAULT_DATA: FooterData = {
     {
       heading: "Company",
       links: [
-        { label: "About",           href: "#about"   },
-        { label: "Pricing",         href: "#pricing" },
-        { label: "Contact",         href: "#contact" },
-        { label: "Privacy Policy",  href: "#privacy" },
-        { label: "Terms of Service",href: "#terms"   },
+        { label: "About",           href: "/about"   },
+        { label: "Pricing",         href: "/pricing" },
+        { label: "Contact",         href: "/contact" },
+        { label: "Privacy Policy",  href: "/privacyPolicy" },
+        { label: "Terms of Service",href: "/termsOfService"   },
       ],
     },
   ],

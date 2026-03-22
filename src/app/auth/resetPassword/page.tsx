@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   RiLockPasswordLine,
@@ -125,6 +125,8 @@ export default function ResetPasswordPage() {
   const [resendCooldown, setResendCooldown] = useState(0);
   const [success, setSuccess] = useState(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const searchParams = useSearchParams();
+const email = searchParams.get("email") || "";
 
   const startCooldown = () => {
     setResendCooldown(60);
@@ -160,28 +162,40 @@ export default function ResetPasswordPage() {
     inputRefs.current[Math.min(pasted.length, OTP_LENGTH - 1)]?.focus();
   };
 
-  // Step 1: verify OTP
-  const handleVerifyOtp = async (e: React.FormEvent) => {
+
+const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     const code = digits.join("");
     if (code.length < OTP_LENGTH) { setOtpError("Enter the full 6-digit code"); return; }
+
     setIsLoading(true);
     try {
-      // TODO: validate OTP — in Better Auth this is part of the resetPassword flow
-      // await authClient.emailOtp.verifyEmail({ email, otp: code });
-      await new Promise((r) => setTimeout(r, 1000));
-      setStep(2);
-    } catch {
-      setOtpError("Invalid or expired code. Try again or resend.");
-      setDigits(Array(OTP_LENGTH).fill(""));
-      inputRefs.current[0]?.focus();
-    } finally {
-      setIsLoading(false);
-    }
-  };
+        const res = await fetch("/api/auth/verifyResetOtp", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, otp: code }),
+            credentials: "include",
+        });
 
-  // Step 2: set new password
-  const handleResetPassword = async (e: React.FormEvent) => {
+        const data = await res.json();
+
+        if (!data.success) {
+            throw new Error(data.message || "Invalid or expired code");
+        }
+
+        setStep(2); // ✅ OTP সঠিক হলে step 2 এ যাও
+
+    } catch (err: any) {
+        setOtpError(err.message || "Invalid or expired code. Try again or resend.");
+        setDigits(Array(OTP_LENGTH).fill(""));
+        inputRefs.current[0]?.focus();
+    } finally {
+        setIsLoading(false);
+    }
+};
+
+
+const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     let valid = true;
     if (!newPassword) { setPassError("New password is required"); valid = false; }
@@ -192,32 +206,58 @@ export default function ResetPasswordPage() {
 
     setIsLoading(true);
     try {
-      const code = digits.join("");
-      // TODO: await authClient.resetPassword({ newPassword, token: code });
-      await new Promise((r) => setTimeout(r, 1200));
-      setSuccess(true);
-      setTimeout(() => router.push("/login"), 2200);
-    } catch (err: any) {
-      setPassError(err?.message ?? "Reset failed. Please start over.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+        const code = digits.join("");
 
-  const handleResend = async () => {
+        const res = await fetch("/api/auth/resetPassword", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, otp: code, newPassword }),
+            credentials: "include",
+        });
+
+        const data = await res.json();
+
+        if (!data.success) {
+            throw new Error(data.message || "Reset failed. Please start over.");
+        }
+
+        setSuccess(true);
+        setTimeout(() => router.push("/auth/signin"), 1000);
+
+    } catch (err: any) {
+        setPassError(err.message || "Reset failed. Please start over.");
+    } finally {
+        setIsLoading(false);
+    }
+};
+
+
+const handleResend = async () => {
     if (resendCooldown > 0) return;
     setIsResending(true);
     try {
-      // TODO: await authClient.forgetPassword({ email, redirectTo: "/reset-password" });
-      await new Promise((r) => setTimeout(r, 700));
-      setDigits(Array(OTP_LENGTH).fill(""));
-      setOtpError("");
-      startCooldown();
-      inputRefs.current[0]?.focus();
+        const res = await fetch("/api/auth/forgetPassword", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email }),
+            credentials: "include",
+        });
+
+        const data = await res.json();
+
+        if (!data.success) throw new Error(data.message);
+
+        setDigits(Array(OTP_LENGTH).fill(""));
+        setOtpError("");
+        startCooldown();
+        inputRefs.current[0]?.focus();
+
+    } catch (err: any) {
+        setOtpError(err.message || "Failed to resend. Try again.");
     } finally {
-      setIsResending(false);
+        setIsResending(false);
     }
-  };
+};
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-950 px-4 py-12">

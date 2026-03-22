@@ -24,10 +24,10 @@ type FormErrors = Partial<FormData> & { general?: string };
 // ─── Password strength ────────────────────────────────────
 function PasswordStrength({ password }: { password: string }) {
   const rules = [
-    { label: "8+ characters",    pass: password.length >= 8 },
+    { label: "8+ characters", pass: password.length >= 8 },
     { label: "Uppercase letter", pass: /[A-Z]/.test(password) },
-    { label: "Number",           pass: /\d/.test(password)   },
-    { label: "Special character",pass: /[^a-zA-Z0-9]/.test(password) },
+    { label: "Number", pass: /\d/.test(password) },
+    { label: "Special character", pass: /[^a-zA-Z0-9]/.test(password) },
   ];
   const score = rules.filter((r) => r.pass).length;
   const colorBar = score <= 1 ? "bg-red-400" : score === 2 ? "bg-amber-400" : score === 3 ? "bg-yellow-400" : "bg-teal-500";
@@ -154,9 +154,40 @@ export default function ChangePasswordPage() {
     setIsLoading(true);
     try {
       // TODO: await authClient.changePassword({ currentPassword: form.currentPassword, newPassword: form.newPassword });
-      await new Promise((r) => setTimeout(r, 1200));
-      setSuccess(true);
-      setTimeout(() => router.push("/dashboard"), 2200);
+
+      const res = await fetch(`/api/auth/changePassword`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          oldPassword: form.currentPassword,
+          newPassword: form.newPassword
+        }),
+        credentials: "include",
+      });
+
+      const data = await res.json();
+
+      console.log(data);
+      if (data.success) {
+        switch (data.data.user.role) {
+          case "ADMIN":
+            window.location.href = "/dashboard/admin"
+            break
+          case "TEACHER":
+            window.location.href = "/dashboard/teacher"
+            break
+          case "STUDENT":
+            window.location.href = "/dashboard/student"
+            break
+          default:
+            window.location.href = "/"
+        }
+
+        setSuccess(true);
+      }
+
+
+
     } catch (err: any) {
       setErrors({ general: err?.message ?? "Current password is incorrect" });
     } finally {

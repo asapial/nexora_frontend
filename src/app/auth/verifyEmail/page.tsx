@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -51,20 +51,24 @@ function OtpBox({
         hasError
           ? "border-red-400 dark:border-red-500/70 text-red-600 dark:text-red-400 focus:border-red-500"
           : value
-          ? "border-teal-400 dark:border-teal-500 text-teal-700 dark:text-teal-300 focus:border-teal-500 dark:focus:border-teal-400 focus:ring-2 focus:ring-teal-400/20"
-          : "border-zinc-200 dark:border-zinc-700/60 text-zinc-900 dark:text-zinc-50 focus:border-teal-400 dark:focus:border-teal-500 focus:ring-2 focus:ring-teal-400/20"
+            ? "border-teal-400 dark:border-teal-500 text-teal-700 dark:text-teal-300 focus:border-teal-500 dark:focus:border-teal-400 focus:ring-2 focus:ring-teal-400/20"
+            : "border-zinc-200 dark:border-zinc-700/60 text-zinc-900 dark:text-zinc-50 focus:border-teal-400 dark:focus:border-teal-500 focus:ring-2 focus:ring-teal-400/20"
       )}
     />
   );
 }
 
+
 // ─── Page ─────────────────────────────────────────────────
 export default function VerifyEmailPage({
-  email = "you@example.com",
+  email: initialEmail = "",
 }: {
   email?: string;
 }) {
   const router = useRouter();
+
+  const [email, setEmail] = useState(initialEmail);
+  const [isEmailLoading, setIsEmailLoading] = useState(true); // ← loading state
   const [digits, setDigits] = useState<string[]>(Array(OTP_LENGTH).fill(""));
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -72,6 +76,26 @@ export default function VerifyEmailPage({
   const [resendCooldown, setResendCooldown] = useState(0);
   const [success, setSuccess] = useState(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const res = await fetch(`/api/auth/me`, {
+          method: "GET",
+          credentials: "include",
+        });
+        const data = await res.json();
+        if (data?.data?.email) {
+          setEmail(data.data.email);
+        }
+      } catch (err) {
+        console.error("Failed to fetch user:", err);
+      } finally {
+        setIsEmailLoading(false);
+      }
+    };
+    fetchUser();
+  }, []);
 
   const startCooldown = () => {
     setResendCooldown(60);
@@ -117,9 +141,29 @@ export default function VerifyEmailPage({
     setIsLoading(true);
     try {
       // TODO: await authClient.emailOtp.verifyEmail({ email, otp: code });
-      await new Promise((r) => setTimeout(r, 1200));
-      setSuccess(true);
-      setTimeout(() => router.push("/dashboard"), 2000);
+      console.log(code)
+
+      const res = await fetch("/api/auth/verify-email", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          email: email,
+          otp: code
+
+        }),
+        credentials: "include"
+      })
+
+      const data = await res.json();
+      console.log(data);
+
+      if (data.success) {
+        setSuccess(true);
+        router.push('/');
+      }
+
     } catch {
       setError("Invalid or expired code. Please try again.");
       setDigits(Array(OTP_LENGTH).fill(""));
@@ -134,7 +178,16 @@ export default function VerifyEmailPage({
     setIsResending(true);
     try {
       // TODO: await authClient.emailOtp.sendVerificationOtp({ email, type: "email-verification" });
-      await new Promise((r) => setTimeout(r, 800));
+            const res = await fetch("/api/auth/resend-verification-email", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          email: email,
+        }),
+        credentials: "include"
+      })
       setError("");
       setDigits(Array(OTP_LENGTH).fill(""));
       startCooldown();
@@ -179,7 +232,14 @@ export default function VerifyEmailPage({
                   </h1>
                   <p className="text-[13.5px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
                     We sent a 6-digit code to{" "}
-                    <span className="font-semibold text-zinc-700 dark:text-zinc-300 break-all">{email}</span>
+                    {isEmailLoading ? (
+                      // ✅ skeleton loader — email আসার আগে দেখাবে
+                      <span className="inline-block w-36 h-4 rounded-md bg-zinc-200 dark:bg-zinc-700 animate-pulse align-middle" />
+                    ) : (
+                      <span className="font-semibold text-zinc-700 dark:text-zinc-300 break-all">
+                        {email || "your email"}
+                      </span>
+                    )}
                   </p>
                 </div>
 
