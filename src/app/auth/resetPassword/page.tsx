@@ -183,7 +183,7 @@ const handleVerifyOtp = async (e: React.FormEvent) => {
             throw new Error(data.message || "Invalid or expired code");
         }
 
-        setStep(2); // ✅ OTP সঠিক হলে step 2 এ যাও
+        setStep(2); 
 
     } catch (err: any) {
         setOtpError(err.message || "Invalid or expired code. Try again or resend.");

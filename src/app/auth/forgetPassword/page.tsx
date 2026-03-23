@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 import { redirect, useRouter } from "next/navigation";
 
 export default function ForgotPasswordPage() {
-    const router = useRouter(); // ✅ এইভাবে নাও
+    const router = useRouter(); 
     const [email, setEmail] = useState("");
     const [error, setError] = useState("");
     const [isLoading, setIsLoading] = useState(false);
@@ -48,14 +48,11 @@ export default function ForgotPasswordPage() {
             const data = await res.json();
             console.log(data);
 
-            // ✅ success false হলে error message দেখাও
             if (!data.success) {
                 setError(data.message || "Something went wrong. Please try again.");
                 return;
             }
 
-
-            // ✅ success true হলে sent করো
             setSent(true);
 
         } catch (err: any) {
