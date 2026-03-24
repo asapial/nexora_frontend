@@ -30,22 +30,22 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={cn("font-sans", inter.variable)} suppressHydrationWarning={true}>
-              <body
-          className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-        >
-      <ThemeProvider
-        attribute="class"
-        defaultTheme="system"
-        enableSystem
-        disableTransitionOnChange
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
 
-          {/* <NavBar></NavBar> */}
+
           {children}
-          <FooterSection></FooterSection>
-       
-      </ThemeProvider>
-       </body>
+
+
+        </ThemeProvider>
+      </body>
     </html>
   );
 }

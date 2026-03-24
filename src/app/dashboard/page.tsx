@@ -13,19 +13,6 @@ import {
   RiBook2Line,
 } from "react-icons/ri";
 
-import { AppSidebar } from "@/components/app-sidebar";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbList,
-  BreadcrumbPage,
-} from "@/components/ui/breadcrumb";
-import { Separator } from "@/components/ui/separator";
-import {
-  SidebarInset,
-  SidebarProvider,
-  SidebarTrigger,
-} from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 
 // ─── Types ─────────────────────────────────────────────────

@@ -9,8 +9,7 @@ import HowItWorksSection from '@/components/home/HowItWorksSection'
 import RolesSection from '@/components/home/RolesSection'
 import TestimonialsSection from '@/components/home/TestimonialsSection'
 
-import SectionContainer from '@/utils/SectionContainer'
-import React from 'react'
+
 
 export default function page() {
   return (
