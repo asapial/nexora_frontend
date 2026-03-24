@@ -1,11 +1,42 @@
 import { cn } from "@/lib/utils";
 import { RiCameraLine } from "react-icons/ri";
+import { useRef } from "react";
 
-export function ProfileAvatar({ name, src, size = "lg", onUpload }: {
-  name: string; src: string | null | undefined; size?: "sm" | "md" | "lg"; onUpload?: () => void;
+export function ProfileAvatar({ name, src, size = "lg", onUploadSuccess }: {
+  name: string;
+  src: string | null | undefined;
+  size?: "sm" | "md" | "lg";
+  onUploadSuccess?: (url: string) => void;
 }) {
+  const fileRef = useRef<HTMLInputElement>(null);
   const initials = name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
   const dim = size === "lg" ? "w-24 h-24 text-3xl" : size === "md" ? "w-14 h-14 text-xl" : "w-10 h-10 text-sm";
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+
+      const res = await fetch(
+        `https://api.imgbb.com/1/upload?key=${process.env.NEXT_PUBLIC_IMGBB_API_KEY}`,
+        { method: "POST", body: formData }
+      );
+
+      const data = await res.json();
+
+      if (data.success) {
+        onUploadSuccess?.(data.data.url); // ✅ uploaded URL পাঠাও
+      } else {
+        console.error("ImgBB upload failed:", data);
+      }
+    } catch (err) {
+      console.error("Upload error:", err);
+    }
+  };
+
   return (
     <div className={cn("relative flex-shrink-0", dim)}>
       {src
@@ -15,8 +46,19 @@ export function ProfileAvatar({ name, src, size = "lg", onUpload }: {
             {initials}
           </div>
       }
-      {onUpload && (
-        <button onClick={onUpload}
+
+      {/* ✅ hidden file input এখানেই */}
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleFileChange}
+      />
+
+      {onUploadSuccess && (
+        <button
+          onClick={() => fileRef.current?.click()}
           className="absolute -bottom-1.5 -right-1.5 w-8 h-8 rounded-xl
                      bg-teal-600 dark:bg-teal-500 hover:bg-teal-700 dark:hover:bg-teal-600
                      border-2 border-background flex items-center justify-center

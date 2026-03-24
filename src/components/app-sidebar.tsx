@@ -34,12 +34,49 @@ import {
 } from "@/components/ui/sidebar";
 
 // ─── Nav data ─────────────────────────────────────────────
-const navMain: NavMainItem[] = [
-  { title: "Dashboard", url: "/dashboard", icon: <RiDashboardLine /> },
-  { title: "My Clusters", url: "/dashboard/clusters", icon: <RiFlaskLine /> },
-  { title: "Sessions", url: "/dashboard/sessions", icon: <RiCalendarCheckLine /> },
-  { title: "Members", url: "/dashboard/members", icon: <RiGroupLine /> },
-  { title: "Analytics", url: "/dashboard/analytics", icon: <RiBarChartBoxLine /> },
+// const navMain: NavDocItem[] = [
+//   { title: "Dashboard", url: "/dashboard", icon: <RiDashboardLine /> ,isActive: false},
+//   {
+//     title: "Clusters", url: "/dashboard/clusters", icon: <RiFlaskLine />, isActive:false,
+//     items: [
+//       { title: "Create Cluster", url: "/dashboard/teacher/cluster/create" },
+//       { title: "Manage Cluster", url: "/dashboard/teacher/cluster/manageCluster" }
+//     ],
+//   },
+//   { title: "Sessions", url: "/dashboard/sessions", icon: <RiCalendarCheckLine /> },
+//   { title: "Members", url: "/dashboard/members", icon: <RiGroupLine /> },
+//   { title: "Analytics", url: "/dashboard/analytics", icon: <RiBarChartBoxLine /> },
+// ];
+
+const navMain: NavDocItem[] = [
+  {
+    title: "Cluster",
+    url: "/dashboard/resources",
+    icon: <RiBook2Line />,
+    isActive: false,
+    items: [
+      { title: "Create Cluster", url: "/dashboard/teacher/cluster/create" },
+      { title: "Manage Cluster", url: "/dashboard/teacher/cluster/manageCluster" }
+    ],
+  },
+  {
+    title: "Sessions",
+    url: "/dashboard/ai",
+    icon: <RiRobot2Line />,
+    items: [
+      { title: "Create Session", url: "/dashboard/teacher/session/create" },
+      { title: "Manage Session", url: "/dashboard/teacher/session/manageSession" }
+    ],
+  },
+  {
+    title: "Certificates",
+    url: "/dashboard/certificates",
+    icon: <RiAwardLine />,
+    items: [
+      { title: "Issue Certificates", url: "/dashboard/certificates/issue" },
+      { title: "Verify a Code", url: "/dashboard/certificates/verify" },
+    ],
+  },
 ];
 
 const navTools: NavDocItem[] = [
@@ -175,7 +212,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       {/* ══ Navigation sections ════════════════════════════ */}
       <SidebarContent className="gap-0">
         {/* Primary */}
-        <NavMain items={navMain} />
+        <NavDocuments items={navMain} />
 
         {/* Divider */}
         <div className="mx-4 my-1 h-px bg-sidebar-border/40" />

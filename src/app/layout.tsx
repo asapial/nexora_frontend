@@ -6,6 +6,8 @@ import { NavBar } from "@/components/shared/NavBar";
 import { ThemeProvider } from "@/provider/theme-provider";
 import FooterSection from "@/components/shared/footer";
 
+import { Toaster } from "@/components/ui/sonner"
+
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
 
 const geistSans = Geist({
@@ -42,7 +44,7 @@ export default function RootLayout({
 
 
           {children}
-
+        <Toaster />
 
         </ThemeProvider>
       </body>

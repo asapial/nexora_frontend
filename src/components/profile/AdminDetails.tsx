@@ -1,12 +1,19 @@
 import { AdminPermission, AdminProfile } from "@/app/dashboard/(commonRoute)/profile/profileInterface";
-import { RiGlobalLine, RiLinkedinBoxLine, RiShieldCheckLine } from "react-icons/ri";
+import { RiBookOpenLine, RiBriefcaseLine, RiBuilding2Line, RiGlobalLine, RiLinkedinBoxLine, RiMapPinLine, RiShieldCheckLine } from "react-icons/ri";
 import { Card } from "./Card";
 import { Tag } from "./Tag";
 import { cn } from "@/lib/utils";
 import { formatJoinDate } from "@/app/dashboard/(commonRoute)/profile/profileUtils";
+import { EditableField } from "./EditableField";
 
-export function AdminDetails({ profile }: { profile: AdminProfile }) {
-  const PERM_LABELS: Record<AdminPermission, string> = {
+export function AdminDetails({
+  profile, onSave, flashSaved,
+}: {
+  profile:    AdminProfile;
+  onSave:     (p: Partial<AdminProfile>) => void;
+  flashSaved: () => void;
+}) {
+  const PERM_LABELS: Record<string, string> = {
     MANAGE_STUDENTS:      "Manage Students",
     MANAGE_TEACHERS:      "Manage Teachers",
     MANAGE_ADMINS:        "Manage Admins",
@@ -23,7 +30,7 @@ export function AdminDetails({ profile }: { profile: AdminProfile }) {
 
   return (
     <>
-      {/* Super admin badge */}
+      {/* Super admin banner */}
       {profile.isSuperAdmin && (
         <div className="flex items-center gap-3 px-4 py-3.5 rounded-2xl
                         bg-violet-50/60 dark:bg-violet-950/20
@@ -38,72 +45,61 @@ export function AdminDetails({ profile }: { profile: AdminProfile }) {
         </div>
       )}
 
-      {/* Permissions */}
-      <Card title="Permissions" description="Modules this admin account can manage.">
-        <div className="flex flex-wrap gap-2">
-          {profile.permissions?.length > 0
-            ? profile.permissions.map(p => (
-                <span key={p}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[12px] font-semibold
-                             bg-violet-100/70 dark:bg-violet-950/40
-                             text-violet-700 dark:text-violet-400
-                             border border-violet-200/60 dark:border-violet-800/50">
-                  <RiShieldCheckLine className="text-xs" />
-                  {PERM_LABELS[p]}
-                </span>
-              ))
-            : <p className="text-[13px] text-muted-foreground italic">No specific permissions assigned.</p>
-          }
-        </div>
-      </Card>
-
-      {/* Managed modules */}
-      {profile.managedModules?.length > 0 && (
-        <Card title="Managed Modules">
+      {/* Permissions — read-only, controlled by system */}
+      {profile.permissions?.length > 0 && (
+        <Card title="Permissions" description="Assigned by the platform — contact support to change.">
           <div className="flex flex-wrap gap-2">
-            {profile.managedModules.map(m => <Tag key={m} label={m.charAt(0).toUpperCase() + m.slice(1)} />)}
+            {profile.permissions.map(p => (
+              <span key={p}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[12px] font-semibold
+                           bg-violet-100/70 dark:bg-violet-950/40
+                           text-violet-700 dark:text-violet-400
+                           border border-violet-200/60 dark:border-violet-800/50">
+                <RiShieldCheckLine className="text-xs" />
+                {PERM_LABELS[p] ?? p}
+              </span>
+            ))}
           </div>
         </Card>
       )}
 
-      {/* Professional */}
+      {/* Professional — all editable */}
       <Card title="Professional Information">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="flex flex-col gap-1">
-            <span className="text-[11px] font-bold tracking-[.08em] uppercase text-muted-foreground/70">Designation</span>
-            <span className="text-[13.5px] text-foreground">{profile.designation || <span className="text-muted-foreground/40 italic text-[13px]">Not set</span>}</span>
-          </div>
-          <div className="flex flex-col gap-1">
-            <span className="text-[11px] font-bold tracking-[.08em] uppercase text-muted-foreground/70">Organisation</span>
-            <span className="text-[13.5px] text-foreground">{profile.organization || <span className="text-muted-foreground/40 italic text-[13px]">Not set</span>}</span>
-          </div>
-          <div className="flex flex-col gap-1">
-            <span className="text-[11px] font-bold tracking-[.08em] uppercase text-muted-foreground/70">Department</span>
-            <span className="text-[13.5px] text-foreground">{profile.department || <span className="text-muted-foreground/40 italic text-[13px]">Not set</span>}</span>
-          </div>
-          <div className="flex flex-col gap-1">
-            <span className="text-[11px] font-bold tracking-[.08em] uppercase text-muted-foreground/70">2FA</span>
-            <span className={cn("text-[13.5px] font-semibold", profile.twoFactorEnabled ? "text-teal-600 dark:text-teal-400" : "text-muted-foreground")}>
-              {profile.twoFactorEnabled ? "Enabled ✓" : "Disabled"}
-            </span>
-          </div>
+          <EditableField label="Designation"   value={profile.designation ?? ""}  icon={<RiBriefcaseLine />}  onSave={v => { onSave({ designation: v }); flashSaved(); }} />
+          <EditableField label="Department"    value={profile.department ?? ""}   icon={<RiBookOpenLine />}   onSave={v => { onSave({ department: v }); flashSaved(); }} />
+          <EditableField label="Organisation"  value={profile.organization ?? ""} icon={<RiBuilding2Line />}  onSave={v => { onSave({ organization: v }); flashSaved(); }} />
+          <EditableField label="Nationality"   value={profile.nationality ?? ""}  icon={<RiMapPinLine />}     onSave={v => { onSave({ nationality: v }); flashSaved(); }} />
         </div>
       </Card>
 
-      {/* Security */}
+      {/* Security info — read-only */}
       <Card title="Security Details">
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center justify-between py-2 border-b border-border/50">
+        <div className="flex flex-col divide-y divide-border/50">
+          <div className="flex items-center justify-between py-2.5">
+            <span className="text-[13px] text-muted-foreground">Two-factor authentication</span>
+            <span className={cn(
+              "text-[13px] font-semibold",
+              profile.twoFactorEnabled
+                ? "text-teal-600 dark:text-teal-400"
+                : "text-muted-foreground"
+            )}>
+              {profile.twoFactorEnabled ? "Enabled ✓" : "Disabled"}
+            </span>
+          </div>
+          <div className="flex items-center justify-between py-2.5">
             <span className="text-[13px] text-muted-foreground">Last active</span>
             <span className="text-[13px] font-semibold text-foreground">
               {profile.lastActiveAt ? formatJoinDate(profile.lastActiveAt) : "—"}
             </span>
           </div>
-          <div className="flex items-center justify-between py-2 border-b border-border/50">
+          <div className="flex items-center justify-between py-2.5">
             <span className="text-[13px] text-muted-foreground">Last login IP</span>
-            <span className="text-[13px] font-mono font-semibold text-foreground">{profile.lastLoginIp || "—"}</span>
+            <span className="text-[13px] font-mono font-semibold text-foreground">
+              {profile.lastLoginIp || "—"}
+            </span>
           </div>
-          <div className="flex items-center justify-between py-2">
+          <div className="flex items-center justify-between py-2.5">
             <span className="text-[13px] text-muted-foreground">IP whitelist</span>
             <span className="text-[13px] font-semibold text-foreground">
               {profile.ipWhitelist?.length > 0 ? `${profile.ipWhitelist.length} IPs` : "None"}
@@ -114,22 +110,9 @@ export function AdminDetails({ profile }: { profile: AdminProfile }) {
 
       {/* Links */}
       <Card title="Links">
-        <div className="flex flex-col gap-2">
-          {profile.linkedinUrl && (
-            <a href={profile.linkedinUrl} target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-2 text-[13.5px] text-teal-600 dark:text-teal-400 hover:underline">
-              <RiLinkedinBoxLine /> {profile.linkedinUrl}
-            </a>
-          )}
-          {profile.website && (
-            <a href={profile.website} target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-2 text-[13.5px] text-teal-600 dark:text-teal-400 hover:underline">
-              <RiGlobalLine/> {profile.website}
-            </a>
-          )}
-          {!profile.linkedinUrl && !profile.website && (
-            <p className="text-[13px] text-muted-foreground italic">No links added.</p>
-          )}
+        <div className="flex flex-col gap-3">
+          <EditableField label="LinkedIn" value={profile.linkedinUrl ?? ""} icon={<RiLinkedinBoxLine />} type="url" onSave={v => { onSave({ linkedinUrl: v }); flashSaved(); }} />
+          <EditableField label="Website"  value={profile.website ?? ""}    icon={<RiGlobalLine />}      type="url" onSave={v => { onSave({ website: v }); flashSaved(); }} />
         </div>
       </Card>
     </>
