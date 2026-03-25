@@ -169,15 +169,12 @@ export default function ResourceUploadPage() {
     try {
       const fd = new FormData();
       fd.append("file", file);
-      // Pass remaining fields as JSON in "data" key (existing validateRequest middleware handles this)
-      fd.append("data", JSON.stringify({
-        title:       form.title,
-        description: form.description || undefined,
-        authors:     form.authors,
-        year:        form.year ? parseInt(form.year) : undefined,
-        tags:        form.tags,
-        visibility:  form.visibility,
-      }));
+      fd.append("title", form.title);
+      if (form.description) fd.append("description", form.description);
+      form.authors.forEach((a) => fd.append("authors[]", a));
+      form.tags.forEach((t) => fd.append("tags[]", t));
+      if (form.year) fd.append("year", form.year);
+      fd.append("visibility", form.visibility);
 
       const res = await fetch("/api/resource", {
         method: "POST",
