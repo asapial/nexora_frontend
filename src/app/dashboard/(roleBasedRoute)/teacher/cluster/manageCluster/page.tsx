@@ -33,7 +33,6 @@ interface Cluster {
     description?: string;
     batchTag?: string;
     memberCount: number;
-    // FIX 4: Made optional — API may not return these fields
     sessionCount?: number;
     healthScore?: number;
     status?: ClusterStatus;
@@ -87,6 +86,7 @@ function MemberAvatar({ name }: { name: string }) {
 }
 
 // ─── Add member email input ────────────────────────────────
+
 function AddMemberInput({
     onAdd,
     cluster,

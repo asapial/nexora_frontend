@@ -85,8 +85,9 @@ export default function VerifyEmailPage({
           credentials: "include",
         });
         const data = await res.json();
-        if (data?.data?.email) {
-          setEmail(data.data.email);
+
+        if (data?.data?.userData?.email) {
+          setEmail(data.data.userData.email);
         }
       } catch (err) {
         console.error("Failed to fetch user:", err);

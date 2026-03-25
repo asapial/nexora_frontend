@@ -69,12 +69,21 @@ const navMain: NavDocItem[] = [
     ],
   },
   {
-    title: "Certificates",
+    title: "Categories",
     url: "/dashboard/certificates",
     icon: <RiAwardLine />,
     items: [
-      { title: "Issue Certificates", url: "/dashboard/certificates/issue" },
-      { title: "Verify a Code", url: "/dashboard/certificates/verify" },
+      { title: "Create Categories", url: "/dashboard/teacher/category/create" },
+      // { title: "Verify a Code", url: "/dashboard/certificates/verify" },
+    ],
+  },
+  {
+    title: "Resources",
+    url: "/dashboard/certificates",
+    icon: <RiAwardLine />,
+    items: [
+      { title: "Upload Resources", url: "/dashboard/teacher/resource/upload" },
+      // { title: "Verify a Code", url: "/dashboard/certificates/verify" },
     ],
   },
 ];
