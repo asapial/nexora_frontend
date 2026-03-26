@@ -200,7 +200,7 @@ export default function HomeworkManagementPage() {
                 <div className="flex items-center gap-3 text-[12px] text-muted-foreground mt-0.5">
                   <span className="flex items-center gap-1"><RiFlaskLine className="text-xs text-teal-600 dark:text-teal-400" />{session.cluster.name}</span>
                   <span className="flex items-center gap-1"><RiCalendarCheckLine className="text-xs" />{new Date(session.scheduledAt).toLocaleDateString()}</span>
-                  <span>{session._count.attendance} attended</span>
+                  {/* <span>{session._count.attendance} attended</span> */}
                 </div>
               </div>
               <button onClick={() => setAssignTarget(session)}

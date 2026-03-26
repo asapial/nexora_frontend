@@ -65,7 +65,8 @@ const navMain: NavDocItem[] = [
     icon: <RiRobot2Line />,
     items: [
       { title: "Create Session", url: "/dashboard/teacher/session/create" },
-      { title: "Manage Session", url: "/dashboard/teacher/session/manageSession" }
+      { title: "Manage Session", url: "/dashboard/teacher/session/manageSession" },
+      { title: "Homework Management", url: "/dashboard/teacher/homeworkManagement" }
     ],
   },
   {
@@ -83,7 +84,34 @@ const navMain: NavDocItem[] = [
     icon: <RiAwardLine />,
     items: [
       { title: "Upload Resources", url: "/dashboard/teacher/resource/upload" },
+      { title: "My Resources", url: "/dashboard/teacher/resource/myResource" },
       // { title: "Verify a Code", url: "/dashboard/certificates/verify" },
+    ],
+  },
+  {
+    title: "Announcement",
+    url: "/dashboard/certificates",
+    icon: <RiAwardLine />,
+    items: [
+      { title: "Announcement", url: "/dashboard/teacher/announcement/create" },
+    ],
+  },
+  {
+    title: "Attendance Tracking",
+    url: "/dashboard/certificates",
+    icon: <RiAwardLine />,
+    items: [
+      { title: "Announcement", url: "/dashboard/teacher/attendanceTracking" },
+    ],
+  },
+  {
+    title: "Course",
+    url: "/dashboard/certificates",
+    icon: <RiAwardLine />,
+    items: [
+      { title: "My Course", url: "/dashboard/teacher/courses" },
+      { title: "Create Course", url: "/dashboard/teacher/courses/create" },
+      { title: "Earnings", url: "/dashboard/teacher/courses/earnings" },
     ],
   },
 ];
