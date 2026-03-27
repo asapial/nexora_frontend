@@ -67,8 +67,8 @@ export const adminApi = {
 // ─── Student / Public API ─────────────────────────────────
 const S = "/api/student";
 export const studentApi = {
-  getCatalog:        (p?: any) => apiFetch<any>(`/api/courses${qs(p)}`),
-  getCoursePublic:   (id: string) => apiFetch<any>(`/api/courses/${id}`),
+  getCatalog:        (p?: any) => apiFetch<any>(`/api/public/courses${qs(p)}`),
+  getCoursePublic:   (id: string) => apiFetch<any>(`/api/public/courses/${id}`),
   freeEnroll:        (courseId: string) => apiFetch<any>(`/api/courses/${courseId}/enroll`, { method: "POST", body: JSON.stringify({}) }),
   getMyEnrollments:  (p?: any) => apiFetch<any>(`${S}/enrollments${qs(p)}`),
   getMyEnrollment:   (courseId: string) => apiFetch<any>(`${S}/enrollments/${courseId}`),

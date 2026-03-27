@@ -189,8 +189,8 @@ export default function ResourceAccessPage() {
       .then((r) => r.json())
       .then((d) => {
         if (d.success) {
-          setResources(d.data.resources);
-          setMeta(d.meta ?? d.data.meta);
+          setResources(Array.isArray(d.data) ? d.data : d.data?.resources ?? []);
+          setMeta(d.meta ?? d.data?.meta ?? { page: 1, limit: 12, total: 0, totalPages: 1 });
         }
       })
       .finally(() => setLoading(false));
