@@ -7,12 +7,12 @@ import { useRouter, useParams } from "next/navigation";
 import {
   RiSparklingFill, RiBookOpenLine, RiCheckLine, RiAlertLine,
   RiRefreshLine, RiLoader4Line, RiFileTextLine, RiVideoLine,
-  RiArticleLine, RiFileMarkLine, RiCheckboxCircleLine, RiArrowRightLine,
+  RiArticleLine, RiFileMarkedLine, RiCheckboxCircleLine, RiArrowRightLine,
   RiArrowLeftLine, RiMenuLine, RiCloseLine, RiTrophyLine,
   RiCalendarLine, RiTimeLine, RiPlayCircleLine,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
-import { studentApi } from "../../lib/api";
+import { studentApi } from "../../../../../lib/api";
 import { toast } from "sonner";
 
 const fmtDate = (d: string) => new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
@@ -35,7 +35,7 @@ function AmbientBg({ player }: { player?: boolean }) {
 const CONTENT_CFG: Record<string, { icon: React.ReactNode; color: string }> = {
   VIDEO: { icon: <RiVideoLine />,    color: "text-blue-600 dark:text-blue-400 bg-blue-100/60 dark:bg-blue-950/40 border-blue-200/60 dark:border-blue-800/50" },
   TEXT:  { icon: <RiArticleLine />,  color: "text-teal-600 dark:text-teal-400 bg-teal-100/60 dark:bg-teal-950/40 border-teal-200/60 dark:border-teal-800/50" },
-  PDF:   { icon: <RiFileMarkLine />, color: "text-amber-600 dark:text-amber-400 bg-amber-100/60 dark:bg-amber-950/40 border-amber-200/60 dark:border-amber-800/50" },
+  PDF:   { icon: <RiFileMarkedLine />, color: "text-amber-600 dark:text-amber-400 bg-amber-100/60 dark:bg-amber-950/40 border-amber-200/60 dark:border-amber-800/50" },
 };
 
 // ════════════════════════════════════════════════════════════
