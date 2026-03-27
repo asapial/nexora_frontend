@@ -81,20 +81,18 @@ function SubmissionPageInner() {
     if (!taskId) { setError("No task ID provided."); setLoading(false); return; }
     setLoading(true);
     try {
-      const res = await fetch("/api/student/tasks", { credentials: "include" });
+      const res = await fetch(`/api/student/tasks/${taskId}`, { credentials: "include" });
       const d = await res.json();
-      if (d.success) {
-        const found = (d.data as Task[]).find(t => t.id === taskId);
-        if (!found) throw new Error("Task not found in your assignments");
-        setTask(found);
-        // Pre-fill if already submitted
-        if (found.submission) {
-          setTextBody(found.submission.textBody ?? "");
-          setVideoUrl(found.submission.videoUrl ?? "");
-          setPdfUrl(found.submission.pdfUrl ?? "");
-          setFileSize(found.submission.fileSize ? String(found.submission.fileSize) : "");
-        }
-      } else throw new Error(d.message);
+      if (!res.ok || !d.success) throw new Error(d.message || "Task not found");
+      const found = d.data as Task;
+      setTask(found);
+      // Pre-fill if already submitted
+      if (found.submission) {
+        setTextBody(found.submission.textBody ?? "");
+        setVideoUrl(found.submission.videoUrl ?? "");
+        setPdfUrl(found.submission.pdfUrl ?? "");
+        setFileSize(found.submission.fileSize ? String(found.submission.fileSize) : "");
+      }
     } catch (e: unknown) { setError(e instanceof Error ? e.message : "Error"); }
     finally { setLoading(false); }
   }, [taskId]);

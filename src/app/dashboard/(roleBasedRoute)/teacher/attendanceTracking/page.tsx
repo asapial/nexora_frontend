@@ -1,90 +1,41 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import {
-  RiCalendarCheckLine, RiGroupLine, RiFlaskLine, RiSparklingFill,
+  RiCalendarCheckLine, RiGroupLine, RiSparklingFill,
   RiCheckLine, RiCloseLine, RiSubtractLine, RiSaveLine,
-  RiHistoryLine, RiArrowRightLine, RiEditLine, RiFilterLine,
+  RiHistoryLine, RiLoader4Line, RiAlertLine, RiRefreshLine,
+  RiSettings3Line, 
+  // RiWarningLine,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 // ─── Types ────────────────────────────────────────────────
 type Status = "PRESENT" | "ABSENT" | "EXCUSED" | "UNMARKED";
 
-interface Member {
-  id:   string;
-  name: string;
-  email:string;
-}
-
-interface AttendanceRecord {
-  memberId: string;
-  status:   Status;
-  note:     string;
-}
-
-interface Session {
-  id:         string;
-  title:      string;
-  date:       string;
-  clusterId:  string;
-  clusterName:string;
-}
-
-interface HistoryEntry {
-  sessionTitle: string;
-  date:         string;
-  status:       Status;
-}
-
-// ─── Mock data ────────────────────────────────────────────
-const MOCK_CLUSTERS = [
-  { id:"c1", name:"ML Research Group — 2025" },
-  { id:"c2", name:"NLP Reading Circle"        },
-  { id:"c3", name:"Bootcamp Cohort B"          },
-];
-
-const MOCK_SESSIONS: Session[] = [
-  { id:"s1", title:"Session 12 — Attention Mechanisms",     date:"2025-03-18", clusterId:"c1", clusterName:"ML Research Group — 2025" },
-  { id:"s2", title:"Session 11 — Transformer Architecture", date:"2025-03-11", clusterId:"c1", clusterName:"ML Research Group — 2025" },
-  { id:"s3", title:"NLP Week 7 — BERT Finetuning",          date:"2025-03-15", clusterId:"c2", clusterName:"NLP Reading Circle"        },
-  { id:"s4", title:"Sprint 8 — REST API Project",           date:"2025-03-14", clusterId:"c3", clusterName:"Bootcamp Cohort B"          },
-  { id:"s5", title:"Session 10 — Positional Encoding",      date:"2025-03-04", clusterId:"c1", clusterName:"ML Research Group — 2025" },
-];
-
-const MOCK_MEMBERS: Member[] = [
-  { id:"m1", name:"Aisha Khan",   email:"aisha@ex.com"  },
-  { id:"m2", name:"Lucas Mendes", email:"lucas@ex.com"  },
-  { id:"m3", name:"Priya Sharma", email:"priya@ex.com"  },
-  { id:"m4", name:"Omar Hassan",  email:"omar@ex.com"   },
-  { id:"m5", name:"Elena Kozlov", email:"elena@ex.com"  },
-];
-
-const HISTORY: Record<string, HistoryEntry[]> = {
-  m1:[ {sessionTitle:"Session 11",date:"Mar 11",status:"PRESENT"},{sessionTitle:"Session 10",date:"Mar 4",status:"PRESENT"},{sessionTitle:"Session 9",date:"Feb 25",status:"EXCUSED"},{sessionTitle:"Session 8",date:"Feb 18",status:"PRESENT"},{sessionTitle:"Session 7",date:"Feb 11",status:"PRESENT"} ],
-  m2:[ {sessionTitle:"Session 11",date:"Mar 11",status:"PRESENT"},{sessionTitle:"Session 10",date:"Mar 4",status:"ABSENT"}, {sessionTitle:"Session 9",date:"Feb 25",status:"PRESENT"},{sessionTitle:"Session 8",date:"Feb 18",status:"PRESENT"},{sessionTitle:"Session 7",date:"Feb 11",status:"EXCUSED"} ],
-  m3:[ {sessionTitle:"Session 11",date:"Mar 11",status:"PRESENT"},{sessionTitle:"Session 10",date:"Mar 4",status:"PRESENT"},{sessionTitle:"Session 9",date:"Feb 25",status:"PRESENT"},{sessionTitle:"Session 8",date:"Feb 18",status:"PRESENT"},{sessionTitle:"Session 7",date:"Feb 11",status:"PRESENT"} ],
-  m4:[ {sessionTitle:"Session 11",date:"Mar 11",status:"ABSENT"}, {sessionTitle:"Session 10",date:"Mar 4",status:"ABSENT"}, {sessionTitle:"Session 9",date:"Feb 25",status:"EXCUSED"},{sessionTitle:"Session 8",date:"Feb 18",status:"PRESENT"},{sessionTitle:"Session 7",date:"Feb 11",status:"ABSENT"} ],
-  m5:[ {sessionTitle:"Session 11",date:"Mar 11",status:"PRESENT"},{sessionTitle:"Session 10",date:"Mar 4",status:"PRESENT"},{sessionTitle:"Session 9",date:"Feb 25",status:"PRESENT"},{sessionTitle:"Session 8",date:"Feb 18",status:"EXCUSED"},{sessionTitle:"Session 7",date:"Feb 11",status:"PRESENT"} ],
-};
+interface ATRecord { memberId: string; status: Status; note: string }
+interface Member { studentProfileId: string; userId: string; name: string; email: string; image: string | null }
+interface Session { id: string; title: string; scheduledAt: string; status: string; clusterId: string; cluster: { id: string; name: string } }
+interface HistEntry { status: Status; StudySession: { title: string; scheduledAt: string } }
 
 // ─── Config ───────────────────────────────────────────────
-const STATUS_CONFIG: Record<Status, { label:string; icon:React.ReactNode; activeClass:string; dotClass:string }> = {
-  PRESENT:  { label:"Present",  icon:<RiCheckLine/>,     activeClass:"border-teal-400 dark:border-teal-500 bg-teal-600 dark:bg-teal-500 text-white",        dotClass:"bg-teal-500" },
-  ABSENT:   { label:"Absent",   icon:<RiCloseLine/>,     activeClass:"border-red-400 dark:border-red-500 bg-red-600 dark:bg-red-500 text-white",              dotClass:"bg-red-500"  },
-  EXCUSED:  { label:"Excused",  icon:<RiSubtractLine/>,  activeClass:"border-amber-400 dark:border-amber-500 bg-amber-500 dark:bg-amber-500 text-white",     dotClass:"bg-amber-400"},
-  UNMARKED: { label:"—",        icon:null,               activeClass:"",                                                                                      dotClass:"bg-muted-foreground/30" },
+const STATUS_CONFIG: Record<Status, { label: string; icon: React.ReactNode; activeClass: string; dotClass: string }> = {
+  PRESENT:  { label: "Present",  icon: <RiCheckLine />,     activeClass: "border-teal-400 bg-teal-600 text-white",    dotClass: "bg-teal-500" },
+  ABSENT:   { label: "Absent",   icon: <RiCloseLine />,     activeClass: "border-red-400 bg-red-600 text-white",      dotClass: "bg-red-500"  },
+  EXCUSED:  { label: "Excused",  icon: <RiSubtractLine />,  activeClass: "border-amber-400 bg-amber-500 text-white",  dotClass: "bg-amber-400"},
+  UNMARKED: { label: "—",        icon: null,                activeClass: "",                                           dotClass: "bg-muted-foreground/30" },
 };
 
-const initials = (name:string) => name.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase();
-const fmtDate  = (d:string) => { try { return new Date(d).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"}); } catch { return d; } };
-const pct      = (a:number,b:number) => b===0?0:Math.round((a/b)*100);
+const initials = (n: string) => n.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+const fmtDate  = (d: string) => { try { return new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }); } catch { return d; } };
+const pct      = (a: number, b: number) => b === 0 ? 0 : Math.round((a / b) * 100);
 
 // ─── Status toggle button ─────────────────────────────────
-function StatusBtn({ status, current, onClick }: { status:Status; current:Status; onClick:()=>void }) {
+function StatusBtn({ status, current, onClick }: { status: Status; current: Status; onClick: () => void }) {
   const cfg = STATUS_CONFIG[status];
-  const isActive = status===current;
-  if (status==="UNMARKED") return null;
+  const isActive = status === current;
+  if (status === "UNMARKED") return null;
   return (
     <button type="button" onClick={onClick}
       className={cn("w-8 h-8 rounded-lg border-2 flex items-center justify-center text-base transition-all duration-150",
@@ -95,101 +46,195 @@ function StatusBtn({ status, current, onClick }: { status:Status; current:Status
   );
 }
 
-// ─── History dots ──────────────────────────────────────────
-function HistoryDots({ memberId }: { memberId: string }) {
-  const entries = HISTORY[memberId] ?? [];
-  if (!entries.length) return <span className="text-[11.5px] text-muted-foreground/50">No history</span>;
-  const presentCount = entries.filter(e=>e.status==="PRESENT").length;
-  const rate = pct(presentCount,entries.length);
-  return (
-    <div className="flex items-center gap-2">
-      <div className="flex gap-1">
-        {entries.map((e,i)=>(
-          <div key={i} title={`${e.sessionTitle} · ${e.date} · ${e.status}`}
-            className={cn("w-3 h-3 rounded-sm transition-all",STATUS_CONFIG[e.status].dotClass)}/>
-        ))}
-      </div>
-      <span className={cn("text-[11.5px] font-bold tabular-nums",
-        rate>=80?"text-teal-600 dark:text-teal-400":rate>=60?"text-amber-600 dark:text-amber-400":"text-red-500 dark:text-red-400")}>
-        {rate}%
-      </span>
-    </div>
-  );
-}
-
 // ─── Attendance rate bar ───────────────────────────────────
-function RateBar({ records }: { records: AttendanceRecord[] }) {
-  const present  = records.filter(r=>r.status==="PRESENT").length;
-  const excused  = records.filter(r=>r.status==="EXCUSED").length;
-  const absent   = records.filter(r=>r.status==="ABSENT").length;
-  const unmarked = records.filter(r=>r.status==="UNMARKED").length;
+function RateBar({ records }: { records: ATRecord[] }) {
+  const present  = records.filter(r => r.status === "PRESENT").length;
+  const excused  = records.filter(r => r.status === "EXCUSED").length;
+  const absent   = records.filter(r => r.status === "ABSENT").length;
+  const unmarked = records.filter(r => r.status === "UNMARKED").length;
   const total    = records.length;
-
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between text-[12.5px] font-semibold text-foreground">
         <span>Session attendance</span>
-        <span className={cn(total===unmarked?"text-muted-foreground":pct(present,total)>=80?"text-teal-600 dark:text-teal-400":pct(present,total)>=60?"text-amber-600 dark:text-amber-400":"text-red-500 dark:text-red-400")}>
-          {total===unmarked?"Not marked yet":`${pct(present,total)}% present`}
+        <span className={cn(total === unmarked ? "text-muted-foreground" : pct(present, total) >= 80 ? "text-teal-600 dark:text-teal-400" : pct(present, total) >= 60 ? "text-amber-600 dark:text-amber-400" : "text-red-500 dark:text-red-400")}>
+          {total === unmarked ? "Not marked yet" : `${pct(present, total)}% present`}
         </span>
       </div>
       <div className="h-3 rounded-full bg-muted overflow-hidden flex gap-0.5">
-        {total>0&&[
-          {count:present,  color:"bg-teal-500"},
-          {count:excused,  color:"bg-amber-400"},
-          {count:absent,   color:"bg-red-400"},
-          {count:unmarked, color:"bg-muted-foreground/20"},
-        ].map((seg,i)=>seg.count>0&&(
-          <div key={i} className={cn("h-full transition-all duration-700",seg.color)} style={{width:`${pct(seg.count,total)}%`}}/>
+        {total > 0 && [
+          { count: present,  color: "bg-teal-500" },
+          { count: excused,  color: "bg-amber-400" },
+          { count: absent,   color: "bg-red-400" },
+          { count: unmarked, color: "bg-muted-foreground/20" },
+        ].map((seg, i) => seg.count > 0 && (
+          <div key={i} className={cn("h-full transition-all duration-700", seg.color)} style={{ width: `${pct(seg.count, total)}%` }} />
         ))}
       </div>
       <div className="flex gap-4 text-[11.5px] text-muted-foreground">
-        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-teal-500"/>Present: {present}</span>
-        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-amber-400"/>Excused: {excused}</span>
-        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-red-400"/>Absent: {absent}</span>
-        {unmarked>0&&<span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-muted-foreground/30"/>Unmarked: {unmarked}</span>}
+        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-teal-500" />Present: {present}</span>
+        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-amber-400" />Excused: {excused}</span>
+        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-red-400" />Absent: {absent}</span>
+        {unmarked > 0 && <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-muted-foreground/30" />Unmarked: {unmarked}</span>}
       </div>
     </div>
   );
 }
 
-// ─── Page ─────────────────────────────────────────────────
+// ─── Cluster selector with real data ──────────────────────
 export default function AttendanceTrackingPage() {
-  const [clusterId,  setClusterId]  = useState("c1");
-  const [sessionId,  setSessionId]  = useState<string>("");
-  const [records,    setRecords]    = useState<Record<string, AttendanceRecord>>({});
-  const [saving,     setSaving]     = useState(false);
-  const [saved,      setSaved]      = useState(false);
-  const [showHistory,setShowHistory]= useState(false);
+  // ── cluster/session selection
+  const [clusters,  setClusters]  = useState<{id:string;name:string}[]>([]);
+  const [clusterId, setClusterId] = useState("");
+  const [sessions,  setSessions]  = useState<Session[]>([]);
+  const [sessionId, setSessionId] = useState("");
+  const [members,   setMembers]   = useState<Member[]>([]);
+  const [history,   setHistory]   = useState<Record<string, HistEntry[]>>({});
 
-  const clusterSessions = MOCK_SESSIONS.filter(s=>s.clusterId===clusterId);
-  const activeSession   = clusterSessions.find(s=>s.id===sessionId) ?? clusterSessions[0];
+  // ── attendance records [key = memberStudentProfileId]
+  const [records,   setRecords]   = useState<Record<string, ATRecord>>({});
 
-  // Init records when session changes
-  const sessionRecords = useMemo(()=>{
-    if (!activeSession) return [];
-    return MOCK_MEMBERS.map(m=>({
-      memberId: m.id,
-      status:   records[`${activeSession.id}-${m.id}`]?.status ?? "UNMARKED",
-      note:     records[`${activeSession.id}-${m.id}`]?.note   ?? "",
-    }));
-  },[activeSession,records]);
+  // ── ui states
+  const [loadingClusters, setLoadingClusters] = useState(true);
+  const [loadingSessions, setLoadingSessions] = useState(false);
+  const [loadingMembers,  setLoadingMembers]  = useState(false);
+  const [loadingExisting, setLoadingExisting] = useState(false);
+  const [loadingHistory,  setLoadingHistory]  = useState(false);
+  const [saving,  setSaving]  = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
 
-  const setStatus = (memberId:string, status:Status) =>
-    setRecords(r=>({...r,[`${activeSession!.id}-${memberId}`]:{ memberId, status, note:r[`${activeSession!.id}-${memberId}`]?.note??"" }}));
+  // ── absent warning config
+  const [showWarningCfg, setShowWarningCfg]   = useState(false);
+  const [absentThreshold, setAbsentThreshold] = useState(3);
+  const [warningMsg, setWarningMsg]           = useState("This student has excessive absences and may need immediate attention.");
 
-  const setNote = (memberId:string, note:string) =>
-    setRecords(r=>({...r,[`${activeSession!.id}-${memberId}`]:{ memberId, status:r[`${activeSession!.id}-${memberId}`]?.status??"UNMARKED", note }}));
+  const activeSession = sessions.find(s => s.id === sessionId) ?? sessions[0];
 
-  const markAll = (status:Status) =>
-    MOCK_MEMBERS.forEach(m=>setStatus(m.id,status));
+  // ── Fetch clusters
+  const fetchClusters = useCallback(async () => {
+    setLoadingClusters(true);
+    try {
+      const res = await fetch("/api/teacher/clusters", { credentials: "include" });
+      const d = await res.json();
+      const list = (d.data ?? d) as {id:string;name:string}[];
+      setClusters(list);
+      if (list.length > 0) setClusterId(list[0].id);
+    } catch { toast.error("Failed to load clusters"); }
+    finally { setLoadingClusters(false); }
+  }, []);
 
+  useEffect(() => { fetchClusters(); }, [fetchClusters]);
+
+  // ── Fetch sessions when cluster changes
+  useEffect(() => {
+    if (!clusterId) return;
+    setLoadingSessions(true); setSessions([]); setSessionId(""); setMembers([]); setRecords({});
+    fetch(`/api/sessions?clusterId=${clusterId}`, { credentials: "include" })
+      .then(r => r.json())
+      .then(d => {
+        const list = (d.data ?? d) as Session[];
+        setSessions(list);
+        if (list.length > 0) setSessionId(list[0].id);
+      })
+      .catch(() => toast.error("Failed to load sessions"))
+      .finally(() => setLoadingSessions(false));
+  }, [clusterId]);
+
+  // ── Fetch members + existing attendance when session changes
+  useEffect(() => {
+    if (!activeSession?.id) return;
+    setLoadingMembers(true); setMembers([]); setRecords({});
+    fetch(`/api/teacher/tasks/sessions/${activeSession.id}/members`, { credentials: "include" })
+      .then(r => r.json())
+      .then(d => {
+        const list = (d.data ?? []) as Member[];
+        setMembers(list);
+        // init all as UNMARKED
+        const init: Record<string, ATRecord> = {};
+        list.forEach(m => { init[m.studentProfileId] = { memberId: m.studentProfileId, status: "UNMARKED", note: "" }; });
+        setRecords(init);
+      })
+      .catch(() => toast.error("Failed to load members"))
+      .finally(() => setLoadingMembers(false));
+
+    // Fetch existing attendance for this session
+    setLoadingExisting(true);
+    fetch(`/api/sessions/${activeSession.id}/attendance`, { credentials: "include" })
+      .then(r => r.json())
+      .then(d => {
+        const recList = (d.data?.records ?? d.data ?? []) as Array<{studentId:string;status:string;note?:string}>;
+        if (recList.length) {
+          setRecords(prev => {
+            const next = { ...prev };
+            recList.forEach(r => {
+              if (next[r.studentId]) {
+                next[r.studentId] = { memberId: r.studentId, status: r.status as Status, note: r.note ?? "" };
+              }
+            });
+            return next;
+          });
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoadingExisting(false));
+  }, [activeSession?.id]);
+
+  // ── Fetch history when showHistory turned on
+  useEffect(() => {
+    if (!showHistory || !members.length) return;
+    setLoadingHistory(true);
+    Promise.all(members.map(async m => {
+      const res = await fetch(`/api/student/attendance?studentProfileId=${m.studentProfileId}`, { credentials: "include" }).catch(() => null);
+      if (!res) return { id: m.studentProfileId, entries: [] as HistEntry[] };
+      const d = await res.json().catch(() => ({ data: [] }));
+      return { id: m.studentProfileId, entries: (d.data ?? []) as HistEntry[] };
+    }))
+      .then(results => {
+        const h: Record<string, HistEntry[]> = {};
+        results.forEach(r => { h[r.id] = r.entries; });
+        setHistory(h);
+      })
+      .finally(() => setLoadingHistory(false));
+  }, [showHistory, members]);
+
+  // ── Record helpers
+  const sessionRecords = useMemo(() => members.map(m => records[m.studentProfileId] ?? { memberId: m.studentProfileId, status: "UNMARKED" as Status, note: "" }), [members, records]);
+
+  const setStatus = (memberId: string, status: Status) =>
+    setRecords(r => ({ ...r, [memberId]: { ...r[memberId], memberId, status } }));
+  const setNote = (memberId: string, note: string) =>
+    setRecords(r => ({ ...r, [memberId]: { ...r[memberId], memberId, note } }));
+  const markAll = (status: Status) => members.forEach(m => setStatus(m.studentProfileId, status));
+
+  // ── Save
   const handleSave = async () => {
+    if (!activeSession) return;
     setSaving(true);
-    await new Promise(r=>setTimeout(r,700));
-    setSaving(false); setSaved(true);
-    setTimeout(()=>setSaved(false),2500);
+    try {
+      const payload = {
+        records: members.map(m => ({
+          studentId: m.studentProfileId,
+          status: records[m.studentProfileId]?.status ?? "UNMARKED",
+          note: records[m.studentProfileId]?.note ?? "",
+        })).filter(r => r.status !== "UNMARKED"),
+      };
+      const res = await fetch(`/api/sessions/${activeSession.id}/attendance`, {
+        method: "POST", credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.message || "Save failed");
+      toast.success("Attendance saved!");
+    } catch (e: unknown) { toast.error(e instanceof Error ? e.message : "Save failed"); }
+    finally { setSaving(false); }
   };
+
+  // ── Absent count per member (across history)
+  const absentCount = (memberId: string) => (history[memberId] ?? []).filter(h => h.status === "ABSENT").length;
+  const isWarned    = (memberId: string) => absentCount(memberId) >= absentThreshold;
+
+  const markedCount = sessionRecords.filter(r => r.status !== "UNMARKED").length;
 
   return (
     <div className="flex flex-col gap-6 p-5 lg:p-7 pt-6 max-w-4xl mx-auto w-full">
@@ -198,75 +243,139 @@ export default function AttendanceTrackingPage() {
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <div className="flex items-center gap-1.5 mb-1">
-            <RiSparklingFill className="text-teal-500 dark:text-teal-400 text-sm animate-pulse"/>
+            <RiSparklingFill className="text-teal-500 dark:text-teal-400 text-sm animate-pulse" />
             <span className="text-[10.5px] font-bold tracking-[.12em] uppercase text-muted-foreground">Sessions</span>
           </div>
           <h1 className="text-[1.5rem] font-extrabold tracking-tight text-foreground leading-none">Attendance Tracking</h1>
         </div>
-        <button onClick={()=>setShowHistory(s=>!s)}
-          className={cn("inline-flex items-center gap-2 h-10 px-4 rounded-xl border text-[13.5px] font-semibold transition-all",
-            showHistory?"border-teal-300/60 dark:border-teal-700/50 bg-teal-50/40 dark:bg-teal-950/20 text-teal-700 dark:text-teal-400"
-                       :"border-border text-muted-foreground hover:text-foreground hover:bg-muted/50")}>
-          <RiHistoryLine/> {showHistory?"Hide history":"Show history"}
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setShowWarningCfg(s => !s)}
+            className={cn("inline-flex items-center gap-2 h-9 px-3 rounded-xl border text-[12.5px] font-semibold transition-all",
+              showWarningCfg ? "border-amber-300/60 bg-amber-50/40 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400" : "border-border text-muted-foreground hover:text-foreground hover:bg-muted/50")}>
+            <RiSettings3Line /> Warning Config
+          </button>
+          <button onClick={() => setShowHistory(s => !s)}
+            className={cn("inline-flex items-center gap-2 h-9 px-3 rounded-xl border text-[12.5px] font-semibold transition-all",
+              showHistory ? "border-teal-300/60 bg-teal-50/40 dark:bg-teal-950/20 text-teal-700 dark:text-teal-400" : "border-border text-muted-foreground hover:text-foreground hover:bg-muted/50")}>
+            <RiHistoryLine /> {showHistory ? "Hide" : "Show"} history
+          </button>
+        </div>
       </div>
+
+      {/* Warning config panel */}
+      {showWarningCfg && (
+        <div className="rounded-2xl border border-amber-200/60 dark:border-amber-800/50 bg-amber-50/30 dark:bg-amber-950/20 px-5 py-4 flex flex-col gap-3">
+          <p className="text-[13px] font-bold text-amber-700 dark:text-amber-400 flex items-center gap-2"><RiWarningLine /> Absence Warning Configuration</p>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[12px] font-semibold text-foreground/70">Absent threshold (sessions)</label>
+              <input type="number" min="1" max="20" value={absentThreshold} onChange={e => setAbsentThreshold(parseInt(e.target.value) || 1)}
+                className="w-24 h-9 px-3 rounded-xl text-[13.5px] bg-muted/40 border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-amber-400/20 focus:border-amber-400/70 transition-all" />
+            </div>
+            <div className="flex-1 flex flex-col gap-1.5">
+              <label className="text-[12px] font-semibold text-foreground/70">Warning message shown to teacher</label>
+              <input value={warningMsg} onChange={e => setWarningMsg(e.target.value)}
+                className="w-full h-9 px-3 rounded-xl text-[13px] bg-muted/40 border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-amber-400/20 focus:border-amber-400/70 transition-all" />
+            </div>
+          </div>
+          <p className="text-[11.5px] text-amber-600/80 dark:text-amber-400/60">Students with ≥ {absentThreshold} absences in their history will show a warning badge below.</p>
+        </div>
+      )}
 
       {/* Session selector */}
       <div className="rounded-2xl border border-border bg-card px-5 py-4 flex flex-col gap-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="flex flex-col gap-1.5">
             <label className="text-[13px] font-semibold text-foreground/80">Cluster</label>
-            <select value={clusterId} onChange={e=>{ setClusterId(e.target.value); setSessionId(""); }}
-              className="w-full h-10 px-4 rounded-xl text-[13.5px] bg-muted/40 border border-border text-foreground appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-teal-400/20 focus:border-teal-400/70 transition-all">
-              {MOCK_CLUSTERS.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
+            {loadingClusters ? (
+              <div className="h-10 rounded-xl bg-muted animate-pulse" />
+            ) : (
+              <select value={clusterId} onChange={e => { setClusterId(e.target.value); setSessionId(""); }}
+                className="w-full h-10 px-4 rounded-xl text-[13.5px] bg-muted/40 border border-border text-foreground appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-teal-400/20 focus:border-teal-400/70 transition-all">
+                {clusters.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            )}
           </div>
           <div className="flex flex-col gap-1.5">
             <label className="text-[13px] font-semibold text-foreground/80">Session</label>
-            <select value={activeSession?.id??""} onChange={e=>setSessionId(e.target.value)}
-              className="w-full h-10 px-4 rounded-xl text-[13.5px] bg-muted/40 border border-border text-foreground appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-teal-400/20 focus:border-teal-400/70 transition-all">
-              {clusterSessions.map(s=><option key={s.id} value={s.id}>{s.title} · {fmtDate(s.date)}</option>)}
-            </select>
+            {loadingSessions ? (
+              <div className="h-10 rounded-xl bg-muted animate-pulse" />
+            ) : (
+              <select value={activeSession?.id ?? ""} onChange={e => setSessionId(e.target.value)}
+                className="w-full h-10 px-4 rounded-xl text-[13.5px] bg-muted/40 border border-border text-foreground appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-teal-400/20 focus:border-teal-400/70 transition-all">
+                {sessions.map(s => <option key={s.id} value={s.id}>{s.title} · {fmtDate(s.scheduledAt)}</option>)}
+              </select>
+            )}
           </div>
         </div>
-        {activeSession && <RateBar records={sessionRecords}/>}
+        {activeSession && !loadingMembers && !loadingExisting && <RateBar records={sessionRecords} />}
       </div>
 
-      {/* Mark all row + table */}
+      {/* Members table */}
       {activeSession && (
         <div className="rounded-2xl border border-border bg-card overflow-hidden">
           {/* Table header */}
           <div className="flex items-center justify-between px-5 py-3.5 border-b border-border bg-muted/20">
             <div className="flex items-center gap-2">
-              <RiGroupLine className="text-muted-foreground/60 text-base"/>
-              <span className="text-[13px] font-bold text-foreground">{MOCK_MEMBERS.length} members</span>
+              <RiGroupLine className="text-muted-foreground/60 text-base" />
+              <span className="text-[13px] font-bold text-foreground">{members.length} members</span>
+              {(loadingMembers || loadingExisting) && <RiLoader4Line className="text-muted-foreground text-sm animate-spin" />}
             </div>
             <div className="flex items-center gap-2">
               <span className="text-[12px] text-muted-foreground mr-1">Mark all:</span>
-              {(["PRESENT","ABSENT","EXCUSED"] as Status[]).map(s=>(
-                <button key={s} type="button" onClick={()=>markAll(s)}
+              {(["PRESENT", "ABSENT", "EXCUSED"] as Status[]).map(s => (
+                <button key={s} type="button" onClick={() => markAll(s)}
                   className={cn("h-7 px-3 rounded-lg text-[11.5px] font-bold border transition-all",
-                    s==="PRESENT"?"border-teal-300/60 dark:border-teal-700/50 text-teal-700 dark:text-teal-400 hover:bg-teal-50/60 dark:hover:bg-teal-950/30"
-                    :s==="ABSENT"?"border-red-300/60 dark:border-red-700/50 text-red-600 dark:text-red-400 hover:bg-red-50/60 dark:hover:bg-red-950/30"
-                    :"border-amber-300/60 dark:border-amber-700/50 text-amber-600 dark:text-amber-400 hover:bg-amber-50/60 dark:hover:bg-amber-950/30"
+                    s === "PRESENT" ? "border-teal-300/60 dark:border-teal-700/50 text-teal-700 dark:text-teal-400 hover:bg-teal-50/60 dark:hover:bg-teal-950/30"
+                    : s === "ABSENT" ? "border-red-300/60 dark:border-red-700/50 text-red-600 dark:text-red-400 hover:bg-red-50/60 dark:hover:bg-red-950/30"
+                    : "border-amber-300/60 dark:border-amber-700/50 text-amber-600 dark:text-amber-400 hover:bg-amber-50/60 dark:hover:bg-amber-950/30"
                   )}>
-                  {s.charAt(0)+s.slice(1).toLowerCase()}
+                  {s.charAt(0) + s.slice(1).toLowerCase()}
                 </button>
               ))}
             </div>
           </div>
 
           {/* Member rows */}
-          {MOCK_MEMBERS.map(member=>{
-            const rec = sessionRecords.find(r=>r.memberId===member.id);
-            const status = rec?.status ?? "UNMARKED";
-            const note   = rec?.note   ?? "";
+          {loadingMembers ? (
+            Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-4 px-5 py-4 border-b border-border/60 animate-pulse">
+                <div className="w-9 h-9 rounded-full bg-muted flex-shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-3 bg-muted rounded w-1/3" />
+                  <div className="h-2.5 bg-muted rounded w-1/2" />
+                </div>
+              </div>
+            ))
+          ) : members.length === 0 ? (
+            <p className="px-5 py-8 text-[13px] text-muted-foreground italic text-center">No members in this session.</p>
+          ) : members.map(member => {
+            const rec    = records[member.studentProfileId] ?? { memberId: member.studentProfileId, status: "UNMARKED" as Status, note: "" };
+            const status = rec.status;
+            const note   = rec.note;
+            const warned = showHistory && isWarned(member.studentProfileId);
+
             return (
-              <div key={member.id} className="border-b border-border/60 last:border-0 hover:bg-muted/20 transition-colors">
+              <div key={member.studentProfileId} className="border-b border-border/60 last:border-0 hover:bg-muted/20 transition-colors">
+                {/* Warning banner */}
+                {warned && (
+                  <div className="mx-5 mt-3 flex items-start gap-2 px-3 py-2 rounded-xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-800/50">
+                    <RiWarningLine className="text-amber-500 text-sm mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-[11.5px] font-bold text-amber-700 dark:text-amber-400">
+                        {absentCount(member.studentProfileId)} absences — above threshold ({absentThreshold})
+                      </p>
+                      <p className="text-[11px] text-amber-600/80 dark:text-amber-400/70">{warningMsg}</p>
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex items-center gap-4 px-5 py-3.5">
                   {/* Avatar */}
-                  <div className="w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center font-bold text-[12px] bg-teal-600/15 dark:bg-teal-400/12 text-teal-700 dark:text-teal-300 border border-teal-300/50 dark:border-teal-600/30">
-                    {initials(member.name)}
+                  <div className="w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center font-bold text-[12px] bg-teal-600/15 dark:bg-teal-400/12 text-teal-700 dark:text-teal-300 border border-teal-300/50 dark:border-teal-600/30 overflow-hidden">
+                    {member.image
+                      ? <img src={member.image} alt={member.name} className="w-full h-full object-cover" />
+                      : initials(member.name)}
                   </div>
 
                   <div className="flex-1 min-w-0">
@@ -276,32 +385,56 @@ export default function AttendanceTrackingPage() {
 
                   {/* Status buttons */}
                   <div className="flex items-center gap-1.5 flex-shrink-0">
-                    {(["PRESENT","EXCUSED","ABSENT"] as Status[]).map(s=>(
-                      <StatusBtn key={s} status={s} current={status} onClick={()=>setStatus(member.id,s)}/>
+                    {(["PRESENT", "EXCUSED", "ABSENT"] as Status[]).map(s => (
+                      <StatusBtn key={s} status={s} current={status} onClick={() => setStatus(member.studentProfileId, s)} />
                     ))}
                   </div>
 
-                  {/* Current status label */}
+                  {/* Status label */}
                   <div className={cn("w-20 text-center text-[11.5px] font-bold flex-shrink-0 hidden sm:block",
-                    status==="PRESENT"?"text-teal-600 dark:text-teal-400"
-                    :status==="ABSENT"?"text-red-500 dark:text-red-400"
-                    :status==="EXCUSED"?"text-amber-600 dark:text-amber-400"
-                    :"text-muted-foreground/40")}>
+                    status === "PRESENT" ? "text-teal-600 dark:text-teal-400"
+                    : status === "ABSENT" ? "text-red-500 dark:text-red-400"
+                    : status === "EXCUSED" ? "text-amber-600 dark:text-amber-400"
+                    : "text-muted-foreground/40")}>
                     {STATUS_CONFIG[status].label}
                   </div>
                 </div>
 
                 {/* Note input */}
                 <div className="px-5 pb-3">
-                  <input value={note} onChange={e=>setNote(member.id,e.target.value)} placeholder="Add a note (optional)…"
-                    className="w-full h-8 px-3 rounded-lg text-[12.5px] bg-muted/30 border border-border/60 text-foreground placeholder:text-muted-foreground/35 focus:outline-none focus:ring-1 focus:ring-teal-400/25 focus:border-teal-400/50 transition-all"/>
+                  <input value={note} onChange={e => setNote(member.studentProfileId, e.target.value)} placeholder="Add a note (optional)…"
+                    className="w-full h-8 px-3 rounded-lg text-[12.5px] bg-muted/30 border border-border/60 text-foreground placeholder:text-muted-foreground/35 focus:outline-none focus:ring-1 focus:ring-teal-400/25 focus:border-teal-400/50 transition-all" />
                 </div>
 
                 {/* History row */}
                 {showHistory && (
                   <div className="px-5 pb-3 flex items-center gap-3">
                     <span className="text-[11.5px] font-semibold text-muted-foreground/70 flex-shrink-0">History:</span>
-                    <HistoryDots memberId={member.id}/>
+                    {loadingHistory ? (
+                      <span className="text-[11.5px] text-muted-foreground/40">Loading…</span>
+                    ) : (history[member.studentProfileId] ?? []).length === 0 ? (
+                      <span className="text-[11.5px] text-muted-foreground/40">No history</span>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <div className="flex gap-1">
+                          {(history[member.studentProfileId] ?? []).slice(0, 10).map((e, i) => (
+                            <div key={i}
+                              title={`${e.StudySession?.title} · ${fmtDate(e.StudySession?.scheduledAt ?? "")} · ${e.status}`}
+                              className={cn("w-3 h-3 rounded-sm transition-all", STATUS_CONFIG[e.status]?.dotClass ?? "bg-muted-foreground/30")} />
+                          ))}
+                        </div>
+                        {(() => {
+                          const hist = history[member.studentProfileId] ?? [];
+                          const p = hist.filter(e => e.status === "PRESENT").length;
+                          const r = pct(p, hist.length);
+                          return (
+                            <span className={cn("text-[11.5px] font-bold tabular-nums", r >= 80 ? "text-teal-600 dark:text-teal-400" : r >= 60 ? "text-amber-600 dark:text-amber-400" : "text-red-500 dark:text-red-400")}>
+                              {r}%
+                            </span>
+                          );
+                        })()}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -311,14 +444,14 @@ export default function AttendanceTrackingPage() {
           {/* Save footer */}
           <div className="flex items-center justify-between px-5 py-4 border-t border-border bg-muted/20">
             <p className="text-[12.5px] text-muted-foreground">
-              {sessionRecords.filter(r=>r.status!=="UNMARKED").length}/{MOCK_MEMBERS.length} marked
+              {markedCount}/{members.length} marked
             </p>
-            <button onClick={handleSave} disabled={saving}
-              className={cn("inline-flex items-center gap-2 h-10 px-6 rounded-xl text-white text-[13.5px] font-bold shadow-md shadow-teal-600/20 transition-all hover:scale-[1.02] disabled:opacity-60",
-                saved?"bg-teal-600 dark:bg-teal-500":"bg-teal-600 dark:bg-teal-500 hover:bg-teal-700 dark:hover:bg-teal-600")}>
-              {saving?<><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"/>Saving…</>
-               :saved?<><RiCheckLine/>Saved!</>
-               :<><RiSaveLine/>Save attendance</>}
+            <button onClick={handleSave} disabled={saving || !activeSession}
+              className="inline-flex items-center gap-2 h-10 px-6 rounded-xl text-white text-[13.5px] font-bold shadow-md shadow-teal-600/20 bg-teal-600 hover:bg-teal-700 transition-all hover:scale-[1.02] disabled:opacity-60 disabled:hover:scale-100">
+              {saving
+                ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Saving…</>
+                : <><RiSaveLine />Save attendance</>
+              }
             </button>
           </div>
         </div>
