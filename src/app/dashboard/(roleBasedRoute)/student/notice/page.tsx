@@ -13,7 +13,7 @@ import {
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
 
-type Urgency = "INFO" | "WARNING" | "URGENT";
+type Urgency = "INFO" | "IMPORTANT" | "CRITICAL";
 
 interface Cluster { id: string; name: string }
 interface Notice {
@@ -35,12 +35,12 @@ const URGENCY: Record<Urgency, { icon: React.ReactNode; badge: string; dot: stri
     badge: "bg-sky-100/80 dark:bg-sky-950/50 text-sky-700 dark:text-sky-400 border-sky-200/70 dark:border-sky-800/50",
     dot: "bg-sky-500",
   },
-  WARNING: {
+  IMPORTANT: {
     icon: <RiAlertLine />,
     badge: "bg-amber-100/80 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border-amber-200/70 dark:border-amber-800/50",
     dot: "bg-amber-500",
   },
-  URGENT: {
+  CRITICAL: {
     icon: <RiErrorWarningLine />,
     badge: "bg-red-100/80 dark:bg-red-950/30 text-red-600 dark:text-red-400 border-red-200/70 dark:border-red-800/50",
     dot: "bg-red-500",
@@ -132,7 +132,7 @@ export default function NoticeBoardPage() {
         <div className="flex items-center gap-1.5 text-[12px] font-semibold text-muted-foreground mr-1">
           <RiFilterLine /> Filter:
         </div>
-        {(["", "INFO", "WARNING", "URGENT"] as const).map((u) => (
+        {(["" , "INFO", "IMPORTANT", "CRITICAL"] as const).map((u) => (
           <button
             key={u}
             onClick={() => setFilter((f) => ({ ...f, urgency: u }))}

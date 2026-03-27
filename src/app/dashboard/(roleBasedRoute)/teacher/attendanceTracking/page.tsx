@@ -109,13 +109,25 @@ export default function AttendanceTrackingPage() {
   const [absentThreshold, setAbsentThreshold] = useState(3);
   const [warningMsg, setWarningMsg]           = useState("This student has excessive absences and may need immediate attention.");
 
+  // ── absent warning config — load from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("nexora_absence_cfg");
+      if (saved) {
+        const { threshold, msg } = JSON.parse(saved);
+        if (threshold) setAbsentThreshold(threshold);
+        if (msg) setWarningMsg(msg);
+      }
+    } catch {}
+  }, []);
+
   const activeSession = sessions.find(s => s.id === sessionId) ?? sessions[0];
 
   // ── Fetch clusters
   const fetchClusters = useCallback(async () => {
     setLoadingClusters(true);
     try {
-      const res = await fetch("/api/teacher/clusters", { credentials: "include" });
+      const res = await fetch("/api/cluster", { credentials: "include" });
       const d = await res.json();
       const list = (d.data ?? d) as {id:string;name:string}[];
       setClusters(list);
@@ -279,7 +291,17 @@ export default function AttendanceTrackingPage() {
                 className="w-full h-9 px-3 rounded-xl text-[13px] bg-muted/40 border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-amber-400/20 focus:border-amber-400/70 transition-all" />
             </div>
           </div>
-          <p className="text-[11.5px] text-amber-600/80 dark:text-amber-400/60">Students with ≥ {absentThreshold} absences in their history will show a warning badge below.</p>
+          <div className="flex items-center justify-between">
+            <p className="text-[11.5px] text-amber-600/80 dark:text-amber-400/60">Students with ≥ {absentThreshold} absences in their history will show a warning badge below.</p>
+            <button
+              onClick={() => {
+                localStorage.setItem("nexora_absence_cfg", JSON.stringify({ threshold: absentThreshold, msg: warningMsg }));
+                toast.success("Warning config saved!");
+              }}
+              className="flex-shrink-0 ml-4 inline-flex items-center gap-1.5 h-8 px-4 rounded-xl text-[12px] font-bold bg-amber-500 hover:bg-amber-600 text-white transition-all">
+              <RiSaveLine /> Save config
+            </button>
+          </div>
         </div>
       )}
 
@@ -361,7 +383,7 @@ export default function AttendanceTrackingPage() {
                 {/* Warning banner */}
                 {warned && (
                   <div className="mx-5 mt-3 flex items-start gap-2 px-3 py-2 rounded-xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-800/50">
-                    <RiWarningLine className="text-amber-500 text-sm mt-0.5 flex-shrink-0" />
+                    <RiAlertLine className="text-amber-500 text-sm mt-0.5 flex-shrink-0" />
                     <div>
                       <p className="text-[11.5px] font-bold text-amber-700 dark:text-amber-400">
                         {absentCount(member.studentProfileId)} absences — above threshold ({absentThreshold})

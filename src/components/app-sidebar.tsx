@@ -67,7 +67,7 @@ const teacherNav: NavDocItem[] = [
     icon: <RiCalendarCheckLine />,
     items: [
       { title: "Create Session", url: "/dashboard/teacher/session/create" },
-      { title: "Session History", url: "/dashboard/teacher/session/history" },
+      { title: "Manage Session", url: "/dashboard/teacher/session/manageSession" },
     ],
   },
   {

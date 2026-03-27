@@ -258,13 +258,33 @@ export function EnrollmentsDetailPage() {
 // ─── Price Requests Page ──────────────────────────────────
 export default function PriceRequestsPage() {
   const router = useRouter();
-  const { id: courseId } = useParams() as { id: string };
+
+  // ── Course picker state
+  const [courses, setCourses] = useState<any[]>([]);
+  const [courseId, setCourseId] = useState<string>("");
+  const [loadingCourses, setLoadingCourses] = useState(true);
+
+  // ── Price requests state
   const [requests, setRequests] = useState<CoursePriceRequest[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
 
+  // load teacher's courses first
+  useEffect(() => {
+    fetch("/api/courses", { credentials: "include" })
+      .then(r => r.json())
+      .then(d => {
+        const list = Array.isArray(d.data) ? d.data : (d.data?.courses ?? []);
+        setCourses(list);
+        if (list.length > 0) setCourseId(list[0].id);
+      })
+      .catch(() => {})
+      .finally(() => setLoadingCourses(false));
+  }, []);
+
   const fetchRequests = useCallback(async () => {
+    if (!courseId) return;
     setLoading(true); setError(null);
     try { const r = await courseApi.getPriceRequests(courseId); setRequests(r.data); }
     catch (e: any) { setError(e.message); }
@@ -273,13 +293,15 @@ export default function PriceRequestsPage() {
 
   useEffect(() => { fetchRequests(); }, [fetchRequests]);
 
+  const selectedCourse = courses.find(c => c.id === courseId);
+
   return (
     <>
-      {showModal && <NewPriceRequestModal courseId={courseId} onClose={() => setShowModal(false)} onCreated={r => setRequests(p => [r, ...p])} />}
+      {showModal && courseId && <NewPriceRequestModal courseId={courseId} onClose={() => setShowModal(false)} onCreated={r => setRequests(p => [r, ...p])} />}
       <div className="relative flex flex-col gap-6 p-5 lg:p-7 pt-6 max-w-3xl mx-auto w-full min-h-screen">
         <AmbientBg />
         <div>
-          <button onClick={() => router.push(`/teacher/courses/${courseId}`)} className="flex items-center gap-1.5 text-[12.5px] font-semibold text-muted-foreground hover:text-foreground transition-colors mb-3"><RiArrowLeftLine /> Back to course</button>
+          <button onClick={() => router.push("/dashboard/teacher/courses")} className="flex items-center gap-1.5 text-[12.5px] font-semibold text-muted-foreground hover:text-foreground transition-colors mb-3"><RiArrowLeftLine /> Back to courses</button>
           <div className="flex items-start justify-between gap-4">
             <div>
               <div className="flex items-center gap-1.5 mb-1">
@@ -287,23 +309,45 @@ export default function PriceRequestsPage() {
                 <span className="text-[10.5px] font-bold tracking-[.12em] uppercase text-muted-foreground">Pricing</span>
               </div>
               <h1 className="text-[1.4rem] font-extrabold tracking-tight text-foreground">Price Request History</h1>
-              <p className="text-[13px] text-muted-foreground mt-1">Submit and track price approval requests for this course.</p>
+              <p className="text-[13px] text-muted-foreground mt-1">Submit and track price approval requests for your courses.</p>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
               <button onClick={fetchRequests} className="w-9 h-9 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all">
                 <RiRefreshLine className={cn("text-sm", loading && "animate-spin")} />
               </button>
-              <button onClick={() => setShowModal(true)} className="inline-flex items-center gap-2 h-9 px-5 rounded-xl bg-teal-600 dark:bg-teal-500 hover:bg-teal-700 text-white text-[13.5px] font-bold shadow-md shadow-teal-600/20 transition-all hover:scale-[1.02] active:scale-[0.98]">
+              <button onClick={() => setShowModal(true)} disabled={!courseId} className="inline-flex items-center gap-2 h-9 px-5 rounded-xl bg-teal-600 dark:bg-teal-500 hover:bg-teal-700 text-white text-[13.5px] font-bold shadow-md shadow-teal-600/20 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50">
                 <RiAddLine /> New request
               </button>
             </div>
           </div>
         </div>
 
+        {/* Course picker */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-[12.5px] font-semibold text-foreground/70">Select course</label>
+          {loadingCourses ? (
+            <div className="h-10 rounded-xl bg-muted animate-pulse" />
+          ) : courses.length === 0 ? (
+            <p className="text-[13px] text-muted-foreground italic">No courses found. Create a course first.</p>
+          ) : (
+            <select value={courseId} onChange={e => setCourseId(e.target.value)}
+              className="h-10 px-4 rounded-xl text-[13.5px] bg-muted/40 border border-border text-foreground appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-teal-400/20 focus:border-teal-400/70 transition-all">
+              {courses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
+            </select>
+          )}
+          {selectedCourse && (
+            <p className="text-[12px] text-muted-foreground">
+              Status: <span className="font-semibold">{selectedCourse.status}</span>
+              {selectedCourse.price != null && <> · Current price: <span className="font-semibold">${Number(selectedCourse.price).toFixed(2)}</span></>}
+            </p>
+          )}
+        </div>
+
         {error && <div className="flex items-start gap-3 px-4 py-3.5 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800/50"><RiAlertLine className="text-red-500 text-base mt-0.5 flex-shrink-0" /><p className="text-[13px] font-medium text-red-600 dark:text-red-400 flex-1">{error}</p><button onClick={fetchRequests} className="text-[12px] font-semibold text-red-600 dark:text-red-400 hover:underline flex-shrink-0">Retry</button></div>}
 
         {loading
           ? <div className="flex flex-col gap-3 animate-pulse">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-28 rounded-2xl bg-muted/40" />)}</div>
+          : loadingCourses ? null
           : requests.length === 0
             ? (
               <div className="rounded-2xl border border-border bg-card/80 py-16 flex flex-col items-center gap-4 text-center">
@@ -352,3 +396,97 @@ export default function PriceRequestsPage() {
     </>
   );
 }
+
+//   const [requests, setRequests] = useState<CoursePriceRequest[]>([]);
+//   const [loading, setLoading] = useState(true);
+//   const [error, setError] = useState<string | null>(null);
+//   const [showModal, setShowModal] = useState(false);
+
+//   const fetchRequests = useCallback(async () => {
+//     setLoading(true); setError(null);
+//     try { const r = await courseApi.getPriceRequests(courseId); setRequests(r.data); }
+//     catch (e: any) { setError(e.message); }
+//     finally { setLoading(false); }
+//   }, [courseId]);
+
+//   useEffect(() => { fetchRequests(); }, [fetchRequests]);
+
+//   return (
+//     <>
+//       {showModal && <NewPriceRequestModal courseId={courseId} onClose={() => setShowModal(false)} onCreated={r => setRequests(p => [r, ...p])} />}
+//       <div className="relative flex flex-col gap-6 p-5 lg:p-7 pt-6 max-w-3xl mx-auto w-full min-h-screen">
+//         <AmbientBg />
+//         <div>
+//           <button onClick={() => router.push(`/teacher/courses/${courseId}`)} className="flex items-center gap-1.5 text-[12.5px] font-semibold text-muted-foreground hover:text-foreground transition-colors mb-3"><RiArrowLeftLine /> Back to course</button>
+//           <div className="flex items-start justify-between gap-4">
+//             <div>
+//               <div className="flex items-center gap-1.5 mb-1">
+//                 <RiSparklingFill className="text-teal-500 dark:text-teal-400 text-sm animate-pulse" />
+//                 <span className="text-[10.5px] font-bold tracking-[.12em] uppercase text-muted-foreground">Pricing</span>
+//               </div>
+//               <h1 className="text-[1.4rem] font-extrabold tracking-tight text-foreground">Price Request History</h1>
+//               <p className="text-[13px] text-muted-foreground mt-1">Submit and track price approval requests for this course.</p>
+//             </div>
+//             <div className="flex items-center gap-2 flex-shrink-0">
+//               <button onClick={fetchRequests} className="w-9 h-9 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all">
+//                 <RiRefreshLine className={cn("text-sm", loading && "animate-spin")} />
+//               </button>
+//               <button onClick={() => setShowModal(true)} className="inline-flex items-center gap-2 h-9 px-5 rounded-xl bg-teal-600 dark:bg-teal-500 hover:bg-teal-700 text-white text-[13.5px] font-bold shadow-md shadow-teal-600/20 transition-all hover:scale-[1.02] active:scale-[0.98]">
+//                 <RiAddLine /> New request
+//               </button>
+//             </div>
+//           </div>
+//         </div>
+
+//         {error && <div className="flex items-start gap-3 px-4 py-3.5 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800/50"><RiAlertLine className="text-red-500 text-base mt-0.5 flex-shrink-0" /><p className="text-[13px] font-medium text-red-600 dark:text-red-400 flex-1">{error}</p><button onClick={fetchRequests} className="text-[12px] font-semibold text-red-600 dark:text-red-400 hover:underline flex-shrink-0">Retry</button></div>}
+
+//         {loading
+//           ? <div className="flex flex-col gap-3 animate-pulse">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-28 rounded-2xl bg-muted/40" />)}</div>
+//           : requests.length === 0
+//             ? (
+//               <div className="rounded-2xl border border-border bg-card/80 py-16 flex flex-col items-center gap-4 text-center">
+//                 <div className="w-12 h-12 rounded-2xl bg-muted/40 border border-border flex items-center justify-center text-xl text-muted-foreground/30"><RiPriceTag3Line /></div>
+//                 <p className="text-[14px] font-bold text-muted-foreground">No price requests yet</p>
+//                 <p className="text-[13px] text-muted-foreground/60">Submit a request to have admin set the course price.</p>
+//               </div>
+//             )
+//             : (
+//               <div className="flex flex-col gap-3">
+//                 {requests.map((req, i) => {
+//                   const cfg = PRICE_CFG[req.status];
+//                   return (
+//                     <div key={req.id} className={cn("rounded-2xl border bg-card/90 backdrop-blur-sm px-5 py-5 flex flex-col gap-3 transition-all",
+//                       i === 0 && req.status === "PENDING" ? "border-amber-200/60 dark:border-amber-800/50 shadow-md shadow-amber-500/5" : "border-border")}>
+//                       <div className="flex items-start justify-between gap-4">
+//                         <div className="flex items-center gap-3">
+//                           <div className="w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center bg-teal-100/60 dark:bg-teal-950/40 border border-teal-200/60 dark:border-teal-800/50 text-teal-600 dark:text-teal-400 text-lg"><RiPriceTag3Line /></div>
+//                           <div>
+//                             <p className="text-[22px] font-extrabold text-foreground leading-none tabular-nums">${req.requestedPrice.toFixed(2)}</p>
+//                             <p className="text-[12px] text-muted-foreground mt-0.5">Submitted {fmtDate(req.createdAt)}</p>
+//                           </div>
+//                         </div>
+//                         <span className={cn("inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border", cfg.badge)}>
+//                           <span className={cn("w-1.5 h-1.5 rounded-full flex-shrink-0", cfg.dot)} />{cfg.label}
+//                         </span>
+//                       </div>
+//                       {req.note && <div><p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground mb-1">Your note</p><p className="text-[13px] text-foreground/80 leading-relaxed">{req.note}</p></div>}
+//                       {req.adminNote && (
+//                         <div className={cn("flex items-start gap-2.5 px-4 py-3 rounded-xl border",
+//                           req.status === "APPROVED" ? "bg-teal-50/40 dark:bg-teal-950/20 border-teal-200/60 dark:border-teal-800/50" : "bg-red-50/40 dark:bg-red-950/20 border-red-200/60 dark:border-red-800/50")}>
+//                           <RiShieldCheckLine className={cn("text-sm mt-0.5 flex-shrink-0", req.status === "APPROVED" ? "text-teal-600 dark:text-teal-400" : "text-red-500")} />
+//                           <div>
+//                             <p className="text-[11.5px] font-bold text-muted-foreground">Admin · {req.reviewedAt ? fmtDate(req.reviewedAt) : ""}</p>
+//                             <p className="text-[13px] text-foreground/80 mt-0.5">{req.adminNote}</p>
+//                           </div>
+//                         </div>
+//                       )}
+//                     </div>
+//                   );
+//                 })}
+//               </div>
+//             )
+//         }
+//       </div>
+//     </>
+//   );
+// }
