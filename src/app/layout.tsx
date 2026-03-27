@@ -6,6 +6,8 @@ import { NavBar } from "@/components/shared/NavBar";
 import { ThemeProvider } from "@/provider/theme-provider";
 import FooterSection from "@/components/shared/footer";
 
+import { Toaster } from "@/components/ui/sonner"
+
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
 
 const geistSans = Geist({
@@ -30,20 +32,22 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={cn("font-sans", inter.variable)} suppressHydrationWarning={true}>
-      <ThemeProvider
-        attribute="class"
-        defaultTheme="system"
-        enableSystem
-        disableTransitionOnChange
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <body
-          className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
         >
-          <NavBar></NavBar>
+
+
           {children}
-          <FooterSection></FooterSection>
-        </body>
-      </ThemeProvider>
+        <Toaster />
+
+        </ThemeProvider>
+      </body>
     </html>
   );
 }
