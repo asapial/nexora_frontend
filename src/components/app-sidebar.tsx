@@ -48,7 +48,7 @@ import {
 //   { title: "Analytics", url: "/dashboard/analytics", icon: <RiBarChartBoxLine /> },
 // ];
 
-const navMain: NavDocItem[] = [
+const navMainTeacher: NavDocItem[] = [
   {
     title: "Cluster",
     url: "/dashboard/resources",
@@ -114,6 +114,89 @@ const navMain: NavDocItem[] = [
       { title: "Earnings", url: "/dashboard/teacher/courses/earnings" },
     ],
   },
+];
+
+const navMainStudent: NavDocItem[] = [
+  {
+    title: "Cluster",
+    url: "/dashboard/resources",
+    icon: <RiBook2Line />,
+    isActive: false,
+    items: [
+      { title: "Cluster", url: "/dashboard/student/cluster" },
+      // { title: "Manage Cluster", url: "/dashboard/teacher/cluster/manageCluster" }
+    ],
+  },
+  {
+    title: "Homework",
+    url: "/dashboard/ai",
+    icon: <RiRobot2Line />,
+    items: [
+      { title: "Homework", url: "/dashboard/student/homework" },
+      // { title: "Manage Session", url: "/dashboard/teacher/session/manageSession" },
+      // { title: "Homework Management", url: "/dashboard/teacher/homeworkManagement" }
+    ],
+  },
+  {
+    title: "Categories",
+    url: "/dashboard/certificates",
+    icon: <RiAwardLine />,
+    items: [
+      { title: "Create Categories", url: "/dashboard/teacher/category/create" },
+      // { title: "Verify a Code", url: "/dashboard/certificates/verify" },
+    ],
+  },
+  {
+    title: "Resources",
+    url: "/dashboard/certificates",
+    icon: <RiAwardLine />,
+    items: [
+      { title: "Upload Resources", url: "/dashboard/teacher/resource/upload" },
+      { title: "My Resources", url: "/dashboard/teacher/resource/myResource" },
+      // { title: "Verify a Code", url: "/dashboard/certificates/verify" },
+    ],
+  },
+  {
+    title: "Announcement",
+    url: "/dashboard/certificates",
+    icon: <RiAwardLine />,
+    items: [
+      { title: "Announcement", url: "/dashboard/teacher/announcement/create" },
+    ],
+  },
+  {
+    title: "Attendance Tracking",
+    url: "/dashboard/certificates",
+    icon: <RiAwardLine />,
+    items: [
+      { title: "Announcement", url: "/dashboard/teacher/attendanceTracking" },
+    ],
+  },
+  {
+    title: "Course",
+    url: "/dashboard/certificates",
+    icon: <RiAwardLine />,
+    items: [
+      { title: "My Course", url: "/dashboard/teacher/courses" },
+      { title: "Create Course", url: "/dashboard/teacher/courses/create" },
+      { title: "Earnings", url: "/dashboard/teacher/courses/earnings" },
+    ],
+  },
+];
+
+const navMainAdmin: NavDocItem[] = [
+  {
+    title: "Approvals",
+    url: "/dashboard/resources",
+    icon: <RiBook2Line />,
+    isActive: false,
+    items: [
+      { title: "Courses", url: "/dashboard/admin/approvals/courses" },
+      { title: "Missions", url: "/dashboard/admin/approvals/missions" },
+
+    ]
+  }
+
 ];
 
 const navTools: NavDocItem[] = [
@@ -249,16 +332,21 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       {/* ══ Navigation sections ════════════════════════════ */}
       <SidebarContent className="gap-0">
         {/* Primary */}
-        <NavDocuments items={navMain} />
+        <NavDocuments items={navMainTeacher} />
 
         {/* Divider */}
         <div className="mx-4 my-1 h-px bg-sidebar-border/40" />
 
         {/* Tools — collapsible */}
-        <NavDocuments items={navTools} />
+        {/* <NavDocuments items={navTools} /> */}
+        <p>Students</p>
+        <NavDocuments items={navMainStudent} />
 
         {/* Divider */}
         <div className="mx-4 my-1 h-px bg-sidebar-border/40" />
+
+                <p>Admin</p>
+        <NavDocuments items={navMainAdmin} />
 
         {/* Quick documents */}
         <NavDocuments items={navDocuments} />
