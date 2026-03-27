@@ -194,7 +194,7 @@ export default function ResourceUploadPage() {
   };
 
   return (
-    <div className="flex flex-1 flex-col gap-6 p-5 lg:p-7 pt-6 max-w-3xl">
+    <div className="flex flex-1 flex-col gap-6 p-5 lg:p-7 pt-6 max-w-3xl mx-auto">
       {/* Heading */}
       <div>
         <div className="flex items-center gap-1.5 mb-1">

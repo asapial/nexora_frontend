@@ -244,7 +244,7 @@ export function CourseDetailPublicPage() {
   );
 
   return (
-    <div className="relative flex flex-col gap-6 p-5 lg:p-8 pt-6 max-w-5xl mx-auto w-full">
+    <div className="relative flex flex-col gap-6 p-5 lg:p-8 pt-6 max-w-5xl mx-auto w-full ">
       <AmbientBg />
 
       {/* Thumbnail hero */}

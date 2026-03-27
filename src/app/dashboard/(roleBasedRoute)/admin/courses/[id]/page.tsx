@@ -5,12 +5,13 @@ import { useRouter, useParams } from "next/navigation";
 import {
   RiSparklingFill, RiArrowLeftLine, RiStarLine, RiStarFill,
   RiGroupLine, RiFileTextLine, RiMoneyDollarCircleLine, RiCheckLine,
-  RiCloseLine, RiAlertLine, RiRefreshLine, RiLoader4Line, RiTrashLine,
+  RiCloseLine, RiAlertLine, RiRefreshLine, RiLoader4Line, 
   RiShieldCheckLine, RiEditLine, RiUserLine,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
 import { adminApi } from "../../../../../../lib/api";
 import { toast } from "sonner";
+import { Trash } from "lucide-react";
 
 interface Mission {
   id: string; title: string; status: string; _count: { contents: number };
@@ -198,7 +199,7 @@ export default function AdminCourseDetailPage() {
             </button>
             <button onClick={handleDelete} disabled={deleting}
               className="inline-flex items-center gap-1.5 h-9 px-4 rounded-xl border border-red-200/60 dark:border-red-800/50 text-red-600 dark:text-red-400 text-[12.5px] font-semibold hover:bg-red-50 dark:hover:bg-red-950/20 transition-all disabled:opacity-60">
-              {deleting ? <RiLoader4Line className="animate-spin text-xs" /> : <RiTrashLine className="text-xs" />} Delete
+              {deleting ? <RiLoader4Line className="animate-spin text-xs" /> : <Trash className="text-xs" />} Delete
             </button>
           </div>
         </div>

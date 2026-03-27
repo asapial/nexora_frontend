@@ -34,18 +34,20 @@ export interface NavDocItem {
   items?:    NavDocSubItem[];
 }
 
-export function NavDocuments({ items }: { items: NavDocItem[] }) {
+export function NavDocuments({ items, label }: { items: NavDocItem[]; label?: string }) {
   const pathname = usePathname();
 
   return (
     <SidebarGroup className="px-2 py-2">
-      <SidebarGroupLabel className="
-        mb-1 h-6 px-2
-        text-[10px] font-bold tracking-[.12em] uppercase
-        text-sidebar-foreground/35
-      ">
-        Tools
-      </SidebarGroupLabel>
+      {label && (
+        <SidebarGroupLabel className="
+          mb-1 h-6 px-2
+          text-[10px] font-bold tracking-[.12em] uppercase
+          text-sidebar-foreground/35
+        ">
+          {label}
+        </SidebarGroupLabel>
+      )}
 
       <SidebarMenu className="gap-0.5">
         {items.map((item) => {

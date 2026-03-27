@@ -5,7 +5,8 @@ import {
   RiCalendarCheckLine, RiGroupLine, RiSparklingFill,
   RiCheckLine, RiCloseLine, RiSubtractLine, RiSaveLine,
   RiHistoryLine, RiLoader4Line, RiAlertLine, RiRefreshLine,
-  RiSettings3Line, 
+  RiSettings3Line,
+  RiFileWarningLine, 
   // RiWarningLine,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
@@ -265,7 +266,7 @@ export default function AttendanceTrackingPage() {
       {/* Warning config panel */}
       {showWarningCfg && (
         <div className="rounded-2xl border border-amber-200/60 dark:border-amber-800/50 bg-amber-50/30 dark:bg-amber-950/20 px-5 py-4 flex flex-col gap-3">
-          <p className="text-[13px] font-bold text-amber-700 dark:text-amber-400 flex items-center gap-2"><RiWarningLine /> Absence Warning Configuration</p>
+          <p className="text-[13px] font-bold text-amber-700 dark:text-amber-400 flex items-center gap-2"><RiFileWarningLine /> Absence Warning Configuration</p>
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex flex-col gap-1.5">
               <label className="text-[12px] font-semibold text-foreground/70">Absent threshold (sessions)</label>
