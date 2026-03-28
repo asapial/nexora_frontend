@@ -109,16 +109,16 @@ export default function AttendanceTrackingPage() {
   const [absentThreshold, setAbsentThreshold] = useState(3);
   const [warningMsg, setWarningMsg]           = useState("This student has excessive absences and may need immediate attention.");
 
-  // ── absent warning config — load from localStorage
+  // ── absent warning config — load from backend
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem("nexora_absence_cfg");
-      if (saved) {
-        const { threshold, msg } = JSON.parse(saved);
-        if (threshold) setAbsentThreshold(threshold);
-        if (msg) setWarningMsg(msg);
-      }
-    } catch {}
+    fetch("/api/sessions/attendance-warning-config", { credentials: "include" })
+      .then((r) => r.json())
+      .then((d) => {
+        const cfg = d.data ?? {};
+        if (cfg.threshold) setAbsentThreshold(cfg.threshold);
+        if (cfg.message) setWarningMsg(cfg.message);
+      })
+      .catch(() => {});
   }, []);
 
   const activeSession = sessions.find(s => s.id === sessionId) ?? sessions[0];
@@ -197,7 +197,7 @@ export default function AttendanceTrackingPage() {
     if (!showHistory || !members.length) return;
     setLoadingHistory(true);
     Promise.all(members.map(async m => {
-      const res = await fetch(`/api/student/attendance?studentProfileId=${m.studentProfileId}`, { credentials: "include" }).catch(() => null);
+      const res = await fetch(`/api/sessions/students/${m.studentProfileId}/attendance-history`, { credentials: "include" }).catch(() => null);
       if (!res) return { id: m.studentProfileId, entries: [] as HistEntry[] };
       const d = await res.json().catch(() => ({ data: [] }));
       return { id: m.studentProfileId, entries: (d.data ?? []) as HistEntry[] };
@@ -225,7 +225,7 @@ export default function AttendanceTrackingPage() {
     setSaving(true);
     try {
       const payload = {
-        records: members.map(m => ({
+        attendance: members.map(m => ({
           studentId: m.studentProfileId,
           status: records[m.studentProfileId]?.status ?? "UNMARKED",
           note: records[m.studentProfileId]?.note ?? "",
@@ -295,8 +295,18 @@ export default function AttendanceTrackingPage() {
             <p className="text-[11.5px] text-amber-600/80 dark:text-amber-400/60">Students with ≥ {absentThreshold} absences in their history will show a warning badge below.</p>
             <button
               onClick={() => {
-                localStorage.setItem("nexora_absence_cfg", JSON.stringify({ threshold: absentThreshold, msg: warningMsg }));
-                toast.success("Warning config saved!");
+                fetch("/api/sessions/attendance-warning-config", {
+                  method: "PUT",
+                  credentials: "include",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ threshold: absentThreshold, message: warningMsg }),
+                })
+                  .then((r) => r.json())
+                  .then((d) => {
+                    if (!d.success) throw new Error(d.message || "Save failed");
+                    toast.success("Warning config saved!");
+                  })
+                  .catch((e: unknown) => toast.error(e instanceof Error ? e.message : "Save failed"));
               }}
               className="flex-shrink-0 ml-4 inline-flex items-center gap-1.5 h-8 px-4 rounded-xl text-[12px] font-bold bg-amber-500 hover:bg-amber-600 text-white transition-all">
               <RiSaveLine /> Save config

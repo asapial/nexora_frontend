@@ -167,7 +167,7 @@ export default function MemberProgressPage() {
       // 2. For each cluster, fetch members + their stats
       const memberPromises = clList.map(async (cl) => {
         try {
-          const mRes = await fetch(`/api/teacher/tasks/sessions/${cl.id}/members`, { credentials: "include" });
+          const mRes = await fetch(`/api/teacher/tasks/clusters/${cl.id}/members-progress`, { credentials: "include" });
           const mData = await mRes.json();
           const rawMembers: any[] = mData.data ?? [];
 
@@ -177,7 +177,7 @@ export default function MemberProgressPage() {
             name:            m.name ?? m.user?.name ?? "Unknown",
             email:           m.email ?? m.user?.email ?? "",
             image:           m.image ?? m.user?.image ?? null,
-            subtype:         (m.subtype ?? "ACTIVE") as MemberSubtype,
+            subtype:         ((m.subtype === "RUNNING" ? "ACTIVE" : m.subtype) ?? "ACTIVE") as MemberSubtype,
             clusterId:       cl.id,
             clusterName:     cl.name,
             tasksTotal:      m.tasksTotal   ?? 0,

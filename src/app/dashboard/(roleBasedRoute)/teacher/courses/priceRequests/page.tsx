@@ -272,8 +272,21 @@ export default function PriceRequestsPage() {
 
   // load teacher's courses first
   useEffect(() => {
+    courseApi.list()
+      .then((r) => {
+    const data = r.data as any;
+    const list = Array.isArray(data) ? data : (data?.courses ?? []);
+        setCourses(list);
+        if (list.length > 0) setCourseId(list[0].id);
+      })
+      .catch(() => {})
+      .finally(() => setLoadingCourses(false));
+  }, []);
+  
+  useEffect(() => {
+    if (courseId) return;
     fetch("/api/courses", { credentials: "include" })
-      .then(r => r.json())
+      .then((r) => r.json())
       .then(d => {
         const list = Array.isArray(d.data) ? d.data : (d.data?.courses ?? []);
         setCourses(list);
