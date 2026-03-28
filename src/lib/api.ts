@@ -38,8 +38,8 @@ export const courseApi = {
   createPriceRequest: (courseId: string, body: any) => apiFetch<any>(`${T}/courses/${courseId}/price-request`, { method: "POST", body: JSON.stringify(body) }),
   getEnrollments: (courseId: string, params?: Record<string, string>) => apiFetch<any>(`${T}/courses/${courseId}/enrollments${qs(params)}`),
   getEnrollmentStats: (courseId: string) => apiFetch<any>(`${T}/courses/${courseId}/enrollments/stats`),
-  getEarnings: () => apiFetch<any>(`${T}/earnings`),
-  getTransactions: (params?: Record<string, string>) => apiFetch<any>(`${T}/earnings/transactions${qs(params)}`),
+  getEarnings: () => apiFetch<any>(`${T}/teacher/earnings`),
+  getTransactions: (params?: Record<string, string>) => apiFetch<any>(`${T}/teacher/earnings/transactions${qs(params)}`),
 };
 
 // ─── Admin API ────────────────────────────────────────────
@@ -67,26 +67,51 @@ export const adminApi = {
 // ─── Student / Public API ─────────────────────────────────
 const S = "/api/student";
 export const studentApi = {
-  getCatalog:        (p?: any) => apiFetch<any>(`/api/public/courses${qs(p)}`),
-  getCoursePublic:   (id: string) => apiFetch<any>(`/api/public/courses/${id}`),
-  freeEnroll:        (courseId: string) => apiFetch<any>(`/api/courses/${courseId}/enroll`, { method: "POST", body: JSON.stringify({}) }),
+  getCatalog:        (p?: any) => apiFetch<any>(`/api/courses/public${qs(p)}`),
+  getCoursePublic:   (id: string) => apiFetch<any>(`/api/courses/${id}/public`),
+  freeEnroll:        (courseId: string) => apiFetch<any>(`/api/payments/enroll/${courseId}`, { method: "POST", body: JSON.stringify({}) }),
   getMyEnrollments:  (p?: any) => apiFetch<any>(`${S}/enrollments${qs(p)}`),
   getMyEnrollment:   (courseId: string) => apiFetch<any>(`${S}/enrollments/${courseId}`),
   completeMission:   (courseId: string, missionId: string) => apiFetch<any>(`${S}/enrollments/${courseId}/missions/${missionId}/complete`, { method: "POST" }),
   getMissionContents:(missionId: string) => apiFetch<any[]>(`${S}/missions/${missionId}/contents`),
 };
 
+export const settingsApi = {
+  getAccount: () => apiFetch<any>("/api/settings/account"),
+  updateAccount: (body: Record<string, unknown>) =>
+    apiFetch<any>("/api/settings/account", { method: "PATCH", body: JSON.stringify(body) }),
+};
+
 // ─── Stripe / Payment API ─────────────────────────────────
 export const paymentApi = {
-  // Create PaymentIntent → returns { clientSecret, paymentId, amount }
   createIntent: (courseId: string) =>
-    apiFetch<{ clientSecret: string; paymentId: string; amount: number }>(
-      "/api/payments/create-intent",
-      { method: "POST", body: JSON.stringify({ courseId }) }
-    ),
-  // Poll payment status after Stripe confirms
+    apiFetch<{
+      clientSecret: string;
+      paymentId: string;
+      paymentIntentId: string;
+      amount: number;
+    }>("/api/payments/create-intent", {
+      method: "POST",
+      body: JSON.stringify({ courseId }),
+    }),
+  /** Call after stripe.confirmPayment succeeds (needed when Stripe webhooks do not hit your server). */
+  confirmPayment: (paymentIntentId: string) =>
+    apiFetch<{ enrollmentId: string | null; alreadyFinalized?: boolean }>("/api/payments/confirm", {
+      method: "POST",
+      body: JSON.stringify({ paymentIntentId }),
+    }),
   getStatus: (courseId: string) =>
-    apiFetch<{ status: string; paidAt: string | null }>(
-      `/api/payments/status/${courseId}`
-    ),
+    apiFetch<{ status: string; paidAt: string | null }>(`/api/payments/status/${courseId}`),
+  /** If payment succeeded in Stripe but DB was never updated, call this (e.g. after revisiting enroll). */
+  syncPaidEnrollment: (courseId: string) =>
+    apiFetch<{ enrollmentId: string | null; synced?: boolean }>(`/api/payments/sync/${courseId}`, {
+      method: "POST",
+      body: JSON.stringify({}),
+    }),
+  /** Finalize every PENDING payment row that is already succeeded in Stripe (fixes empty My Courses). */
+  syncPendingPayments: () =>
+    apiFetch<{ pendingCount: number; finalized: number }>("/api/payments/sync-pending", {
+      method: "POST",
+      body: JSON.stringify({}),
+    }),
 };

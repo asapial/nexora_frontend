@@ -8,8 +8,25 @@ import {
   RiAlertLine, RiCheckLine, RiUploadLine, RiLoader4Line,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
-import { courseApi } from "../../../../../../lib/api";
+import { courseApi } from "@/lib/api";
 import { toast } from "sonner";
+
+const IMGBB_API_KEY = process.env.NEXT_PUBLIC_IMGBB_API_KEY ?? "";
+
+async function uploadToImgbb(file: File): Promise<string> {
+  const fd = new FormData();
+  fd.append("image", file);
+  const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`, {
+    method: "POST",
+    body: fd,
+  });
+  if (!res.ok) throw new Error("Thumbnail upload failed");
+  const payload = await res.json();
+  if (!payload?.success || !payload?.data?.url) {
+    throw new Error(payload?.error?.message ?? "Thumbnail upload failed");
+  }
+  return payload.data.url as string;
+}
 
 // ─── Ambient ──────────────────────────────────────────────
 function AmbientBg() {
@@ -82,6 +99,7 @@ export default function CreateCoursePage() {
   const [requestedPrice, setRequestedPrice] = useState("");
   const [priceNote, setPriceNote] = useState("");
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -90,6 +108,7 @@ export default function CreateCoursePage() {
   const handleThumbnail = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setThumbnailFile(file);
       const reader = new FileReader();
       reader.onload = ev => setThumbnailPreview(ev.target?.result as string);
       reader.readAsDataURL(file);
@@ -110,9 +129,17 @@ export default function CreateCoursePage() {
     if (Object.keys(errs).length) { setErrors(errs); return; }
     setLoading(true);
     try {
+      let thumbnailUrl: string | undefined;
+      if (thumbnailFile) {
+        if (!IMGBB_API_KEY) {
+          throw new Error("Missing NEXT_PUBLIC_IMGBB_API_KEY — add it to your frontend env for thumbnail uploads.");
+        }
+        thumbnailUrl = await uploadToImgbb(thumbnailFile);
+      }
       const res = await courseApi.create({
         title: title.trim(),
         description: description.trim() || undefined,
+        ...(thumbnailUrl ? { thumbnailUrl } : {}),
         tags,
         isFree,
         requestedPrice: isFree ? undefined : parseFloat(requestedPrice),
@@ -175,7 +202,7 @@ export default function CreateCoursePage() {
             <div className="relative rounded-xl overflow-hidden h-48 group">
               <img src={thumbnailPreview} alt="Preview" className="w-full h-full object-cover" />
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
-              <button type="button" onClick={() => setThumbnailPreview(null)}
+              <button type="button" onClick={() => { setThumbnailPreview(null); setThumbnailFile(null); }}
                 className="absolute top-3 right-3 w-8 h-8 rounded-lg bg-black/60 flex items-center justify-center text-white hover:bg-black/80 transition-colors opacity-0 group-hover:opacity-100">
                 <RiCloseLine />
               </button>

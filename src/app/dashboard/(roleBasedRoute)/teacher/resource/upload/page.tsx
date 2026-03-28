@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   RiSparklingFill, RiUploadCloud2Line, RiFileAddLine, RiCloseLine, RiCheckLine,
 } from "react-icons/ri";
@@ -11,6 +11,7 @@ type Visibility = "PUBLIC" | "CLUSTER" | "PRIVATE";
 interface FormState {
   title: string; description: string; authors: string[];
   year: string; tags: string[]; visibility: Visibility;
+  categoryId: string;
 }
 
 const VISIBILITY_OPTIONS: { value: Visibility; label: string; desc: string; cls: string }[] = [
@@ -46,8 +47,29 @@ function TagInput({ value, onChange }: { value: string[]; onChange: (v: string[]
 }
 
 export default function TeacherResourceUploadPage() {
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/resource/categories", { credentials: "include" });
+        const json = await res.json();
+        if (!cancelled && json.success && Array.isArray(json.data)) {
+          setCategories(json.data.map((c: { id: string; name: string }) => ({ id: c.id, name: c.name })));
+        }
+      } catch {
+        /* ignore */
+      } finally {
+        if (!cancelled) setCategoriesLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   const [form, setForm] = useState<FormState>({
-    title: "", description: "", authors: [], year: "", tags: [], visibility: "PUBLIC",
+    title: "", description: "", authors: [], year: "", tags: [], visibility: "PUBLIC", categoryId: "",
   });
   const [file, setFile]           = useState<File | null>(null);
   const [dragging, setDragging]   = useState(false);
@@ -71,12 +93,13 @@ export default function TeacherResourceUploadPage() {
       form.tags.forEach(t => fd.append("tags[]", t));
       if (form.year) fd.append("year", form.year);
       fd.append("visibility", form.visibility);
+      if (form.categoryId) fd.append("categoryId", form.categoryId);
 
       const res = await fetch("/api/resource", { method: "POST", credentials: "include", body: fd });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Upload failed");
       setSuccess(true);
-      setForm({ title: "", description: "", authors: [], year: "", tags: [], visibility: "PUBLIC" });
+      setForm({ title: "", description: "", authors: [], year: "", tags: [], visibility: "PUBLIC", categoryId: "" });
       setFile(null);
     } catch (err: unknown) { setError(err instanceof Error ? err.message : "Upload failed"); }
     finally { setSubmitting(false); }
@@ -127,6 +150,22 @@ export default function TeacherResourceUploadPage() {
         <div>
           <label className={LABEL}>Title *</label>
           <input type="text" value={form.title} onChange={e => set("title", e.target.value)} placeholder="Resource title" className={FIELD} />
+        </div>
+
+        <div>
+          <label className={LABEL}>Category</label>
+          <p className="text-[11px] text-muted-foreground/80 mb-1.5">Includes global (admin) categories and any you created under Library.</p>
+          <select
+            value={form.categoryId}
+            onChange={e => set("categoryId", e.target.value)}
+            disabled={categoriesLoading}
+            className={cn(FIELD, "cursor-pointer")}
+          >
+            <option value="">{categoriesLoading ? "Loading categories…" : "Optional — select a category"}</option>
+            {categories.map(c => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
         </div>
 
         <div>
