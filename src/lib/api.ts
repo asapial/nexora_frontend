@@ -62,6 +62,18 @@ export const adminApi = {
   getAllEnrollments:       (p?: any) => apiFetch<any>(`${A}/enrollments${qs(p)}`),
   getRevenue:             () => apiFetch<any>(`${A}/revenue`),
   getRevenueTransactions: (p?: any) => apiFetch<any>(`${A}/revenue/transactions${qs(p)}`),
+  createTeachersByEmails: (emails: string[]) =>
+    apiFetch<{
+      newAccountsCreated: string[];
+      existingUpgraded: string[];
+      alreadyRegisteredAsTeacher: string[];
+    }>(`${A}/createTeacher`, { method: "POST", body: JSON.stringify({ emails }) }),
+  createAdminsByEmails: (emails: string[]) =>
+    apiFetch<{
+      newAccountsCreated: string[];
+      existingUpgraded: string[];
+      alreadyRegisteredAsAdmin: string[];
+    }>(`${A}/createAdmin`, { method: "POST", body: JSON.stringify({ emails }) }),
 };
 
 // ─── Student / Public API ─────────────────────────────────
@@ -74,6 +86,30 @@ export const studentApi = {
   getMyEnrollment:   (courseId: string) => apiFetch<any>(`${S}/enrollments/${courseId}`),
   completeMission:   (courseId: string, missionId: string) => apiFetch<any>(`${S}/enrollments/${courseId}/missions/${missionId}/complete`, { method: "POST" }),
   getMissionContents:(missionId: string) => apiFetch<any[]>(`${S}/missions/${missionId}/contents`),
+  /** Paid course purchases (Stripe) — not free enrollments. */
+  getPaymentHistory: () =>
+    apiFetch<{
+      summary: {
+        totalPaidUsd: number;
+        totalAttempts: number;
+        paidCount: number;
+        pendingCount: number;
+        failedCount: number;
+        refundedCount: number;
+      };
+      payments: Array<{
+        id: string;
+        courseId: string;
+        courseTitle: string;
+        amount: number;
+        currency: string;
+        status: string;
+        stripePaymentIntentId: string;
+        paidAt: string | null;
+        failedAt: string | null;
+        createdAt: string;
+      }>;
+    }>("/api/payments/history"),
 };
 
 export const settingsApi = {
@@ -114,4 +150,69 @@ export const paymentApi = {
       method: "POST",
       body: JSON.stringify({}),
     }),
+};
+
+// ─── Student Dashboard Extended APIs ──────────────────────
+export const leaderboardApi = {
+  get:          (p?: { clusterId?: string; period?: string }) => apiFetch<any>(`${S}/leaderboard${qs(p)}`),
+  getOptIn:     () => apiFetch<any>(`${S}/leaderboard/opt-in-status`),
+  optIn:        () => apiFetch<any>(`${S}/leaderboard/opt-in`,  { method: "POST" }),
+  optOut:       () => apiFetch<any>(`${S}/leaderboard/opt-out`, { method: "POST" }),
+};
+
+export const studyPlannerApi = {
+  getGoals:    () => apiFetch<any[]>(`${S}/study-planner`),
+  getStreak:   () => apiFetch<any>(`${S}/study-planner/streak`),
+  createGoal:  (body: any) => apiFetch<any>(`${S}/study-planner`, { method: "POST", body: JSON.stringify(body) }),
+  updateGoal:  (id: string, body: any) => apiFetch<any>(`${S}/study-planner/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  deleteGoal:  (id: string) => apiFetch<any>(`${S}/study-planner/${id}`, { method: "DELETE" }),
+};
+
+export const annotationApi = {
+  getResources:        () => apiFetch<any[]>(`${S}/annotations/resources`),
+  getAnnotations:      (resourceId: string) => apiFetch<any[]>(`${S}/annotations${qs({ resourceId })}`),
+  getShared:           (resourceId: string) => apiFetch<any[]>(`${S}/annotations/shared${qs({ resourceId })}`),
+  create:              (body: any) => apiFetch<any>(`${S}/annotations`, { method: "POST", body: JSON.stringify(body) }),
+  update:              (id: string, body: any) => apiFetch<any>(`${S}/annotations/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  delete:              (id: string) => apiFetch<any>(`${S}/annotations/${id}`, { method: "DELETE" }),
+};
+
+// ─── Admin Platform APIs ──────────────────────────────────
+const AP = "/api/admin/platform";
+export const adminPlatformApi = {
+  getAnalytics:     () => apiFetch<any>(`${AP}/analytics`),
+  getAnnouncements: (p?: any) => apiFetch<any>(`${AP}/announcements${qs(p)}`),
+  createAnnouncement: (body: any) => apiFetch<any>(`${AP}/announcements`, { method: "POST", body: JSON.stringify(body) }),
+  deleteAnnouncement: (id: string) => apiFetch<any>(`${AP}/announcements/${id}`, { method: "DELETE" }),
+  getClusters:      (p?: any) => apiFetch<any>(`${AP}/clusters${qs(p)}`),
+  getModeration:    (p?: any) => apiFetch<any>(`${AP}/moderation${qs(p)}`),
+  removeComment:    (id: string) => apiFetch<any>(`${AP}/moderation/comments/${id}`, { method: "DELETE" }),
+  warnUser:         (userId: string, reason: string) => apiFetch<any>(`${AP}/moderation/warn/${userId}`, { method: "POST", body: JSON.stringify({ reason }) }),
+  getCertificates:  (p?: any) => apiFetch<any>(`${AP}/certificates${qs(p)}`),
+  generateCert:     (enrollmentId: string) => apiFetch<any>(`${AP}/certificates/${enrollmentId}`, { method: "POST" }),
+  enroll:           (userId: string, courseId: string) => apiFetch<any>(`${AP}/enroll`, { method: "POST", body: JSON.stringify({ userId, courseId }) }),
+  unenroll:         (userId: string, courseId: string) => apiFetch<any>(`${AP}/unenroll`, { method: "POST", body: JSON.stringify({ userId, courseId }) }),
+};
+
+// ─── Admin Users API ──────────────────────────────────────
+const AU = "/api/admin/users";
+export const adminUsersApi = {
+  getUsers:    (p?: any) => apiFetch<any>(`${AU}${qs(p)}`),
+  getUser:     (id: string) => apiFetch<any>(`${AU}/${id}`),
+  updateUser:  (id: string, body: any) => apiFetch<any>(`${AU}/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  deactivate:  (id: string) => apiFetch<any>(`${AU}/${id}`, { method: "DELETE" }),
+  resetPwd:    (id: string) => apiFetch<any>(`${AU}/${id}/reset-password`, { method: "POST" }),
+  impersonate: (id: string) => apiFetch<any>(`${AU}/${id}/impersonate`, { method: "POST" }),
+};
+
+// ─── Teacher Dashboard Extended APIs ─────────────────────
+const TA = "/api/teacher";
+export const teacherDashApi = {
+  getAnalytics:     () => apiFetch<any>(`${TA}/analytics`),
+  getSessionHistory:(p?: any) => apiFetch<any>(`${TA}/session-history${qs(p)}`),
+  getTemplates:     () => apiFetch<any[]>(`${TA}/task-templates`),
+  createTemplate:   (body: any) => apiFetch<any>(`${TA}/task-templates`, { method: "POST", body: JSON.stringify(body) }),
+  updateTemplate:   (id: string, body: any) => apiFetch<any>(`${TA}/task-templates/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  deleteTemplate:   (id: string) => apiFetch<any>(`${TA}/task-templates/${id}`, { method: "DELETE" }),
+  getClusters:      () => apiFetch<any[]>(`/api/cluster`),
 };
