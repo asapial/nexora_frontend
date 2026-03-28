@@ -4,7 +4,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { RiCheckboxCircleLine, RiAlertLine, RiLoader4Line, RiArrowRightLine } from "react-icons/ri";
-import { paymentApi } from "../../../../../lib/api";
+import { paymentApi } from "../../../../../../lib/api";
 
 function AmbientBg() {
   return (

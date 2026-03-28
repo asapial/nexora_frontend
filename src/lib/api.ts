@@ -187,11 +187,27 @@ export const adminPlatformApi = {
   getClusters:      (p?: any) => apiFetch<any>(`${AP}/clusters${qs(p)}`),
   getModeration:    (p?: any) => apiFetch<any>(`${AP}/moderation${qs(p)}`),
   removeComment:    (id: string) => apiFetch<any>(`${AP}/moderation/comments/${id}`, { method: "DELETE" }),
+  removeCourse:     (id: string) => apiFetch<any>(`${AP}/moderation/courses/${id}`, { method: "DELETE" }),
+  removeResource:   (id: string) => apiFetch<any>(`${AP}/moderation/resources/${id}`, { method: "DELETE" }),
   warnUser:         (userId: string, reason: string) => apiFetch<any>(`${AP}/moderation/warn/${userId}`, { method: "POST", body: JSON.stringify({ reason }) }),
   getCertificates:  (p?: any) => apiFetch<any>(`${AP}/certificates${qs(p)}`),
   generateCert:     (enrollmentId: string) => apiFetch<any>(`${AP}/certificates/${enrollmentId}`, { method: "POST" }),
   enroll:           (userId: string, courseId: string) => apiFetch<any>(`${AP}/enroll`, { method: "POST", body: JSON.stringify({ userId, courseId }) }),
   unenroll:         (userId: string, courseId: string) => apiFetch<any>(`${AP}/unenroll`, { method: "POST", body: JSON.stringify({ userId, courseId }) }),
+  // Email Templates
+  getEmailTemplates:    () => apiFetch<any>(`${AP}/email-templates`),
+  createEmailTemplate:  (body: any) => apiFetch<any>(`${AP}/email-templates`, { method: "POST", body: JSON.stringify(body) }),
+  updateEmailTemplate:  (id: string, body: any) => apiFetch<any>(`${AP}/email-templates/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  deleteEmailTemplate:  (id: string) => apiFetch<any>(`${AP}/email-templates/${id}`, { method: "DELETE" }),
+  // Personal notices
+  sendPersonalNotice:   (targetUserId: string, payload: { title: string; body: string; urgency?: string }) =>
+    apiFetch<any>(`${AP}/announcements`, { method: "POST", body: JSON.stringify({ ...payload, targetUserId }) }),
+};
+
+// ─── Teacher Notice API ───────────────────────────────────
+export const teacherNoticeApi = {
+  getNotices: (p?: Record<string, string | number | undefined>) => apiFetch<any>(`/api/teacher/notices${qs(p)}`),
+  markRead:   (id: string) => apiFetch<any>(`/api/teacher/notices/${id}/read`, { method: "PATCH" }),
 };
 
 // ─── Admin Users API ──────────────────────────────────────

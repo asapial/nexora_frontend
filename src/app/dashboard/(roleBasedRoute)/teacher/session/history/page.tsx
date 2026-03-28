@@ -100,6 +100,13 @@ export default function SessionHistoryPage() {
   const avgAtt    = filtered.length?Math.round(totalAtt/filtered.length):0;
   const avgSub    = filtered.length?Math.round(totalSub/filtered.length):0;
 
+  const accentMap: Record<string, { i: string; b: string; br: string }> = {
+  teal:   { i:"text-teal-600 dark:text-teal-400",   b:"bg-teal-100/70 dark:bg-teal-950/50",   br:"border-teal-200/70 dark:border-teal-800/50" },
+  violet: { i:"text-violet-600 dark:text-violet-400", b:"bg-violet-100/70 dark:bg-violet-950/50", br:"border-violet-200/70 dark:border-violet-800/50" },
+  amber:  { i:"text-amber-600 dark:text-amber-400",  b:"bg-amber-100/70 dark:bg-amber-950/50",  br:"border-amber-200/70 dark:border-amber-800/50" },
+  sky:    { i:"text-sky-600 dark:text-sky-400",      b:"bg-sky-100/70 dark:bg-sky-950/50",      br:"border-sky-200/70 dark:border-sky-800/50" },
+};
+
   return (
     <div className="flex flex-col gap-6 p-5 lg:p-7 pt-6 max-w-5xl mx-auto w-full">
 
@@ -121,21 +128,21 @@ export default function SessionHistoryPage() {
       {/* Aggregate summary cards */}
       {filtered.length>0 && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {[
-            { label:"Sessions",         value:filtered.length,  icon:<RiCalendarCheckLine/>, accent:"teal" },
-            { label:"Avg attendance",   value:`${avgAtt}%`,     icon:<RiGroupLine/>,          accent:"violet" },
-            { label:"Avg submission",   value:`${avgSub}%`,     icon:<RiCheckboxCircleLine/>, accent:"amber" },
-            { label:"Total member-hrs", value:filtered.reduce((s,x)=>s+Math.round((x.attendanceCount*x.duration)/60),0), icon:<RiTimeLine/>, accent:"sky" },
-          ].map(card=>{
-            const a = {teal:{i:"text-teal-600 dark:text-teal-400",b:"bg-teal-100/70 dark:bg-teal-950/50",br:"border-teal-200/70 dark:border-teal-800/50"},violet:{i:"text-violet-600 dark:text-violet-400",b:"bg-violet-100/70 dark:bg-violet-950/50",br:"border-violet-200/70 dark:border-violet-800/50"},amber:{i:"text-amber-600 dark:text-amber-400",b:"bg-amber-100/70 dark:bg-amber-950/50",br:"border-amber-200/70 dark:border-amber-800/50"},sky:{i:"text-sky-600 dark:text-sky-400",b:"bg-sky-100/70 dark:bg-sky-950/50",br:"border-sky-200/70 dark:border-sky-800/50"}}[card.accent];
-            return (
-              <div key={card.label} className="rounded-2xl border border-border bg-card p-4">
-                <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center text-base border mb-3",a.b,a.br,a.i)}>{card.icon}</div>
-                <p className="text-[1.4rem] font-extrabold tabular-nums text-foreground leading-none mb-0.5">{card.value}</p>
-                <p className="text-[12px] font-medium text-muted-foreground">{card.label}</p>
-              </div>
-            );
-          })}
+{[
+  { label:"Sessions",         value:filtered.length,  icon:<RiCalendarCheckLine/>, accent:"teal" },
+  { label:"Avg attendance",   value:`${avgAtt}%`,     icon:<RiGroupLine/>,          accent:"violet" },
+  { label:"Avg submission",   value:`${avgSub}%`,     icon:<RiCheckboxCircleLine/>, accent:"amber" },
+  { label:"Total member-hrs", value:filtered.reduce((s,x)=>s+Math.round((x.attendanceCount*x.duration)/60),0), icon:<RiTimeLine/>, accent:"sky" },
+].map(card => {
+  const a = accentMap[card.accent] ?? accentMap["teal"];
+  return (
+    <div key={card.label} className="rounded-2xl border border-border bg-card p-4">
+      <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center text-base border mb-3", a.b, a.br, a.i)}>{card.icon}</div>
+      <p className="text-[1.4rem] font-extrabold tabular-nums text-foreground leading-none mb-0.5">{card.value}</p>
+      <p className="text-[12px] font-medium text-muted-foreground">{card.label}</p>
+    </div>
+  );
+})}
         </div>
       )}
 

@@ -404,7 +404,7 @@ export function CoursePlayerPage() {
                             {cnt.type === "PDF" && cnt.pdfUrl && (
                               <a href={cnt.pdfUrl} target="_blank" rel="noreferrer"
                                 className="flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-800/50 hover:bg-amber-100/60 transition-colors">
-                                <RiFileMarkLine className="text-amber-600 dark:text-amber-400 text-xl" />
+                                <RiFileMarkedLine className="text-amber-600 dark:text-amber-400 text-xl" />
                                 <div><p className="text-[13px] font-bold text-foreground">{cnt.title}</p><p className="text-[11.5px] text-muted-foreground">Click to open PDF in new tab</p></div>
                               </a>
                             )}

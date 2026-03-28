@@ -52,6 +52,15 @@ const TABS = [
 
 type TabId = (typeof TABS)[number]["id"];
 
+type EmailNotificationPrefs = {
+  sessionCreated: boolean;
+  submissionAlert: boolean;
+  atRiskAlert: boolean;
+  badgeEarned: boolean;
+  weeklyDigest: boolean;
+  marketing: boolean;
+};
+
 type ProfileForm = {
   name: string;
   email: string;
@@ -484,21 +493,29 @@ function ProfileTab() {
 }
 
 // ─── TAB: Notifications ────────────────────────────────────
-const EMAIL_NOTIFICATION_DEFAULTS = {
+const EMAIL_NOTIFICATION_DEFAULTS: EmailNotificationPrefs = {
   sessionCreated: true,
   submissionAlert: true,
   atRiskAlert: true,
   badgeEarned: true,
   weeklyDigest: false,
   marketing: false,
-} as const;
+};
 
-const PUSH_NOTIFICATION_DEFAULTS = {
+type PushNotificationPrefs = {
+  deadline: boolean;
+  memberInactive: boolean;
+  newSubmission: boolean;
+  systemAnnounce: boolean;
+};
+
+const PUSH_NOTIFICATION_DEFAULTS: PushNotificationPrefs = {
   deadline: true,
   memberInactive: true,
   newSubmission: false,
   systemAnnounce: true,
-} as const;
+};
+
 
 function NotificationsTab() {
   const [email, setEmail] = useState({ ...EMAIL_NOTIFICATION_DEFAULTS });

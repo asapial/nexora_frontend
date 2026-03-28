@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   RiSparklingFill, RiShieldCheckLine, RiDeleteBinLine, RiAlertLine,
-  RiRefreshLine, RiLoader4Line, RiMessageLine, RiFileTextLine,
-  RiUserLine,
+  RiRefreshLine, RiLoader4Line, RiBookOpenLine, RiFileTextLine,
+  RiUserLine, RiCloseLine, RiTimeLine,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
 import { adminPlatformApi } from "@/lib/api";
@@ -13,12 +13,15 @@ import { toast } from "sonner";
 const fmtDate = (d: string) =>
   new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 
-type Comment = {
+type Course = {
   id: string;
-  content?: string;
-  text?: string;
+  title: string;
+  status: string;
   createdAt: string;
-  resource?: { id: string; title: string };
+  _count?: { enrollments: number };
+  teacher?: {
+    user?: { id: string; name: string; email: string };
+  };
 };
 
 type Resource = {
@@ -26,7 +29,7 @@ type Resource = {
   title: string;
   fileType: string;
   createdAt: string;
-  uploader?: { name: string };
+  uploader?: { id: string; name: string };
 };
 
 function SkeletonRow() {
@@ -46,8 +49,9 @@ function SkeletonRow() {
 }
 
 // ─── Warn modal ───────────────────────────────────────────
-function WarnModal({ userId, onClose, onWarn }: {
+function WarnModal({ userId, userName, onClose, onWarn }: {
   userId: string;
+  userName: string;
   onClose: () => void;
   onWarn: (userId: string, reason: string) => Promise<void>;
 }) {
@@ -64,7 +68,12 @@ function WarnModal({ userId, onClose, onWarn }: {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
       <div className="rounded-2xl border border-border bg-card shadow-2xl w-full max-w-sm p-6 flex flex-col gap-4">
-        <h2 className="text-[15px] font-extrabold text-foreground">Warn User</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-[15px] font-extrabold text-foreground">Warn {userName}</h2>
+          <button onClick={onClose} className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted/60 transition-all">
+            <RiCloseLine />
+          </button>
+        </div>
         <textarea value={reason} onChange={e => setReason(e.target.value)} rows={4}
           placeholder="Reason for warning…"
           className="w-full px-3 py-2 rounded-xl border border-border bg-muted/30 text-[13px] text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-amber-400/25 resize-none transition-all" />
@@ -82,18 +91,19 @@ function WarnModal({ userId, onClose, onWarn }: {
 }
 
 export default function ContentModerationPage() {
-  const [comments, setComments] = useState<Comment[]>([]);
+  const [courses, setCourses]     = useState<Course[]>([]);
   const [resources, setResources] = useState<Resource[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"comments" | "resources">("comments");
-  const [warnUserId, setWarnUserId] = useState<string | null>(null);
-  const [actionLog, setActionLog] = useState<string[]>([]);
+  const [loading, setLoading]     = useState(true);
+  const [activeTab, setActiveTab] = useState<"courses" | "resources">("courses");
+  const [warnTarget, setWarnTarget] = useState<{ userId: string; name: string } | null>(null);
+  const [removingId, setRemovingId] = useState<string | null>(null);
+  const [actionLog, setActionLog]   = useState<string[]>([]);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const r = await adminPlatformApi.getModeration();
-      setComments(Array.isArray(r.data?.comments) ? r.data.comments : []);
+      setCourses(Array.isArray(r.data?.courses) ? r.data.courses : []);
       setResources(Array.isArray(r.data?.resources) ? r.data.resources : []);
     } catch (err: unknown) { toast.error(err instanceof Error ? err.message : "Failed"); }
     finally { setLoading(false); }
@@ -101,13 +111,28 @@ export default function ContentModerationPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  const removeComment = async (id: string) => {
+  const removeCourse = async (id: string, title: string) => {
+    if (!confirm(`Remove course "${title}"? This is irreversible.`)) return;
+    setRemovingId(id);
     try {
-      await adminPlatformApi.removeComment(id);
-      setComments(prev => prev.filter(c => c.id !== id));
-      setActionLog(prev => [`Removed comment ${id}`, ...prev]);
-      toast.success("Comment removed");
+      await adminPlatformApi.removeCourse(id);
+      setCourses(prev => prev.filter(c => c.id !== id));
+      setActionLog(prev => [`Removed course: ${title}`, ...prev]);
+      toast.success("Course removed");
     } catch (err: unknown) { toast.error(err instanceof Error ? err.message : "Failed"); }
+    finally { setRemovingId(null); }
+  };
+
+  const removeResource = async (id: string, title: string) => {
+    if (!confirm(`Remove resource "${title}"?`)) return;
+    setRemovingId(id);
+    try {
+      await adminPlatformApi.removeResource(id);
+      setResources(prev => prev.filter(r => r.id !== id));
+      setActionLog(prev => [`Removed resource: ${title}`, ...prev]);
+      toast.success("Resource removed");
+    } catch (err: unknown) { toast.error(err instanceof Error ? err.message : "Failed"); }
+    finally { setRemovingId(null); }
   };
 
   const warnUser = async (userId: string, reason: string) => {
@@ -117,8 +142,8 @@ export default function ContentModerationPage() {
   };
 
   const tabs = [
-    { key: "comments" as const, label: "Comments", count: comments.length, icon: <RiMessageLine /> },
-    { key: "resources" as const, label: "Resources", count: resources.length, icon: <RiFileTextLine /> },
+    { key: "courses"   as const, label: "Courses",   count: courses.length,   icon: <RiBookOpenLine /> },
+    { key: "resources" as const, label: "Resources",  count: resources.length, icon: <RiFileTextLine /> },
   ];
 
   return (
@@ -131,7 +156,7 @@ export default function ContentModerationPage() {
             <span className="text-[10.5px] font-bold tracking-[.12em] uppercase text-muted-foreground">Admin</span>
           </div>
           <h1 className="text-[1.5rem] font-extrabold tracking-tight text-foreground leading-none">Content Moderation</h1>
-          <p className="text-[13px] text-muted-foreground mt-1">Review flagged content, remove items, and warn users</p>
+          <p className="text-[13px] text-muted-foreground mt-1">Review published courses and resources, remove items, and warn users</p>
         </div>
         <button onClick={load}
           className="w-9 h-9 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all">
@@ -159,44 +184,56 @@ export default function ContentModerationPage() {
       <div className="rounded-2xl border border-border bg-card overflow-hidden">
         <div className="px-5 py-3 border-b border-border bg-muted/10">
           <p className="text-[11.5px] font-bold text-muted-foreground uppercase tracking-wider">
-            {activeTab === "comments" ? "Flagged Comments" : "Recent Public Resources"}
+            {activeTab === "courses" ? "Published Courses" : "Public Resources"}
           </p>
         </div>
 
         {loading
           ? Array.from({ length: 6 }).map((_, i) => <SkeletonRow key={i} />)
-          : activeTab === "comments"
-          ? comments.length === 0
+          : activeTab === "courses"
+          ? courses.length === 0
             ? (
               <div className="py-16 text-center">
                 <RiShieldCheckLine className="text-4xl text-muted-foreground/20 mx-auto mb-3" />
-                <p className="text-[13.5px] font-medium text-muted-foreground">No flagged comments</p>
+                <p className="text-[13.5px] font-medium text-muted-foreground">No published courses</p>
               </div>
             )
-            : comments.map(c => (
-              <div key={c.id} className="px-5 py-4 border-b border-border/60 last:border-0 hover:bg-muted/10 transition-colors flex items-start gap-3">
-                <div className="w-8 h-8 rounded-lg bg-rose-50/70 dark:bg-rose-950/30 border border-rose-200/60 flex items-center justify-center shrink-0">
-                  <RiMessageLine className="text-rose-600 dark:text-rose-400 text-sm" />
+            : courses.map(c => (
+              <div key={c.id} className="px-5 py-4 border-b border-border/60 last:border-0 hover:bg-muted/10 transition-colors flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-rose-50/70 dark:bg-rose-950/30 border border-rose-200/60 flex items-center justify-center shrink-0">
+                  <RiBookOpenLine className="text-rose-600 dark:text-rose-400 text-sm" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[13px] text-foreground leading-snug">{c.content ?? c.text ?? "(empty)"}</p>
-                  <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                    {c.resource && (
-                      <span className="text-[11px] text-muted-foreground/60">
-                        On: {c.resource.title}
+                  <p className="text-[13px] font-semibold text-foreground truncate">{c.title}</p>
+                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                    {c.teacher?.user && (
+                      <span className="flex items-center gap-0.5 text-[11px] text-muted-foreground/70">
+                        <RiUserLine className="text-xs" /> {c.teacher.user.name}
                       </span>
                     )}
-                    <span className="text-[11px] text-muted-foreground/60">{fmtDate(c.createdAt)}</span>
+                    {c._count && (
+                      <span className="text-[11px] text-muted-foreground/60">{c._count.enrollments} enrolled</span>
+                    )}
+                    <span className="flex items-center gap-0.5 text-[11px] text-muted-foreground/60">
+                      <RiTimeLine className="text-xs" /> {fmtDate(c.createdAt)}
+                    </span>
                   </div>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
-                  <button onClick={() => toast.info("User ID required to warn")}
-                    className="w-7 h-7 rounded-lg flex items-center justify-center text-amber-600 hover:bg-amber-50/60 transition-all" title="Warn user">
-                    <RiAlertLine className="text-sm" />
-                  </button>
-                  <button onClick={() => removeComment(c.id)}
-                    className="w-7 h-7 rounded-lg flex items-center justify-center text-rose-600 hover:bg-rose-50/60 transition-all" title="Remove comment">
-                    <RiDeleteBinLine className="text-sm" />
+                  {c.teacher?.user && (
+                    <button
+                      onClick={() => setWarnTarget({ userId: c.teacher!.user!.id, name: c.teacher!.user!.name })}
+                      className="w-7 h-7 rounded-lg flex items-center justify-center text-amber-600 hover:bg-amber-50/60 dark:hover:bg-amber-950/30 transition-all"
+                      title="Warn teacher">
+                      <RiAlertLine className="text-sm" />
+                    </button>
+                  )}
+                  <button
+                    onClick={() => removeCourse(c.id, c.title)}
+                    disabled={removingId === c.id}
+                    className="w-7 h-7 rounded-lg flex items-center justify-center text-rose-600 hover:bg-rose-50/60 dark:hover:bg-rose-950/30 transition-all"
+                    title="Remove course">
+                    {removingId === c.id ? <RiLoader4Line className="text-sm animate-spin" /> : <RiDeleteBinLine className="text-sm" />}
                   </button>
                 </div>
               </div>
@@ -225,10 +262,23 @@ export default function ContentModerationPage() {
                   <span className="text-[11px] text-muted-foreground/60">{fmtDate(r.createdAt)}</span>
                 </div>
               </div>
-              <button onClick={() => toast.info("Resource ID: " + r.id)}
-                className="w-7 h-7 rounded-lg flex items-center justify-center text-amber-600 hover:bg-amber-50/60 transition-all" title="Review">
-                <RiAlertLine className="text-sm" />
-              </button>
+              <div className="flex items-center gap-1 shrink-0">
+                {r.uploader && (
+                  <button
+                    onClick={() => setWarnTarget({ userId: r.uploader!.id, name: r.uploader!.name })}
+                    className="w-7 h-7 rounded-lg flex items-center justify-center text-amber-600 hover:bg-amber-50/60 transition-all"
+                    title="Warn uploader">
+                    <RiAlertLine className="text-sm" />
+                  </button>
+                )}
+                <button
+                  onClick={() => removeResource(r.id, r.title)}
+                  disabled={removingId === r.id}
+                  className="w-7 h-7 rounded-lg flex items-center justify-center text-rose-600 hover:bg-rose-50/60 transition-all"
+                  title="Remove resource">
+                  {removingId === r.id ? <RiLoader4Line className="text-sm animate-spin" /> : <RiDeleteBinLine className="text-sm" />}
+                </button>
+              </div>
             </div>
           ))}
       </div>
@@ -247,8 +297,13 @@ export default function ContentModerationPage() {
         </div>
       )}
 
-      {warnUserId && (
-        <WarnModal userId={warnUserId} onClose={() => setWarnUserId(null)} onWarn={warnUser} />
+      {warnTarget && (
+        <WarnModal
+          userId={warnTarget.userId}
+          userName={warnTarget.name}
+          onClose={() => setWarnTarget(null)}
+          onWarn={warnUser}
+        />
       )}
     </div>
   );

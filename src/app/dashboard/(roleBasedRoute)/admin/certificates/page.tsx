@@ -6,7 +6,7 @@ import {
   RiCheckLine, RiLinkM, RiDownloadLine, RiUserLine, RiBookOpenLine,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
-import { adminPlatformApi } from "@/lib/api";
+import { adminPlatformApi, adminApi } from "@/lib/api";
 import { toast } from "sonner";
 
 type Certificate = {
@@ -41,10 +41,11 @@ function SkeletonRow() {
 
 export default function CertificatesPage() {
   const [certificates, setCertificates] = useState<Certificate[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [generating, setGenerating] = useState<string | null>(null);
-  const [tab, setTab] = useState<"issued" | "generate">("issued");
-  const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
+  const [certTotal, setCertTotal]       = useState(0);
+  const [loading, setLoading]           = useState(true);
+  const [generating, setGenerating]     = useState<string | null>(null);
+  const [tab, setTab]                   = useState<"issued" | "generate">("issued");
+  const [enrollments, setEnrollments]   = useState<Enrollment[]>([]);
   const [loadingEnrollments, setLoadingEnrollments] = useState(false);
 
   const loadCerts = useCallback(async () => {
@@ -53,6 +54,7 @@ export default function CertificatesPage() {
       const r = await adminPlatformApi.getCertificates();
       const raw = r.data;
       setCertificates(Array.isArray(raw?.data) ? raw.data : Array.isArray(raw) ? raw : []);
+      setCertTotal(raw?.total ?? (Array.isArray(raw?.data) ? raw.data.length : (Array.isArray(raw) ? raw.length : 0)));
     } catch (err: unknown) { toast.error(err instanceof Error ? err.message : "Failed"); }
     finally { setLoading(false); }
   }, []);
@@ -60,10 +62,8 @@ export default function CertificatesPage() {
   const loadEnrollments = useCallback(async () => {
     setLoadingEnrollments(true);
     try {
-      // Re-use the admin enrollments endpoint
-      const r = await fetch("/api/admin/enrollments?limit=50", { credentials: "include" });
-      const json = await r.json();
-      const raw = json.data;
+      const r = await adminApi.getAllEnrollments({ limit: 50 });
+      const raw = r.data;
       setEnrollments(Array.isArray(raw?.data) ? raw.data : Array.isArray(raw) ? raw : []);
     } catch { toast.error("Failed to load enrollments"); }
     finally { setLoadingEnrollments(false); }
@@ -119,7 +119,7 @@ export default function CertificatesPage() {
           <div className="w-8 h-8 rounded-xl flex items-center justify-center text-sm border mb-2.5 text-teal-600 dark:text-teal-400 bg-teal-100/60 dark:bg-teal-950/40 border-teal-200/60">
             <RiAwardLine />
           </div>
-          <p className="text-[1.3rem] font-extrabold tabular-nums text-foreground leading-none mb-0.5">{loading ? "—" : certificates.length}</p>
+          <p className="text-[1.3rem] font-extrabold tabular-nums text-foreground leading-none mb-0.5">{loading ? "—" : certTotal}</p>
           <p className="text-[12px] font-medium text-muted-foreground">Certificates issued</p>
         </div>
       </div>

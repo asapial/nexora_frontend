@@ -274,7 +274,8 @@ export default function PriceRequestsPage() {
   useEffect(() => {
     courseApi.list()
       .then((r) => {
-        const list = Array.isArray(r.data) ? r.data : (r.data?.courses ?? []);
+    const data = r.data as any;
+    const list = Array.isArray(data) ? data : (data?.courses ?? []);
         setCourses(list);
         if (list.length > 0) setCourseId(list[0].id);
       })

@@ -181,8 +181,8 @@ export default function AdminRevenuePage() {
           <div key={tx.id ?? i} className="grid grid-cols-[1fr_1fr_120px_120px_100px] gap-4 px-5 py-3.5 hover:bg-muted/15 transition-colors border-b border-border/60 last:border-0 items-center">
             <p className="text-[12.5px] font-medium text-foreground truncate">{tx.user?.name ?? tx.studentName ?? "—"}</p>
             <p className="text-[12.5px] text-foreground truncate">{tx.course?.title ?? tx.courseTitle ?? "—"}</p>
-            <p className="text-[12px] text-muted-foreground">{tx.createdAt ? fmtDate(tx.createdAt) : "—"}</p>
-            <p className="text-[13px] font-bold text-foreground tabular-nums">{fmtUSD(tx.amount ?? 0)}</p>
+            <p className="text-[12px] text-muted-foreground">{tx.transactedAt ? fmtDate(tx.transactedAt) : tx.createdAt ? fmtDate(tx.createdAt) : "—"}</p>
+            <p className="text-[13px] font-bold text-foreground tabular-nums">{fmtUSD(tx.totalAmount ?? tx.amount ?? 0)}</p>
             <span className={cn("text-[10px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-full border w-fit",
               tx.status === "PAID" || tx.status === "SUCCEEDED"
                 ? "bg-teal-100/80 dark:bg-teal-950/50 text-teal-700 dark:text-teal-400 border-teal-200/70"
