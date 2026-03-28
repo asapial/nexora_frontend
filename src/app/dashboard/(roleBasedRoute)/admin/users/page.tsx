@@ -1,329 +1,361 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
-  RiUserLine, RiAddLine, RiEditLine, RiDeleteBinLine, RiCheckLine,
-  RiCloseLine, RiSparklingFill, RiSearchLine, RiMoreLine,
-  RiShieldLine, RiLockPasswordLine, RiEyeLine, RiAlertLine,
-  RiUserFollowLine, RiUserForbidLine,
+  RiSparklingFill, RiSearchLine, RiRefreshLine, RiUserLine,
+  RiShieldUserLine, RiUserStarLine, RiMoreLine, RiEditLine,
+  RiDeleteBinLine, RiLockPasswordLine, RiEyeLine, RiLoader4Line,
+  RiCheckLine, RiCloseLine, RiAddLine,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
+import { adminUsersApi } from "@/lib/api";
+import { toast } from "sonner";
 
-type Role   = "STUDENT" | "TEACHER" | "ADMIN";
-interface User {
-  id: string; name: string; email: string; role: Role;
-  isActive: boolean; emailVerified: boolean;
-  createdAt: string; lastLoginAt?: string; image?: string;
-}
-
-const API = (p: string) => `/api/admin/users${p}`;
-const apiFetch = (url: string, opts?: RequestInit) =>
-  fetch(url, { credentials: "include", headers: { "Content-Type": "application/json" }, ...opts }).then(r => r.json());
-
-const ROLE_BADGE: Record<Role, string> = {
-  STUDENT: "bg-sky-100/80 dark:bg-sky-950/50 text-sky-700 dark:text-sky-400 border-sky-200/70 dark:border-sky-800/50",
-  TEACHER: "bg-teal-100/80 dark:bg-teal-950/50 text-teal-700 dark:text-teal-400 border-teal-200/70 dark:border-teal-800/50",
-  ADMIN:   "bg-violet-100/80 dark:bg-violet-950/40 text-violet-700 dark:text-violet-400 border-violet-200/70 dark:border-violet-800/50",
+const ROLE_CFG: Record<string, { label: string; cls: string }> = {
+  ADMIN:   { label: "Admin",   cls: "text-violet-700 dark:text-violet-400 bg-violet-50/80 dark:bg-violet-950/40 border-violet-200/60 dark:border-violet-800/50" },
+  TEACHER: { label: "Teacher", cls: "text-teal-700 dark:text-teal-400 bg-teal-50/80 dark:bg-teal-950/40 border-teal-200/60 dark:border-teal-800/50" },
+  STUDENT: { label: "Student", cls: "text-sky-700 dark:text-sky-400 bg-sky-50/80 dark:bg-sky-950/40 border-sky-200/60 dark:border-sky-800/50" },
 };
 
-const initials = (name: string) => name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+type User = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  image?: string;
+  createdAt: string;
+  emailVerified: boolean;
+  needPasswordChange: boolean;
+  isDeleted: boolean;
+};
 
-// ─── Create user modal ────────────────────────────────────
-function CreateUserModal({ onDone }: { onDone: () => void }) {
-  const [form, setForm] = useState({ name: "", email: "", password: "", role: "STUDENT" as Role });
-  const [errors, setErrors]   = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState(false);
+type RoleFilter = "all" | "ADMIN" | "TEACHER" | "STUDENT";
 
-  const validate = () => {
-    const e: Record<string, string> = {};
-    if (!form.name.trim())          e.name     = "Name is required";
-    if (!form.email.trim())         e.email    = "Email is required";
-    if (form.password.length < 8)   e.password = "Password must be at least 8 characters";
-    return e;
-  };
+const fmtDate = (d: string) =>
+  new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 
-  const handleSubmit = async (ev: React.FormEvent) => {
-    ev.preventDefault();
-    const e = validate();
-    if (Object.keys(e).length) { setErrors(e); return; }
-    setLoading(true);
-    await apiFetch(API("/"), { method: "POST", body: JSON.stringify(form) });
-    setLoading(false); onDone();
-  };
-
-  const inp = (field: keyof typeof form) => (v: string) => { setForm(p => ({ ...p, [field]: v })); setErrors(e => ({ ...e, [field]: "" })); };
-
+function SkeletonRow() {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-2xl border border-border bg-card shadow-2xl overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-          <span className="text-[14.5px] font-bold text-foreground">Create User</span>
-          <button onClick={onDone} className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/60"><RiCloseLine /></button>
+    <div className="grid grid-cols-[1fr_180px_100px_120px_80px] gap-4 px-5 py-4 border-b border-border/60 animate-pulse items-center">
+      <div className="flex items-center gap-3">
+        <div className="w-8 h-8 rounded-full bg-muted shrink-0" />
+        <div className="space-y-1.5">
+          <div className="h-3 bg-muted rounded w-32" />
+          <div className="h-2.5 bg-muted rounded w-44" />
         </div>
-        <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-4">
-          {[
-            { label: "Full name", field: "name", placeholder: "Dr. Riya Mehta", type: "text" },
-            { label: "Email",     field: "email",    placeholder: "riya@example.com", type: "email" },
-            { label: "Password",  field: "password", placeholder: "Min. 8 characters", type: "password" },
-          ].map(({ label, field, placeholder, type }) => (
-            <div key={field} className="flex flex-col gap-1.5">
-              <label className="text-[13px] font-semibold text-foreground/80">{label}</label>
-              <input type={type} value={form[field as keyof typeof form] as string} onChange={e => inp(field as keyof typeof form)(e.target.value)} placeholder={placeholder}
-                className={cn("w-full h-10 px-4 rounded-xl text-[13.5px] bg-muted/40 border",
-                  errors[field] ? "border-red-400/60" : "border-border focus:border-teal-400/70",
-                  "text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-teal-400/20 transition-all")} />
-              {errors[field] && <p className="text-[12px] text-red-500 font-medium">{errors[field]}</p>}
-            </div>
-          ))}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[13px] font-semibold text-foreground/80">Role</label>
-            <select value={form.role} onChange={e => setForm(p => ({ ...p, role: e.target.value as Role }))}
-              className="w-full h-10 px-4 rounded-xl text-[13.5px] bg-muted/40 border border-border text-foreground appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-teal-400/20 transition-all">
-              <option value="STUDENT">Student</option>
-              <option value="TEACHER">Teacher</option>
-              <option value="ADMIN">Admin</option>
-            </select>
-          </div>
-          <div className="flex gap-3 justify-end pt-2 border-t border-border">
-            <button type="button" onClick={onDone} className="h-9 px-4 rounded-xl border border-border text-[13px] font-semibold text-muted-foreground hover:bg-muted/50 transition-all">Cancel</button>
-            <button type="submit" disabled={loading}
-              className="inline-flex items-center gap-2 h-9 px-5 rounded-xl bg-teal-600 dark:bg-teal-500 hover:bg-teal-700 text-white text-[13px] font-bold shadow-sm shadow-teal-600/20 transition-all disabled:opacity-60">
-              {loading ? <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <RiCheckLine />} Create user
-            </button>
-          </div>
-        </form>
+      </div>
+      <div className="h-3 bg-muted rounded w-24" />
+      <div className="h-5 bg-muted rounded-full w-16" />
+      <div className="h-3 bg-muted rounded w-16" />
+      <div className="flex gap-1">
+        <div className="w-6 h-6 bg-muted rounded-lg" />
+        <div className="w-6 h-6 bg-muted rounded-lg" />
       </div>
     </div>
   );
 }
 
-// ─── Reset password modal ─────────────────────────────────
-function ResetPasswordModal({ user, onDone }: { user: User; onDone: () => void }) {
-  const [pw, setPw]         = useState("");
-  const [error, setError]   = useState("");
-  const [loading, setLoading] = useState(false);
-  const [done, setDone]     = useState(false);
+// ─── Edit Modal ───────────────────────────────────────────
+function EditModal({
+  user,
+  onClose,
+  onSave,
+}: {
+  user: User;
+  onClose: () => void;
+  onSave: (id: string, data: any) => Promise<void>;
+}) {
+  const [name, setName] = useState(user.name);
+  const [role, setRole] = useState(user.role);
+  const [saving, setSaving] = useState(false);
 
-  const handleSubmit = async (ev: React.FormEvent) => {
-    ev.preventDefault();
-    if (pw.length < 8) { setError("Minimum 8 characters"); return; }
-    setLoading(true);
-    await apiFetch(API(`/${user.id}/reset-password`), { method: "PATCH", body: JSON.stringify({ newPassword: pw }) });
-    setLoading(false); setDone(true);
-    setTimeout(onDone, 1500);
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
-      <div className="w-full max-w-sm rounded-2xl border border-border bg-card shadow-2xl overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-          <span className="text-[14.5px] font-bold text-foreground">Reset Password</span>
-          <button onClick={onDone} className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/60"><RiCloseLine /></button>
-        </div>
-        <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-4">
-          <p className="text-[13px] text-muted-foreground">Set a new password for <strong className="text-foreground">{user.name}</strong>. They will be required to change it on next login.</p>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[13px] font-semibold text-foreground/80">New password</label>
-            <input type="password" value={pw} onChange={e => { setPw(e.target.value); setError(""); }} placeholder="Min. 8 characters"
-              className={cn("w-full h-10 px-4 rounded-xl text-[13.5px] bg-muted/40 border",
-                error ? "border-red-400/60" : "border-border focus:border-teal-400/70",
-                "text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-teal-400/20 transition-all")} />
-            {error && <p className="text-[12px] text-red-500 font-medium">{error}</p>}
-          </div>
-          <div className="flex gap-3 justify-end border-t border-border pt-3">
-            <button type="button" onClick={onDone} className="h-9 px-4 rounded-xl border border-border text-[13px] font-semibold text-muted-foreground hover:bg-muted/50 transition-all">Cancel</button>
-            <button type="submit" disabled={loading || done}
-              className="inline-flex items-center gap-2 h-9 px-5 rounded-xl bg-teal-600 dark:bg-teal-500 hover:bg-teal-700 text-white text-[13px] font-bold shadow-sm shadow-teal-600/20 transition-all disabled:opacity-60">
-              {done ? <><RiCheckLine />Done</> : loading ? <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><RiLockPasswordLine />Reset</>}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-// ─── Impersonate modal ────────────────────────────────────
-function ImpersonateModal({ user, onDone }: { user: User; onDone: () => void }) {
-  const [reason,  setReason]  = useState("");
-  const [error,   setError]   = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const handleSubmit = async (ev: React.FormEvent) => {
-    ev.preventDefault();
-    if (reason.length < 5) { setError("Provide a reason (min 5 chars)"); return; }
-    setLoading(true);
-    const data = await apiFetch(API(`/${user.id}/impersonate`), { method: "POST", body: JSON.stringify({ reason }) });
-    if (data.success) {
-      // In production: set tokens in cookies and redirect to dashboard
-      alert(`Impersonation token issued for ${user.name}.\nIn production this would set the session cookies and redirect.`);
+  const save = async () => {
+    setSaving(true);
+    try {
+      await onSave(user.id, { name, role });
+      onClose();
+    } finally {
+      setSaving(false);
     }
-    setLoading(false); onDone();
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
-      <div className="w-full max-w-sm rounded-2xl border border-amber-300/50 dark:border-amber-700/50 bg-card shadow-2xl overflow-hidden">
-        <div className="flex items-center gap-3 px-6 py-4 border-b border-border bg-amber-50/30 dark:bg-amber-950/10">
-          <RiEyeLine className="text-amber-600 dark:text-amber-400" />
-          <span className="text-[14px] font-bold text-foreground">Impersonate User</span>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+      <div className="rounded-2xl border border-border bg-card shadow-2xl w-full max-w-md p-6 flex flex-col gap-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-[15px] font-extrabold text-foreground">Edit User</h2>
+          <button onClick={onClose} className="w-8 h-8 rounded-xl flex items-center justify-center text-muted-foreground hover:bg-muted/60 transition-all">
+            <RiCloseLine />
+          </button>
         </div>
-        <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-4">
-          <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-800/50">
-            <RiAlertLine className="text-amber-500 dark:text-amber-400 text-base mt-0.5 flex-shrink-0" />
-            <p className="text-[12.5px] text-amber-700 dark:text-amber-400">This action is logged in the audit trail. You will temporarily act as <strong>{user.name}</strong>.</p>
+        <div className="flex flex-col gap-3">
+          <div>
+            <label className="text-[12px] font-semibold text-muted-foreground mb-1 block">Name</label>
+            <input value={name} onChange={e => setName(e.target.value)}
+              className="w-full h-10 px-3 rounded-xl border border-border bg-muted/30 text-[13px] text-foreground focus:outline-none focus:ring-2 focus:ring-violet-400/25 transition-all" />
           </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[13px] font-semibold text-foreground/80">Reason <span className="text-red-500">*</span></label>
-            <input value={reason} onChange={e => { setReason(e.target.value); setError(""); }} placeholder="e.g. Debugging enrollment issue reported by user"
-              className={cn("w-full h-10 px-4 rounded-xl text-[13.5px] bg-muted/40 border",
-                error ? "border-red-400/60" : "border-border focus:border-amber-400/70",
-                "text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-amber-400/20 transition-all")} />
-            {error && <p className="text-[12px] text-red-500 font-medium">{error}</p>}
-          </div>
-          <div className="flex gap-3 justify-end border-t border-border pt-3">
-            <button type="button" onClick={onDone} className="h-9 px-4 rounded-xl border border-border text-[13px] font-semibold text-muted-foreground hover:bg-muted/50 transition-all">Cancel</button>
-            <button type="submit" disabled={loading}
-              className="inline-flex items-center gap-2 h-9 px-5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-[13px] font-bold transition-all disabled:opacity-60">
-              {loading ? <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <RiEyeLine />} Impersonate
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-// ─── User row menu ─────────────────────────────────────────
-function UserRowMenu({ user, onRefresh }: { user: User; onRefresh: () => void }) {
-  const [menuOpen,        setMenuOpen]        = useState(false);
-  const [showReset,       setShowReset]       = useState(false);
-  const [showImpersonate, setShowImpersonate] = useState(false);
-
-  const toggle = async (action: "deactivate" | "activate" | "delete") => {
-    const methodMap = { deactivate: "PATCH", activate: "PATCH", delete: "DELETE" };
-    await apiFetch(API(`/${user.id}${action === "delete" ? "" : `/${action}`}`), { method: methodMap[action] });
-    setMenuOpen(false); onRefresh();
-  };
-
-  return (
-    <>
-      {showReset       && <ResetPasswordModal user={user} onDone={() => { setShowReset(false); }} />}
-      {showImpersonate && <ImpersonateModal   user={user} onDone={() => { setShowImpersonate(false); }} />}
-
-      <div className="relative">
-        <button onClick={() => setMenuOpen(o => !o)} className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground/50 hover:text-foreground hover:bg-muted/60 transition-all"><RiMoreLine /></button>
-        {menuOpen && (
-          <>
-            <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-            <div className="absolute right-0 top-full mt-1 z-20 w-48 rounded-xl border border-border bg-popover shadow-xl overflow-hidden">
-              <button onClick={() => { setShowReset(true); setMenuOpen(false); }} className="flex items-center gap-2.5 w-full px-4 py-2.5 text-[13px] text-foreground hover:bg-accent transition-colors"><RiLockPasswordLine className="text-muted-foreground"/>Reset password</button>
-              <button onClick={() => { setShowImpersonate(true); setMenuOpen(false); }} className="flex items-center gap-2.5 w-full px-4 py-2.5 text-[13px] text-foreground hover:bg-accent transition-colors"><RiEyeLine className="text-muted-foreground"/>Impersonate</button>
-              <div className="border-t border-border" />
-              {user.isActive
-                ? <button onClick={() => toggle("deactivate")} className="flex items-center gap-2.5 w-full px-4 py-2.5 text-[13px] text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 transition-colors"><RiUserForbidLine />Deactivate</button>
-                : <button onClick={() => toggle("activate")}   className="flex items-center gap-2.5 w-full px-4 py-2.5 text-[13px] text-teal-600 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-950/30 transition-colors"><RiUserFollowLine />Activate</button>
-              }
-              <button onClick={() => toggle("delete")} className="flex items-center gap-2.5 w-full px-4 py-2.5 text-[13px] text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"><RiDeleteBinLine />Delete user</button>
+          <div>
+            <label className="text-[12px] font-semibold text-muted-foreground mb-1 block">Role</label>
+            <div className="grid grid-cols-3 gap-2">
+              {["STUDENT", "TEACHER", "ADMIN"].map(r => (
+                <button key={r} onClick={() => setRole(r)}
+                  className={cn("h-9 rounded-xl text-[12px] font-semibold border transition-all",
+                    role === r ? "bg-foreground text-background border-foreground" : "border-border text-muted-foreground hover:bg-muted/40")}>
+                  {r.charAt(0) + r.slice(1).toLowerCase()}
+                </button>
+              ))}
             </div>
-          </>
-        )}
-      </div>
-    </>
-  );
-}
-
-// ─── Page ─────────────────────────────────────────────────
-export default function AdminUserManagementPage() {
-  const [users,     setUsers]     = useState<User[]>([]);
-  const [loading,   setLoading]   = useState(true);
-  const [search,    setSearch]    = useState("");
-  const [roleFilter,setRoleFilter]= useState("");
-  const [showCreate,setShowCreate]= useState(false);
-  const [page,      setPage]      = useState(1);
-  const [totalPages,setTotalPages]= useState(1);
-
-  const load = async () => {
-    setLoading(true);
-    const params = new URLSearchParams({ page: String(page), limit: "25" });
-    if (search)     params.set("search", search);
-    if (roleFilter) params.set("role", roleFilter);
-    const data = await apiFetch(API(`?${params}`));
-    if (data.success) { setUsers(data.data.users); setTotalPages(data.data.totalPages); }
-    setLoading(false);
-  };
-
-  useEffect(() => { load(); }, [search, roleFilter, page]);
-
-  return (
-    <div className="flex flex-col gap-6 p-5 lg:p-7 pt-6 max-w-6xl mx-auto w-full">
-      {showCreate && <CreateUserModal onDone={() => { setShowCreate(false); load(); }} />}
-
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div>
-          <div className="flex items-center gap-1.5 mb-1"><RiSparklingFill className="text-teal-500 dark:text-teal-400 text-sm animate-pulse" /><span className="text-[10.5px] font-bold tracking-[.12em] uppercase text-muted-foreground">Admin</span></div>
-          <h1 className="text-[1.5rem] font-extrabold tracking-tight text-foreground leading-none">User Management</h1>
+          </div>
         </div>
-        <button onClick={() => setShowCreate(true)}
-          className="inline-flex items-center gap-2 h-10 px-5 rounded-xl bg-teal-600 dark:bg-teal-500 hover:bg-teal-700 text-white text-[13.5px] font-bold shadow-md shadow-teal-600/20 transition-all hover:scale-[1.02]">
-          <RiAddLine /> New user
+        <button onClick={save} disabled={saving || !name.trim()}
+          className="h-11 rounded-xl bg-violet-600 dark:bg-violet-500 hover:bg-violet-700 disabled:opacity-50 text-white text-[13px] font-bold flex items-center justify-center gap-2 transition-all">
+          {saving ? <RiLoader4Line className="animate-spin" /> : <RiCheckLine />}
+          Save changes
         </button>
       </div>
+    </div>
+  );
+}
 
-      <div className="flex gap-3 flex-wrap">
-        <div className="relative flex-1 min-w-[200px]">
-          <RiSearchLine className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/50 pointer-events-none" />
-          <input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} placeholder="Search by name or email…"
-            className="w-full h-10 pl-9 pr-4 rounded-xl text-[13.5px] bg-muted/40 border border-border text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-teal-400/20 focus:border-teal-400/70 transition-all" />
-        </div>
-        <select value={roleFilter} onChange={e => { setRoleFilter(e.target.value); setPage(1); }}
-          className="h-10 px-4 rounded-xl text-[13.5px] bg-muted/40 border border-border text-foreground appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-teal-400/20 transition-all">
-          <option value="">All roles</option>
-          <option value="STUDENT">Students</option>
-          <option value="TEACHER">Teachers</option>
-          <option value="ADMIN">Admins</option>
-        </select>
-      </div>
+// ─── Action Menu ──────────────────────────────────────────
+function ActionMenu({
+  user,
+  onEdit,
+  onDeactivate,
+  onResetPwd,
+  onImpersonate,
+}: {
+  user: User;
+  onEdit: () => void;
+  onDeactivate: () => void;
+  onResetPwd: () => void;
+  onImpersonate: () => void;
+}) {
+  const [open, setOpen] = useState(false);
 
-      <div className="rounded-2xl border border-border bg-card overflow-hidden">
-        {loading ? (
-          <div className="flex justify-center py-12"><span className="w-6 h-6 border-2 border-teal-200 dark:border-teal-800 border-t-teal-500 rounded-full animate-spin" /></div>
-        ) : (
-          <div className="flex flex-col divide-y divide-border/60">
-            {users.map(u => (
-              <div key={u.id} className="flex items-center gap-4 px-5 py-3.5 hover:bg-muted/20 transition-colors">
-                <div className="w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center font-bold text-[12px] bg-teal-600/15 dark:bg-teal-400/12 text-teal-700 dark:text-teal-300 border border-teal-300/50 dark:border-teal-600/30">
-                  {u.image ? <img src={u.image} alt="" className="w-full h-full rounded-full object-cover" /> : initials(u.name)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                    <span className="text-[13.5px] font-bold text-foreground">{u.name}</span>
-                    <span className={cn("text-[10px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-full border", ROLE_BADGE[u.role])}>{u.role}</span>
-                    {!u.isActive && <span className="text-[10px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-full border bg-red-100/80 dark:bg-red-950/30 text-red-600 dark:text-red-400 border-red-200/70 dark:border-red-800/50">Inactive</span>}
-                    {!u.emailVerified && <span className="text-[10px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-full border bg-amber-100/80 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border-amber-200/70 dark:border-amber-800/50">Unverified</span>}
-                  </div>
-                  <p className="text-[12px] text-muted-foreground truncate">{u.email}</p>
-                </div>
-                <div className="text-right flex-shrink-0 hidden sm:block">
-                  <p className="text-[12px] text-muted-foreground">Joined {new Date(u.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</p>
-                  {u.lastLoginAt && <p className="text-[11px] text-muted-foreground/60">Last login {new Date(u.lastLoginAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</p>}
-                </div>
-                <UserRowMenu user={u} onRefresh={load} />
-              </div>
+  return (
+    <div className="relative">
+      <button onClick={() => setOpen(v => !v)}
+        className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all">
+        <RiMoreLine className="text-sm" />
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-8 z-20 w-44 rounded-xl border border-border bg-card shadow-xl overflow-hidden">
+            {[
+              { icon: <RiEditLine />, label: "Edit user", fn: onEdit },
+              { icon: <RiLockPasswordLine />, label: "Reset password", fn: onResetPwd },
+              { icon: <RiEyeLine />, label: "Impersonate", fn: onImpersonate },
+              { icon: <RiDeleteBinLine />, label: "Deactivate", fn: onDeactivate, danger: true },
+            ].map(a => (
+              <button key={a.label} onClick={() => { a.fn(); setOpen(false); }}
+                className={cn("w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[12.5px] font-medium transition-colors hover:bg-muted/40",
+                  a.danger ? "text-rose-600 dark:text-rose-400" : "text-foreground")}>
+                <span className="text-sm">{a.icon}</span>
+                {a.label}
+              </button>
             ))}
-            {users.length === 0 && <div className="px-5 py-12 text-center"><RiUserLine className="text-3xl text-muted-foreground/25 mx-auto mb-2" /><p className="text-[13.5px] text-muted-foreground">No users found</p></div>}
           </div>
-        )}
+        </>
+      )}
+    </div>
+  );
+}
+
+export default function AdminUserManagementPage() {
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const LIMIT = 20;
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params: any = { page, limit: LIMIT };
+      if (roleFilter !== "all") params.role = roleFilter;
+      if (search.trim()) params.search = search.trim();
+      const r = await adminUsersApi.getUsers(params);
+      const d = r.data;
+      setUsers(Array.isArray(d?.data) ? d.data : Array.isArray(d) ? d : []);
+      setTotal(d?.total ?? 0);
+    } catch (err: unknown) { toast.error(err instanceof Error ? err.message : "Failed"); }
+    finally { setLoading(false); }
+  }, [page, roleFilter, search]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const handleSave = async (id: string, data: any) => {
+    await adminUsersApi.updateUser(id, data);
+    toast.success("User updated");
+    load();
+  };
+
+  const handleDeactivate = async (u: User) => {
+    if (!confirm(`Deactivate ${u.name}?`)) return;
+    try {
+      await adminUsersApi.deactivate(u.id);
+      toast.success("User deactivated");
+      load();
+    } catch (err: unknown) { toast.error(err instanceof Error ? err.message : "Failed"); }
+  };
+
+  const handleResetPwd = async (u: User) => {
+    if (!confirm(`Send password reset to ${u.email}?`)) return;
+    try {
+      await adminUsersApi.resetPwd(u.id);
+      toast.success(`Reset email sent to ${u.email}`);
+    } catch (err: unknown) { toast.error(err instanceof Error ? err.message : "Failed"); }
+  };
+
+  const handleImpersonate = async (u: User) => {
+    try {
+      await adminUsersApi.impersonate(u.id);
+      toast.success(`Impersonation logged for ${u.email}`);
+    } catch (err: unknown) { toast.error(err instanceof Error ? err.message : "Failed"); }
+  };
+
+  const totalPages = Math.ceil(total / LIMIT);
+
+  return (
+    <div className="flex flex-col gap-6 p-5 lg:p-7 pt-6 max-w-7xl mx-auto w-full">
+      {/* Header */}
+      <div>
+        <div className="flex items-center gap-1.5 mb-1">
+          <RiSparklingFill className="text-violet-500 dark:text-violet-400 text-sm animate-pulse" />
+          <span className="text-[10.5px] font-bold tracking-[.12em] uppercase text-muted-foreground">Admin</span>
+        </div>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-[1.5rem] font-extrabold tracking-tight text-foreground leading-none">User Management</h1>
+            <p className="text-[13px] text-muted-foreground mt-1">View, edit, manage roles, reset passwords and impersonate users</p>
+          </div>
+          <div className="flex gap-2 shrink-0">
+            <button onClick={load}
+              className="w-9 h-9 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all">
+              <RiRefreshLine className={cn("text-sm", loading && "animate-spin")} />
+            </button>
+            <a href="/dashboard/admin/create"
+              className="h-9 px-4 rounded-xl bg-violet-600 dark:bg-violet-500 hover:bg-violet-700 text-white text-[12.5px] font-bold flex items-center gap-1.5 transition-all">
+              <RiAddLine /> Create users
+            </a>
+          </div>
+        </div>
       </div>
 
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-3">
-          <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-            className="h-9 px-4 rounded-xl border border-border text-[13px] font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed">Previous</button>
-          <span className="text-[13px] text-muted-foreground">Page {page} of {totalPages}</span>
-          <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-            className="h-9 px-4 rounded-xl border border-border text-[13px] font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed">Next</button>
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-3">
+        {[
+          { icon: <RiUserLine />, label: "Total Users", val: total, col: "text-teal-600 dark:text-teal-400 bg-teal-100/60 dark:bg-teal-950/40 border-teal-200/60" },
+          { icon: <RiUserStarLine />, label: "Admins", val: users.filter(u => u.role === "ADMIN").length, col: "text-violet-600 dark:text-violet-400 bg-violet-100/60 dark:bg-violet-950/40 border-violet-200/60" },
+          { icon: <RiShieldUserLine />, label: "Teachers", val: users.filter(u => u.role === "TEACHER").length, col: "text-amber-600 dark:text-amber-400 bg-amber-100/60 dark:bg-amber-950/40 border-amber-200/60" },
+        ].map(s => (
+          <div key={s.label} className="rounded-2xl border border-border bg-card p-4">
+            <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center text-sm border mb-2.5", s.col)}>{s.icon}</div>
+            <p className="text-[1.3rem] font-extrabold tabular-nums text-foreground leading-none mb-0.5">{loading ? "—" : s.val}</p>
+            <p className="text-[12px] font-medium text-muted-foreground">{s.label}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <RiSearchLine className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/50 pointer-events-none text-sm" />
+          <input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }}
+            placeholder="Search name or email…"
+            className="w-full h-10 pl-9 pr-4 rounded-xl text-[13px] bg-muted/40 border border-border text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-violet-400/20 transition-all" />
         </div>
+        <div className="flex items-center gap-2">
+          {(["all", "ADMIN", "TEACHER", "STUDENT"] as RoleFilter[]).map(f => (
+            <button key={f} onClick={() => { setRoleFilter(f); setPage(1); }}
+              className={cn("h-9 px-3 rounded-xl text-[12px] font-semibold border transition-all",
+                roleFilter === f ? "bg-violet-600 text-white border-violet-600" : "border-border text-muted-foreground hover:bg-muted/40")}>
+              {f === "all" ? "All" : f.charAt(0) + f.slice(1).toLowerCase() + "s"}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="rounded-2xl border border-border bg-card overflow-hidden">
+        <div className="grid grid-cols-[1fr_180px_100px_120px_80px] gap-4 px-5 py-3 border-b border-border bg-muted/20">
+          {["User", "Joined", "Role", "Status", "Actions"].map(h => (
+            <p key={h} className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">{h}</p>
+          ))}
+        </div>
+
+        {loading
+          ? Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} />)
+          : users.length === 0
+          ? (
+            <div className="py-16 text-center">
+              <RiUserLine className="text-4xl text-muted-foreground/20 mx-auto mb-3" />
+              <p className="text-[13.5px] font-medium text-muted-foreground">No users found</p>
+            </div>
+          )
+          : users.map(u => {
+            const roleCfg = ROLE_CFG[u.role] ?? { label: u.role, cls: "border-border text-muted-foreground" };
+            return (
+              <div key={u.id} className="grid grid-cols-[1fr_180px_100px_120px_80px] gap-4 px-5 py-4 border-b border-border/60 last:border-0 hover:bg-muted/10 transition-colors items-center">
+                <div className="flex items-center gap-3 min-w-0">
+                  {u.image ? (
+                    <img src={u.image} alt={u.name} className="w-8 h-8 rounded-full object-cover shrink-0 ring-1 ring-border" />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center shrink-0">
+                      <RiUserLine className="text-muted-foreground text-xs" />
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <p className="text-[13px] font-semibold text-foreground truncate">{u.name}</p>
+                    <p className="text-[11.5px] text-muted-foreground truncate">{u.email}</p>
+                  </div>
+                </div>
+                <p className="text-[12.5px] text-muted-foreground">{fmtDate(u.createdAt)}</p>
+                <span className={cn("text-[10.5px] font-bold tracking-wide uppercase px-2 py-0.5 rounded-full border w-fit", roleCfg.cls)}>
+                  {roleCfg.label}
+                </span>
+                <span className={cn("text-[10.5px] font-bold tracking-wide uppercase px-2 py-0.5 rounded-full border w-fit",
+                  u.isDeleted
+                    ? "text-rose-600 bg-rose-50/70 dark:bg-rose-950/30 border-rose-200/60"
+                    : u.needPasswordChange
+                    ? "text-amber-600 bg-amber-50/70 dark:bg-amber-950/30 border-amber-200/60"
+                    : "text-teal-600 bg-teal-50/70 dark:bg-teal-950/30 border-teal-200/60"
+                )}>
+                  {u.isDeleted ? "Inactive" : u.needPasswordChange ? "Pending" : "Active"}
+                </span>
+                <ActionMenu user={u}
+                  onEdit={() => setEditingUser(u)}
+                  onDeactivate={() => handleDeactivate(u)}
+                  onResetPwd={() => handleResetPwd(u)}
+                  onImpersonate={() => handleImpersonate(u)}
+                />
+              </div>
+            );
+          })}
+      </div>
+
+      {/* Pagination */}
+      {!loading && totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2">
+          <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+            className="h-8 px-3 rounded-xl border border-border text-[12.5px] font-semibold text-muted-foreground hover:bg-muted/40 disabled:opacity-40 transition-all">
+            Previous
+          </button>
+          <span className="text-[12.5px] text-muted-foreground">Page {page} of {totalPages}</span>
+          <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
+            className="h-8 px-3 rounded-xl border border-border text-[12.5px] font-semibold text-muted-foreground hover:bg-muted/40 disabled:opacity-40 transition-all">
+            Next
+          </button>
+        </div>
+      )}
+
+      {editingUser && (
+        <EditModal user={editingUser} onClose={() => setEditingUser(null)} onSave={handleSave} />
       )}
     </div>
   );
