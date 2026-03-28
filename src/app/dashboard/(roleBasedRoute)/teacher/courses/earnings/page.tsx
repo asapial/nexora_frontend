@@ -1,15 +1,15 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   RiSparklingFill, RiMoneyDollarCircleLine, RiArrowRightLine,
   RiPercentLine, RiBookOpenLine, RiGroupLine, RiSearchLine,
   RiArrowUpLine, RiArrowDownLine, RiTrophyLine, RiRefreshLine,
-  RiAlertLine, RiLoader4Line,
+  RiAlertLine,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
-import { courseApi } from "../../../../../../lib/api";
+import { courseApi } from "@/lib/api";
 
 // ─── Ambient ──────────────────────────────────────────────
 function AmbientBg() {
@@ -131,10 +131,15 @@ export default function EarningsDashboardPage() {
       const params: Record<string, string> = { page: String(page), limit: String(PER_PAGE) };
       if (search) params.search = search;
       const r = await courseApi.getTransactions(params);
-      setTransactions(r.data.data);
-      setTxTotal(r.data.total);
-      setTxPages(r.data.totalPages);
-    } catch { }
+      setTransactions(r.data.data ?? []);
+      setTxTotal(r.data.total ?? 0);
+      setTxPages(r.data.totalPages ?? 1);
+    } catch (e: unknown) {
+      setTransactions([]);
+      setTxTotal(0);
+      setTxPages(1);
+      console.error("Transactions fetch failed", e);
+    }
     finally { setTxLoading(false); }
   }, [page, search]);
 
@@ -144,8 +149,24 @@ export default function EarningsDashboardPage() {
   const totalEarned = summary?.totalEarned ?? 0;
   const perCourse: any[] = summary?.perCourse ?? [];
   const maxCourseEarning = Math.max(...perCourse.map((c: any) => c._sum?.teacherEarning ?? 0), 1);
-  // Mock sparkline until real monthly data endpoint exists
-  const sparklineData = [820, 1200, 960, 1540, 1380, 2100, 1760, Math.round(totalEarned / 10) || 2480];
+  const paidEnrollmentCount = summary?.paidEnrollmentCount ?? 0;
+  const totalEnrollmentCount = summary?.totalEnrollmentCount ?? 0;
+  const sparklineData = useMemo(() => {
+    const t = summary?.monthlyEarningsTrend;
+    if (Array.isArray(t) && t.length === 8) return t.map((n: unknown) => Number(n) || 0);
+    return Array.from({ length: 8 }, () => 0);
+  }, [summary?.monthlyEarningsTrend]);
+  const sparklineThisMonth = sparklineData[sparklineData.length - 1] ?? 0;
+  const monthLabels = useMemo(() => {
+    const short = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const out: string[] = [];
+    const now = new Date();
+    for (let i = 7; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      out.push(short[d.getMonth()]);
+    }
+    return out;
+  }, []);
 
   return (
     <div className="relative flex flex-col gap-6 p-5 lg:p-7 pt-6 max-w-5xl mx-auto w-full min-h-screen">
@@ -177,10 +198,10 @@ export default function EarningsDashboardPage() {
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatCard icon={<RiMoneyDollarCircleLine />} label="Total earned" value={fmtCurrency(totalEarned)} sub="All time" trend={14} accent="teal" loading={loading} />
-        <StatCard icon={<RiTrophyLine />} label="Paid enrollments" value={String(transactions.filter(t => t.teacherEarning > 0).length)} accent="amber" loading={loading} />
-        <StatCard icon={<RiGroupLine />} label="Total students" value={String(perCourse.reduce((a: number, c: any) => a + (c._count?.id ?? 0), 0))} accent="blue" loading={loading} />
-        <StatCard icon={<RiPercentLine />} label="Avg. revenue cut" value="70%" sub="Platform-set per course" accent="teal" loading={loading} />
+        <StatCard icon={<RiMoneyDollarCircleLine />} label="Total earned" value={fmtCurrency(totalEarned)} sub="All time (your share)" accent="teal" loading={loading} />
+        <StatCard icon={<RiTrophyLine />} label="Paid enrollments" value={String(paidEnrollmentCount)} accent="amber" loading={loading} />
+        <StatCard icon={<RiGroupLine />} label="Total enrollments" value={String(totalEnrollmentCount)} sub="Across your courses" accent="blue" loading={loading} />
+        <StatCard icon={<RiPercentLine />} label="Avg. revenue cut" value={perCourse.length ? `${Math.round(perCourse.reduce((a: number, c: any) => a + (c.teacherRevenuePercent ?? 70), 0) / perCourse.length)}%` : "—"} sub="Per-course teacher share" accent="teal" loading={loading} />
       </div>
 
       {/* Sparkline chart */}
@@ -192,14 +213,14 @@ export default function EarningsDashboardPage() {
             <p className="text-[12px] text-muted-foreground">Last 8 months</p>
           </div>
           <div className="text-right">
-            <p className="text-[22px] font-extrabold text-foreground tabular-nums">{fmtCurrency(sparklineData[7])}</p>
+            <p className="text-[22px] font-extrabold text-foreground tabular-nums">{fmtCurrency(sparklineThisMonth)}</p>
             <p className="text-[11.5px] text-muted-foreground">This month</p>
           </div>
         </div>
         <div className="relative z-10">
           <Sparkline values={sparklineData} />
           <div className="flex justify-between mt-2">
-            {["Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar"].map(m => <span key={m} className="text-[10.5px] text-muted-foreground/50">{m}</span>)}
+            {monthLabels.map((m, i) => <span key={`${m}-${i}`} className="text-[10.5px] text-muted-foreground/50">{m}</span>)}
           </div>
         </div>
       </div>
@@ -221,7 +242,7 @@ export default function EarningsDashboardPage() {
                   title={c.courseTitle ?? `Course ${i + 1}`}
                   earning={c._sum?.teacherEarning ?? 0}
                   enrollments={c._count?.id ?? 0}
-                  revenuePercent={70}
+                  revenuePercent={Math.round(c.teacherRevenuePercent ?? 70)}
                   max={maxCourseEarning}
                   onClick={() => router.push(`/teacher/courses/${c.courseId}`)} />
               ))

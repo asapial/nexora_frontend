@@ -94,8 +94,8 @@ function OrderSummary({ course }: { course: any }) {
 }
 
 // ─── Stripe Payment Form (inner — needs Elements context) ─
-function StripePaymentForm({ course, clientSecret, onSuccess }: {
-  course: any; clientSecret: string; onSuccess: () => void;
+function StripePaymentForm({ course, clientSecret, paymentIntentId, onSuccess }: {
+  course: any; clientSecret: string; paymentIntentId: string | null; onSuccess: () => void;
 }) {
   const stripe = useStripe();
   const elements = useElements();
@@ -107,7 +107,7 @@ function StripePaymentForm({ course, clientSecret, onSuccess }: {
     if (!stripe || !elements) return;
     setPaying(true); setErr(null);
 
-    const { error } = await stripe.confirmPayment({
+    const { error, paymentIntent } = await stripe.confirmPayment({
       elements,
       confirmParams: {
         return_url: `${window.location.origin}/courses/${course.id}/enroll/success`,
@@ -118,11 +118,26 @@ function StripePaymentForm({ course, clientSecret, onSuccess }: {
     if (error) {
       setErr(error.message ?? "Payment failed. Please try again.");
       setPaying(false);
-    } else {
-      // Payment succeeded without redirect (card payments)
-      toast.success("Payment successful! Enrolling you now…", { position: "top-right" });
-      onSuccess();
+      return;
     }
+
+    const piId = paymentIntent?.id ?? paymentIntentId ?? undefined;
+    if (!piId) {
+      setErr("Could not confirm payment reference. Please contact support.");
+      setPaying(false);
+      return;
+    }
+
+    try {
+      await paymentApi.confirmPayment(piId);
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : "Could not finalize enrollment. Try refresh or contact support.");
+      setPaying(false);
+      return;
+    }
+
+    toast.success("Payment successful! You're enrolled.", { position: "top-right" });
+    onSuccess();
   };
 
   return (
@@ -144,7 +159,7 @@ function StripePaymentForm({ course, clientSecret, onSuccess }: {
           </div>
         </div>
         <div className="px-5 py-5">
-          <PaymentElement
+          {/* <PaymentElement
             options={{
               layout: "tabs",
               appearance: {
@@ -158,7 +173,29 @@ function StripePaymentForm({ course, clientSecret, onSuccess }: {
                 },
               },
             }}
-          />
+          /> */}
+          <Elements
+            stripe={stripePromise}
+            options={{
+              clientSecret,
+              appearance: {
+                theme: "stripe",
+                variables: {
+                  colorPrimary: "#0d9488",
+                  colorBackground: "transparent",
+                  colorText: "inherit",
+                  borderRadius: "12px",
+                  fontSizeBase: "13.5px",
+                },
+              },
+            }}
+          >
+            <PaymentElement
+              options={{
+                layout: "tabs",
+              }}
+            />
+          </Elements>
         </div>
       </div>
 
@@ -203,7 +240,7 @@ function StripePaymentForm({ course, clientSecret, onSuccess }: {
 function SuccessScreen({ course }: { course: any }) {
   const router = useRouter();
   useEffect(() => {
-    const t = setTimeout(() => router.push(`/student/courses/${course.id}`), 2500);
+    const t = setTimeout(() => router.push(`/dashboard/student/courses/${course.id}`), 2500);
     return () => clearTimeout(t);
   }, [course.id, router]);
 
@@ -235,6 +272,7 @@ export default function EnrollPage() {
 
   const [course, setCourse] = useState<any>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [enrolling, setEnrolling] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -252,7 +290,10 @@ export default function EnrollPage() {
   useEffect(() => {
     if (!course || course.isFree) return;
     paymentApi.createIntent(id)
-      .then(r => setClientSecret(r.data.clientSecret))
+      .then(r => {
+        setClientSecret(r.data.clientSecret);
+        setPaymentIntentId(r.data.paymentIntentId);
+      })
       .catch(e => setError(e.message));
   }, [course, id]);
 
@@ -372,6 +413,7 @@ export default function EnrollPage() {
               <StripePaymentForm
                 course={course}
                 clientSecret={clientSecret}
+                paymentIntentId={paymentIntentId}
                 onSuccess={() => setSuccess(true)}
               />
             </Elements>

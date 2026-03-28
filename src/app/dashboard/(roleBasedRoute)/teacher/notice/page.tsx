@@ -13,17 +13,12 @@ import {
   RiUserLine,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
+import { teacherNoticeApi } from "@/lib/api";
+import { toast } from "sonner";
 
 type Urgency = "INFO" | "IMPORTANT" | "CRITICAL";
-type TabKey = "all" | "students" | "personal";
+type TabKey = "all" | "teachers" | "personal";
 
-const TABS: { key: TabKey; label: string }[] = [
-  { key: "all",      label: "All Notices" },
-  { key: "students", label: "Students Only" },
-  { key: "personal", label: "Personal" },
-];
-
-interface Cluster { id: string; name: string }
 interface Notice {
   id: string;
   title: string;
@@ -36,7 +31,6 @@ interface Notice {
   createdAt: string;
   isRead: boolean;
   author: { name: string; email: string } | null;
-  clusters: { cluster: Cluster }[];
 }
 
 const URGENCY: Record<Urgency, { icon: React.ReactNode; badge: string; dot: string }> = {
@@ -57,6 +51,12 @@ const URGENCY: Record<Urgency, { icon: React.ReactNode; badge: string; dot: stri
   },
 };
 
+const TABS: { key: TabKey; label: string }[] = [
+  { key: "all",      label: "All Notices" },
+  { key: "teachers", label: "Teachers Only" },
+  { key: "personal", label: "Personal" },
+];
+
 function timeAgo(dateStr: string) {
   const diff = Date.now() - new Date(dateStr).getTime();
   const m = Math.floor(diff / 60000);
@@ -67,67 +67,59 @@ function timeAgo(dateStr: string) {
   return `${Math.floor(h / 24)}d ago`;
 }
 
-export default function NoticeBoardPage() {
+export default function TeacherNoticePage() {
   const [notices, setNotices] = useState<Notice[]>([]);
   const [loading, setLoading] = useState(true);
   const [markingId, setMarkingId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabKey>("all");
-  const [filter, setFilter] = useState<{ urgency: string; unread: string }>({
-    urgency: "",
-    unread: "",
-  });
+  const [urgencyFilter, setUrgencyFilter] = useState("");
 
-  const fetchNotices = useCallback(() => {
+  const fetchNotices = useCallback(async () => {
     setLoading(true);
-    const params = new URLSearchParams();
-    if (filter.urgency) params.set("urgency", filter.urgency);
-    if (filter.unread) params.set("unread", filter.unread);
-    fetch(`/api/student/notices?${params}`, { credentials: "include" })
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.success) setNotices(d.data);
-      })
-      .finally(() => setLoading(false));
-  }, [filter]);
+    try {
+      const r = await teacherNoticeApi.getNotices();
+      const raw = r.data;
+      setNotices(Array.isArray(raw?.data) ? raw.data : Array.isArray(raw) ? raw : []);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to load notices");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => { fetchNotices(); }, [fetchNotices]);
 
   const markRead = async (id: string) => {
     setMarkingId(id);
     try {
-      await fetch(`/api/student/notices/${id}/read`, {
-        method: "PATCH",
-        credentials: "include",
-      });
-      setNotices((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
-      );
+      await teacherNoticeApi.markRead(id);
+      setNotices(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+    } catch {
+      // ignore
     } finally {
       setMarkingId(null);
     }
   };
 
-  // Client-side tab filter
+  // Client-side filter by tab
   const filtered = notices.filter(n => {
-    if (filter.urgency && n.urgency !== filter.urgency) return false;
-    if (filter.unread === "true" && n.isRead) return false;
-    if (filter.unread === "false" && !n.isRead) return false;
+    if (urgencyFilter && n.urgency !== urgencyFilter) return false;
     if (activeTab === "personal") return !!n.targetUserId;
-    if (activeTab === "students") return n.targetRole === "STUDENT";
-    return true;
+    if (activeTab === "teachers") return n.targetRole === "TEACHER";
+    return true; // "all"
   });
 
-  const unreadCount = filtered.filter((n) => !n.isRead).length;
+  const unreadCount = filtered.filter(n => !n.isRead).length;
 
   return (
-    <div className="flex flex-1 flex-col gap-6 p-5 lg:p-7 pt-6">
+    <div className="flex flex-1 flex-col gap-6 p-5 lg:p-7 pt-6 max-w-3xl mx-auto w-full">
       {/* Heading */}
       <div className="flex items-start justify-between">
         <div>
           <div className="flex items-center gap-1.5 mb-1">
             <RiSparklingFill className="text-teal-500 dark:text-teal-400 text-sm animate-pulse" />
             <span className="text-[10.5px] font-bold tracking-[.12em] uppercase text-muted-foreground">
-              Announcements
+              Teacher
             </span>
           </div>
           <h1 className="text-[1.55rem] font-extrabold tracking-tight leading-none text-foreground">
@@ -159,38 +151,23 @@ export default function NoticeBoardPage() {
         ))}
       </div>
 
-      {/* Urgency / Read Filters */}
+      {/* Urgency filter */}
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex items-center gap-1.5 text-[12px] font-semibold text-muted-foreground mr-1">
-          <RiFilterLine /> Filter:
+          <RiFilterLine /> Urgency:
         </div>
-        {(["" , "INFO", "IMPORTANT", "CRITICAL"] as const).map((u) => (
+        {(["", "INFO", "IMPORTANT", "CRITICAL"] as const).map(u => (
           <button
             key={u}
-            onClick={() => setFilter((f) => ({ ...f, urgency: u }))}
+            onClick={() => setUrgencyFilter(u)}
             className={cn(
               "text-[11.5px] font-semibold px-3 py-1 rounded-full border transition-colors",
-              filter.urgency === u
+              urgencyFilter === u
                 ? "bg-teal-600 text-white border-teal-600"
                 : "border-border text-muted-foreground hover:bg-muted/40"
             )}
           >
             {u === "" ? "All" : u}
-          </button>
-        ))}
-        <div className="h-4 w-px bg-border mx-1" />
-        {([["", "All"], ["true", "Unread"], ["false", "Read"]] as const).map(([val, label]) => (
-          <button
-            key={val}
-            onClick={() => setFilter((f) => ({ ...f, unread: val }))}
-            className={cn(
-              "text-[11.5px] font-semibold px-3 py-1 rounded-full border transition-colors",
-              filter.unread === val
-                ? "bg-violet-600 text-white border-violet-600"
-                : "border-border text-muted-foreground hover:bg-muted/40"
-            )}
-          >
-            {label}
           </button>
         ))}
       </div>
@@ -218,13 +195,13 @@ export default function NoticeBoardPage() {
               <p className="text-[12.5px] text-muted-foreground">
                 {activeTab === "personal"
                   ? "No personal notices from admin yet."
-                  : activeTab === "students"
-                  ? "No student-specific announcements."
-                  : "No announcements match your current filter."}
+                  : activeTab === "teachers"
+                  ? "No teacher-specific announcements."
+                  : "No notices match your current filter."}
               </p>
             </div>
           )
-          : filtered.map((n) => {
+          : filtered.map(n => {
             const u = URGENCY[n.urgency] ?? URGENCY.INFO;
             const isPersonal = !!n.targetUserId;
             return (
@@ -239,38 +216,28 @@ export default function NoticeBoardPage() {
               >
                 <div className="flex items-start gap-3">
                   {/* Urgency icon */}
-                  <div
-                    className={cn(
-                      "mt-0.5 w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center text-sm border",
-                      u.badge
-                    )}
-                  >
+                  <div className={cn("mt-0.5 w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center text-sm border", u.badge)}>
                     {u.icon}
                   </div>
 
                   <div className="flex-1 min-w-0">
                     {/* Title row */}
                     <div className="flex items-start justify-between gap-2 mb-1.5">
-                      <p
-                        className={cn(
-                          "text-[13.5px] font-bold leading-snug",
-                          n.isRead ? "text-foreground/60" : "text-foreground"
-                        )}
-                      >
+                      <p className={cn("text-[13.5px] font-bold leading-snug", n.isRead ? "text-foreground/60" : "text-foreground")}>
                         {n.title}
                         {!n.isRead && (
-                          <span
-                            className={cn(
-                              "inline-block ml-2 w-1.5 h-1.5 rounded-full align-middle",
-                              u.dot
-                            )}
-                          />
+                          <span className={cn("inline-block ml-2 w-1.5 h-1.5 rounded-full align-middle", u.dot)} />
                         )}
                       </p>
-                      <div className="flex items-center gap-2 flex-shrink-0">
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
                         {isPersonal && (
                           <span className="text-[9.5px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-full border bg-violet-100/80 dark:bg-violet-950/50 text-violet-700 dark:text-violet-400 border-violet-200/70 dark:border-violet-800/50 flex items-center gap-0.5">
                             <RiUserLine className="text-[9px]" /> Personal
+                          </span>
+                        )}
+                        {n.targetRole === "TEACHER" && !isPersonal && (
+                          <span className="text-[9.5px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-full border bg-teal-100/80 dark:bg-teal-950/50 text-teal-700 dark:text-teal-400 border-teal-200/70">
+                            Teachers only
                           </span>
                         )}
                         {n.isGlobal && !isPersonal && (
@@ -278,35 +245,14 @@ export default function NoticeBoardPage() {
                             Platform
                           </span>
                         )}
-                        <span
-                          className={cn(
-                            "text-[9.5px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-full border",
-                            u.badge
-                          )}
-                        >
+                        <span className={cn("text-[9.5px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-full border", u.badge)}>
                           {n.urgency}
                         </span>
                       </div>
                     </div>
 
                     {/* Body */}
-                    <p className="text-[12.5px] text-muted-foreground leading-relaxed mb-3">
-                      {n.body}
-                    </p>
-
-                    {/* Clusters */}
-                    {n.clusters.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 mb-3">
-                        {n.clusters.map(({ cluster }) => (
-                          <span
-                            key={cluster.id}
-                            className="text-[10.5px] font-medium px-2 py-0.5 rounded-full bg-muted border border-border text-muted-foreground"
-                          >
-                            {cluster.name}
-                          </span>
-                        ))}
-                      </div>
-                    )}
+                    <p className="text-[12.5px] text-muted-foreground leading-relaxed mb-3">{n.body}</p>
 
                     {/* Footer */}
                     <div className="flex items-center justify-between">

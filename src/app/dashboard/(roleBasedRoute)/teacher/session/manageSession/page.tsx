@@ -56,105 +56,6 @@ interface StudySession {
     status: SessionStatus;
 }
 
-// ─── Mock Data ────────────────────────────────────────────
-const MOCK_SESSIONS: StudySession[] = [
-    {
-        id: "s1",
-        clusterId: "c1",
-        clusterName: "ML Research Group — 2025",
-        clusterBatchTag: "Batch 2025",
-        title: "Session 14 — Transformer Architectures Deep Dive",
-        description: "We'll explore the internals of transformer models, attention heads, and positional encodings. Bring your questions.",
-        scheduledAt: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
-        durationMins: 90,
-        location: "Room 204, Lab Building",
-        taskDeadline: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
-        memberCount: 18,
-        taskSubmittedCount: 0,
-        attendanceCount: 0,
-        createdAt: new Date().toISOString(),
-        agenda: [
-            { id: "a1", startTime: "10:00", durationMins: 15, topic: "Recap of last session", presenter: "Dr. Ahmed", order: 0 },
-            { id: "a2", startTime: "10:15", durationMins: 40, topic: "Transformer internals walkthrough", presenter: "Dr. Ahmed", order: 1 },
-            { id: "a3", startTime: "10:55", durationMins: 20, topic: "Group discussion", order: 2 },
-            { id: "a4", startTime: "11:15", durationMins: 15, topic: "Q&A + wrap-up", order: 3 },
-        ],
-        status: "upcoming",
-    },
-    {
-        id: "s2",
-        clusterId: "c1",
-        clusterName: "ML Research Group — 2025",
-        clusterBatchTag: "Batch 2025",
-        title: "Session 13 — Attention Mechanisms",
-        description: "Detailed look at self-attention, cross-attention, and multi-head attention with live coding.",
-        scheduledAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-        durationMins: 90,
-        location: "Room 204, Lab Building",
-        taskDeadline: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString(),
-        recordingUrl: "https://zoom.us/rec/share/example",
-        memberCount: 18,
-        taskSubmittedCount: 12,
-        attendanceCount: 15,
-        createdAt: new Date().toISOString(),
-        feedback: { averageRating: 4.3, totalCount: 11 },
-        agenda: [],
-        status: "completed",
-    },
-    {
-        id: "s3",
-        clusterId: "c2",
-        clusterName: "NLP Reading Circle",
-        clusterBatchTag: "Spring 25",
-        title: "Paper Review — Chain of Thought Prompting",
-        description: "Review and discussion of Wei et al. 2022 CoT paper.",
-        scheduledAt: new Date(Date.now() + 0.5 * 24 * 60 * 60 * 1000).toISOString(),
-        durationMins: 60,
-        location: "Zoom",
-        memberCount: 11,
-        taskSubmittedCount: 3,
-        attendanceCount: 0,
-        createdAt: new Date().toISOString(),
-        agenda: [],
-        status: "upcoming",
-    },
-    {
-        id: "s4",
-        clusterId: "c3",
-        clusterName: "Bootcamp Cohort B",
-        clusterBatchTag: "Cohort B",
-        title: "Sprint 4 Writeup & Review",
-        scheduledAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
-        durationMins: 120,
-        location: "Auditorium A",
-        taskDeadline: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-        memberCount: 42,
-        taskSubmittedCount: 38,
-        attendanceCount: 40,
-        createdAt: new Date().toISOString(),
-        feedback: { averageRating: 4.7, totalCount: 35 },
-        recordingUrl: "https://drive.google.com/example",
-        agenda: [],
-        status: "completed",
-    },
-    {
-        id: "s5",
-        clusterId: "c2",
-        clusterName: "NLP Reading Circle",
-        clusterBatchTag: "Spring 25",
-        title: "Paper Review — RLHF in Large Language Models",
-        scheduledAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
-        durationMins: 75,
-        memberCount: 11,
-        taskSubmittedCount: 9,
-        attendanceCount: 10,
-        createdAt: new Date().toISOString(),
-        feedback: { averageRating: 3.9, totalCount: 8 },
-        agenda: [],
-        status: "completed",
-    },
-];
-
 // ─── Status config ────────────────────────────────────────
 const STATUS_CONFIG: Record<SessionStatus, { label: string; color: string; dot: string }> = {
     upcoming: {
@@ -1092,7 +993,8 @@ function SessionCard({
 export default function ManageSessionsPage() {
     const router = useRouter();
 
-    const [sessions, setSessions] = useState<StudySession[]>(MOCK_SESSIONS);
+    const [sessions, setSessions] = useState<StudySession[]>([]);
+    const [listLoading, setListLoading] = useState(true);
     const [search, setSearch] = useState("");
     const [filterStatus, setFilterStatus] = useState<SessionStatus | "all">("all");
     const [filterCluster, setFilterCluster] = useState("all");
@@ -1100,17 +1002,20 @@ export default function ManageSessionsPage() {
 
     useEffect(() => {
         const fetchSessions = async () => {
+            setListLoading(true);
             try {
                 const res = await fetch(`/api/sessions`, {
                     method: "GET",
                     credentials: "include",
                 });
                 const data = await res.json();
-                if (data.success) {
-                    setSessions(data.data);
+                if (data.success && Array.isArray(data.data)) {
+                    setSessions(data.data as StudySession[]);
                 }
             } catch (err) {
                 console.error("Failed to fetch sessions:", err);
+            } finally {
+                setListLoading(false);
             }
         };
         fetchSessions();
@@ -1299,27 +1204,31 @@ export default function ManageSessionsPage() {
 
             {/* ── Summary stats ── */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {[
-                    { label: "Total sessions", value: totalSessions, icon: <RiCalendar2Line />, color: "teal" },
-                    { label: "Completed", value: completedCount, icon: <RiCheckLine />, color: "teal" },
-                    { label: "Avg. rating", value: avgRating ?? "—", icon: <RiStarLine />, color: "amber" },
-                    { label: "Total members", value: totalMembers, icon: <RiGroupLine />, color: "teal" },
-                ].map((stat, i) => (
-                    <div key={i} className="rounded-2xl border border-border bg-card px-4 py-3.5 flex items-center gap-3">
-                        <div className={cn(
-                            "w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center text-base",
-                            stat.color === "amber"
-                                ? "bg-amber-100/70 dark:bg-amber-950/50 border border-amber-200/60 dark:border-amber-800/50 text-amber-600 dark:text-amber-400"
-                                : "bg-teal-100/70 dark:bg-teal-950/50 border border-teal-200/60 dark:border-teal-800/50 text-teal-600 dark:text-teal-400"
-                        )}>
-                            {stat.icon}
+                {listLoading
+                    ? Array.from({ length: 4 }).map((_, i) => (
+                        <div key={i} className="rounded-2xl border border-border bg-card px-4 py-3.5 h-[72px] animate-pulse bg-muted/30" />
+                    ))
+                    : [
+                        { label: "Total sessions", value: totalSessions, icon: <RiCalendar2Line />, color: "teal" },
+                        { label: "Completed", value: completedCount, icon: <RiCheckLine />, color: "teal" },
+                        { label: "Avg. rating", value: avgRating ?? "—", icon: <RiStarLine />, color: "amber" },
+                        { label: "Total members", value: totalMembers, icon: <RiGroupLine />, color: "teal" },
+                    ].map((stat, i) => (
+                        <div key={i} className="rounded-2xl border border-border bg-card px-4 py-3.5 flex items-center gap-3">
+                            <div className={cn(
+                                "w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center text-base",
+                                stat.color === "amber"
+                                    ? "bg-amber-100/70 dark:bg-amber-950/50 border border-amber-200/60 dark:border-amber-800/50 text-amber-600 dark:text-amber-400"
+                                    : "bg-teal-100/70 dark:bg-teal-950/50 border border-teal-200/60 dark:border-teal-800/50 text-teal-600 dark:text-teal-400"
+                            )}>
+                                {stat.icon}
+                            </div>
+                            <div>
+                                <p className="text-[18px] font-extrabold text-foreground leading-none">{stat.value}</p>
+                                <p className="text-[11.5px] text-muted-foreground mt-0.5">{stat.label}</p>
+                            </div>
                         </div>
-                        <div>
-                            <p className="text-[18px] font-extrabold text-foreground leading-none">{stat.value}</p>
-                            <p className="text-[11.5px] text-muted-foreground mt-0.5">{stat.label}</p>
-                        </div>
-                    </div>
-                ))}
+                    ))}
             </div>
 
             {/* ── Filters ── */}
@@ -1366,7 +1275,13 @@ export default function ManageSessionsPage() {
             </div>
 
             {/* ── Session groups ── */}
-            {filtered.length === 0 ? (
+            {listLoading ? (
+                <div className="flex flex-col gap-4">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                        <div key={i} className="rounded-2xl border border-border h-48 animate-pulse bg-muted/30" />
+                    ))}
+                </div>
+            ) : filtered.length === 0 ? (
                 <div className="rounded-2xl border border-border bg-card px-6 py-16
                         flex flex-col items-center text-center gap-3">
                     <div className="w-12 h-12 rounded-2xl flex items-center justify-center

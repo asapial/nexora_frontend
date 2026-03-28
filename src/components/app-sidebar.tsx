@@ -29,6 +29,8 @@ import {
   RiShieldCheckLine,
   RiMoneyDollarCircleLine,
   RiSparklingLine,
+  RiTrophyLine,
+  RiBarChartBoxLine,
 } from "react-icons/ri";
 
 import { NavDocuments, type NavDocItem } from "@/components/nav-documents";
@@ -116,6 +118,16 @@ const teacherNav: NavDocItem[] = [
       { title: "Create Category", url: "/dashboard/teacher/category/create" },
     ],
   },
+  {
+    title: "Insights",
+    url: "/dashboard/teacher/analytics",
+    icon: <RiBarChartBoxLine />,
+    items: [
+      { title: "Analytics dashboard", url: "/dashboard/teacher/analytics" },
+      { title: "Session history & export", url: "/dashboard/teacher/session-history" },
+      { title: "Task templates", url: "/dashboard/teacher/task-templates" },
+    ],
+  },
 ];
 
 const studentNav: NavDocItem[] = [
@@ -139,6 +151,17 @@ const studentNav: NavDocItem[] = [
     items: [
       { title: "Browse Courses", url: "/courses" },
       { title: "My Learning", url: "/dashboard/student/courses" },
+      { title: "Payment history", url: "/dashboard/student/paymentHistory" },
+    ],
+  },
+  {
+    title: "Learning tools",
+    url: "/dashboard/student/leaderboard",
+    icon: <RiTrophyLine />,
+    items: [
+      { title: "Leaderboard", url: "/dashboard/student/leaderboard" },
+      { title: "Study planner", url: "/dashboard/student/study-planner" },
+      { title: "Resource annotation", url: "/dashboard/student/resource-annotation" },
     ],
   },
   {
@@ -190,6 +213,15 @@ const adminNav: NavDocItem[] = [
     icon: <RiDashboardLine />,
   },
   {
+    title: "Users & access",
+    url: "/dashboard/admin/users",
+    icon: <RiUserLine />,
+    items: [
+      { title: "User management", url: "/dashboard/admin/users" },
+      { title: "Create teachers & admins", url: "/dashboard/admin/create" },
+    ],
+  },
+  {
     title: "Courses",
     url: "/dashboard/admin/courses",
     icon: <RiBookOpenLine />,
@@ -224,11 +256,16 @@ const adminNav: NavDocItem[] = [
     ],
   },
   {
-    title: "Teachers",
-    url: "/dashboard/admin/teachers",
-    icon: <RiShieldCheckLine />,
+    title: "Platform",
+    url: "/dashboard/admin/analytics",
+    icon: <RiBarChartBoxLine />,
     items: [
-      { title: "Create Teacher", url: "/dashboard/admin" },
+      { title: "Platform analytics", url: "/dashboard/admin/analytics" },
+      { title: "Global announcements", url: "/dashboard/admin/global-announcements" },
+      { title: "Email templates", url: "/dashboard/admin/email-templates" },
+      { title: "Content moderation", url: "/dashboard/admin/content-moderation" },
+      { title: "Cluster oversight", url: "/dashboard/admin/cluster-oversight" },
+      { title: "Certificates", url: "/dashboard/admin/certificates" },
     ],
   },
 ];

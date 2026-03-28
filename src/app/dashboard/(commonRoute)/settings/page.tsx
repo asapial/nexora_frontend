@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import {
   RiUserSettingsLine,
@@ -39,6 +39,8 @@ import {
 import { Separator }    from "@/components/ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { cn }           from "@/lib/utils";
+import { settingsApi } from "@/lib/api";
+import { toast } from "sonner";
 
 // ─── Tabs ──────────────────────────────────────────────────
 const TABS = [
@@ -50,21 +52,63 @@ const TABS = [
 
 type TabId = (typeof TABS)[number]["id"];
 
-// ─── Mock defaults ─────────────────────────────────────────
-const PROFILE_DEFAULTS = {
-  name:        "Dr. Riya Mehta",
-  email:       "riya@nittrichy.ac.in",
-  phone:       "+91 98765 43210",
-  institution: "NIT Trichy",
-  department:  "Computer Science & Engineering",
-  location:    "Tiruchirappalli, Tamil Nadu",
-  website:     "https://riyamehta.dev",
-  github:      "riyamehta",
-  linkedin:    "dr-riya-mehta",
-  bio:         "Associate Professor specialising in NLP and deep learning. Running three active research clusters and mentoring 18 graduate students on their thesis projects.",
-  timezone:    "Asia/Kolkata (UTC+5:30)",
-  language:    "English",
+type EmailNotificationPrefs = {
+  sessionCreated: boolean;
+  submissionAlert: boolean;
+  atRiskAlert: boolean;
+  badgeEarned: boolean;
+  weeklyDigest: boolean;
+  marketing: boolean;
 };
+
+type ProfileForm = {
+  name: string;
+  email: string;
+  phone: string;
+  institution: string;
+  department: string;
+  location: string;
+  website: string;
+  github: string;
+  linkedin: string;
+  bio: string;
+  timezone: string;
+  language: string;
+};
+
+const EMPTY_PROFILE: ProfileForm = {
+  name: "",
+  email: "",
+  phone: "",
+  institution: "",
+  department: "",
+  location: "",
+  website: "",
+  github: "",
+  linkedin: "",
+  bio: "",
+  timezone: "UTC",
+  language: "English",
+};
+
+const DEFAULT_PRIVACY_PREFS = {
+  profilePublic: true,
+  showEmail: false,
+  showClusters: true,
+  activityVisible: false,
+  twoFactor: false,
+};
+
+function mergeBoolPrefs<T extends Record<string, boolean>>(defaults: T, raw: unknown): T {
+  if (!raw || typeof raw !== "object") return defaults;
+  const o = raw as Record<string, unknown>;
+  const out = { ...defaults };
+  for (const k of Object.keys(defaults) as (keyof T)[]) {
+    const v = o[String(k)];
+    if (typeof v === "boolean") (out as Record<string, boolean>)[String(k)] = v;
+  }
+  return out;
+}
 
 // ─── Reusable primitives ───────────────────────────────────
 
@@ -244,18 +288,115 @@ function PasswordField({ label, value, onChange, placeholder }: {
 
 // ─── TAB: Profile ──────────────────────────────────────────
 function ProfileTab() {
-  const [form, setForm] = useState(PROFILE_DEFAULTS);
+  const [form, setForm] = useState<ProfileForm>(EMPTY_PROFILE);
+  const [profileType, setProfileType] = useState<"teacher" | "student" | "admin" | "none" | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadingPage, setLoadingPage] = useState(true);
   const [loading, setLoading] = useState(false);
   const [saved,   setSaved]   = useState(false);
-  const set = (k: keyof typeof PROFILE_DEFAULTS) => (v: string) => setForm(p => ({ ...p, [k]: v }));
+  const set = (k: keyof ProfileForm) => (v: string) => setForm(p => ({ ...p, [k]: v }));
+
+  const load = useCallback(async () => {
+    setLoadingPage(true); setLoadError(null);
+    try {
+      const r = await settingsApi.getAccount();
+      const { user, profile, profileType: pt, preferences } = r.data;
+      setProfileType(pt);
+      const org =
+        profile?.institution ??
+        profile?.organization ??
+        "";
+      setForm({
+        ...EMPTY_PROFILE,
+        name: user?.name ?? "",
+        email: user?.email ?? "",
+        bio: profile?.bio ?? "",
+        institution: org,
+        department: profile?.department ?? "",
+        website: profile?.website ?? "",
+        linkedin: profile?.linkedinUrl ?? "",
+        github: profile?.githubUrl ?? "",
+        phone: profile?.phone ?? "",
+        location: profile?.address ?? "",
+        timezone: preferences?.timezone ?? EMPTY_PROFILE.timezone,
+        language: preferences?.language ?? EMPTY_PROFILE.language,
+      });
+    } catch (e: unknown) {
+      setLoadError(e instanceof Error ? e.message : "Could not load profile");
+    } finally {
+      setLoadingPage(false);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    await new Promise(r => setTimeout(r, 900));
-    setLoading(false); setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+    try {
+      const body: Record<string, unknown> = { name: form.name };
+      if (profileType === "teacher") {
+        body.teacherProfile = {
+          institution: form.institution || undefined,
+          department: form.department || undefined,
+          bio: form.bio || undefined,
+          website: form.website || undefined,
+          linkedinUrl: form.linkedin || undefined,
+        };
+      } else if (profileType === "student") {
+        body.studentProfile = {
+          phone: form.phone || undefined,
+          address: form.location || undefined,
+          institution: form.institution || undefined,
+          department: form.department || undefined,
+          bio: form.bio || undefined,
+          website: form.website || undefined,
+          githubUrl: form.github || undefined,
+          linkedinUrl: form.linkedin || undefined,
+        };
+      } else if (profileType === "admin") {
+        body.adminProfile = {
+          phone: form.phone || undefined,
+          bio: form.bio || undefined,
+          department: form.department || undefined,
+          organization: form.institution || undefined,
+          linkedinUrl: form.linkedin || undefined,
+          website: form.website || undefined,
+        };
+      }
+      body.preferences = {
+        timezone: form.timezone,
+        language: form.language,
+      };
+      await settingsApi.updateAccount(body);
+      toast.success("Profile saved", { position: "top-right" });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+      await load();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Save failed", { position: "top-right" });
+    } finally {
+      setLoading(false);
+    }
   };
+
+  if (loadingPage) {
+    return (
+      <div className="flex flex-col gap-4 max-w-3xl">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="rounded-2xl border border-border h-36 animate-pulse bg-muted/30" />
+        ))}
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="rounded-2xl border border-red-200 dark:border-red-800/50 bg-red-50/50 dark:bg-red-950/20 px-4 py-3 text-[13px] text-red-600 dark:text-red-400">
+        {loadError}
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
@@ -265,8 +406,8 @@ function ProfileTab() {
           <Field label="Full name">
             <TextInput value={form.name}        onChange={set("name")}        icon={<RiUserLine />}       placeholder="Your full name" />
           </Field>
-          <Field label="Email address" hint="Changing email requires re-verification.">
-            <TextInput value={form.email}       onChange={set("email")}       icon={<RiMailLine />}       placeholder="you@example.com" type="email" />
+          <Field label="Email address" hint="Read-only. Use your auth provider to change email.">
+            <TextInput value={form.email} icon={<RiMailLine />} placeholder="you@example.com" type="email" readonly />
           </Field>
           <Field label="Phone number">
             <TextInput value={form.phone}       onChange={set("phone")}       icon={<RiPhoneLine />}      placeholder="+1 234 567 8900" />
@@ -352,31 +493,94 @@ function ProfileTab() {
 }
 
 // ─── TAB: Notifications ────────────────────────────────────
+const EMAIL_NOTIFICATION_DEFAULTS: EmailNotificationPrefs = {
+  sessionCreated: true,
+  submissionAlert: true,
+  atRiskAlert: true,
+  badgeEarned: true,
+  weeklyDigest: false,
+  marketing: false,
+};
+
+type PushNotificationPrefs = {
+  deadline: boolean;
+  memberInactive: boolean;
+  newSubmission: boolean;
+  systemAnnounce: boolean;
+};
+
+const PUSH_NOTIFICATION_DEFAULTS: PushNotificationPrefs = {
+  deadline: true,
+  memberInactive: true,
+  newSubmission: false,
+  systemAnnounce: true,
+};
+
+
 function NotificationsTab() {
-  const [email, setEmail] = useState({
-    sessionCreated:  true,
-    submissionAlert: true,
-    atRiskAlert:     true,
-    badgeEarned:     true,
-    weeklyDigest:    false,
-    marketing:       false,
-  });
-  const [push, setPush] = useState({
-    deadline:        true,
-    memberInactive:  true,
-    newSubmission:   false,
-    systemAnnounce:  true,
-  });
+  const [email, setEmail] = useState({ ...EMAIL_NOTIFICATION_DEFAULTS });
+  const [push, setPush] = useState({ ...PUSH_NOTIFICATION_DEFAULTS });
+  const [userEmail, setUserEmail] = useState("");
+  const [pageLoading, setPageLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [saved,   setSaved]   = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  const load = useCallback(async () => {
+    setPageLoading(true);
+    setLoadError(null);
+    try {
+      const r = await settingsApi.getAccount();
+      setUserEmail(r.data.user?.email ?? "");
+      setEmail(mergeBoolPrefs({ ...EMAIL_NOTIFICATION_DEFAULTS }, r.data.preferences?.emailNotifications));
+      setPush(mergeBoolPrefs({ ...PUSH_NOTIFICATION_DEFAULTS }, r.data.preferences?.pushNotifications));
+    } catch (e: unknown) {
+      setLoadError(e instanceof Error ? e.message : "Could not load preferences");
+    } finally {
+      setPageLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { void load(); }, [load]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    await new Promise(r => setTimeout(r, 900));
-    setLoading(false); setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+    try {
+      await settingsApi.updateAccount({
+        preferences: {
+          emailNotifications: { ...email },
+          pushNotifications: { ...push },
+        },
+      });
+      toast.success("Notification preferences saved", { position: "top-right" });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+      await load();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Save failed", { position: "top-right" });
+    } finally {
+      setLoading(false);
+    }
   };
+
+  if (pageLoading) {
+    return (
+      <div className="flex flex-col gap-4 max-w-3xl">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="rounded-2xl border border-border h-36 animate-pulse bg-muted/30" />
+        ))}
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="rounded-2xl border border-red-200 dark:border-red-800/50 bg-red-50/50 dark:bg-red-950/20 px-4 py-3 text-[13px] text-red-600 dark:text-red-400">
+        {loadError}
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={handleSave} className="flex flex-col gap-5">
@@ -390,7 +594,8 @@ function NotificationsTab() {
                         border border-teal-200/60 dark:border-teal-800/50">
           <RiMailLine className="text-teal-600 dark:text-teal-400 text-base flex-shrink-0" />
           <span className="text-[12.5px] font-semibold text-teal-700 dark:text-teal-300">
-            Sending to: <span className="font-bold">riya@nittrichy.ac.in</span>
+            Sending to:{" "}
+            <span className="font-bold break-all">{userEmail || "your account email"}</span>
           </span>
           <Link href="#" className="ml-auto text-[12px] font-semibold text-teal-600 dark:text-teal-400
                                     hover:underline flex items-center gap-0.5">
@@ -434,18 +639,49 @@ function NotificationsTab() {
 
 // ─── TAB: Privacy & Security ───────────────────────────────
 function PrivacyTab() {
-  const [privacy, setPrivacy] = useState({
-    profilePublic:   true,
-    showEmail:       false,
-    showClusters:    true,
-    activityVisible: false,
-    twoFactor:       false,
-  });
+  const [privacy, setPrivacy] = useState({ ...DEFAULT_PRIVACY_PREFS });
+  const [pageLoading, setPageLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [prefLoading, setPrefLoading] = useState(false);
+  const [prefSaved, setPrefSaved] = useState(false);
 
   const [pw, setPw] = useState({ current: "", newP: "", confirm: "" });
   const [pwLoading, setPwLoading] = useState(false);
-  const [pwSaved,   setPwSaved]   = useState(false);
-  const [pwError,   setPwError]   = useState("");
+  const [pwSaved, setPwSaved] = useState(false);
+  const [pwError, setPwError] = useState("");
+
+  const loadPrivacy = useCallback(async () => {
+    setPageLoading(true);
+    setLoadError(null);
+    try {
+      const r = await settingsApi.getAccount();
+      setPrivacy(mergeBoolPrefs({ ...DEFAULT_PRIVACY_PREFS }, r.data.preferences?.privacy));
+    } catch (e: unknown) {
+      setLoadError(e instanceof Error ? e.message : "Could not load privacy settings");
+    } finally {
+      setPageLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { void loadPrivacy(); }, [loadPrivacy]);
+
+  const handleSavePrivacy = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPrefLoading(true);
+    try {
+      await settingsApi.updateAccount({
+        preferences: { privacy: { ...privacy } },
+      });
+      toast.success("Privacy settings saved", { position: "top-right" });
+      setPrefSaved(true);
+      setTimeout(() => setPrefSaved(false), 2500);
+      await loadPrivacy();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Save failed", { position: "top-right" });
+    } finally {
+      setPrefLoading(false);
+    }
+  };
 
   const handlePwSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -458,40 +694,63 @@ function PrivacyTab() {
     setTimeout(() => setPwSaved(false), 2500);
   };
 
+  if (pageLoading) {
+    return (
+      <div className="flex flex-col gap-4 max-w-3xl">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="rounded-2xl border border-border h-28 animate-pulse bg-muted/30" />
+        ))}
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="rounded-2xl border border-red-200 dark:border-red-800/50 bg-red-50/50 dark:bg-red-950/20 px-4 py-3 text-[13px] text-red-600 dark:text-red-400">
+        {loadError}
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-5">
-      {/* Visibility */}
-      <Section title="Profile Visibility" description="Control who can see your Nexora profile.">
-        <ToggleRow label="Public profile"          description="Anyone with the link can view your profile page."               checked={privacy.profilePublic}   onChange={v => setPrivacy(p => ({ ...p, profilePublic: v }))}   />
-        <ToggleRow label="Show email address"      description="Show your email on your public profile."                         checked={privacy.showEmail}       onChange={v => setPrivacy(p => ({ ...p, showEmail: v }))}       />
-        <ToggleRow label="Show clusters"           description="Show the clusters you manage on your public profile."            checked={privacy.showClusters}    onChange={v => setPrivacy(p => ({ ...p, showClusters: v }))}    />
-        <ToggleRow label="Activity visible"        description="Show your recent activity (sessions, submissions) to others."   checked={privacy.activityVisible} onChange={v => setPrivacy(p => ({ ...p, activityVisible: v }))} />
-      </Section>
+      <form onSubmit={handleSavePrivacy} className="flex flex-col gap-5">
+        <Section title="Profile Visibility" description="Control who can see your Nexora profile.">
+          <ToggleRow label="Public profile" description="Anyone with the link can view your profile page." checked={privacy.profilePublic} onChange={v => setPrivacy(p => ({ ...p, profilePublic: v }))} />
+          <ToggleRow label="Show email address" description="Show your email on your public profile." checked={privacy.showEmail} onChange={v => setPrivacy(p => ({ ...p, showEmail: v }))} />
+          <ToggleRow label="Show clusters" description="Show the clusters you manage on your public profile." checked={privacy.showClusters} onChange={v => setPrivacy(p => ({ ...p, showClusters: v }))} />
+          <ToggleRow label="Activity visible" description="Show your recent activity (sessions, submissions) to others." checked={privacy.activityVisible} onChange={v => setPrivacy(p => ({ ...p, activityVisible: v }))} />
+        </Section>
 
-      {/* 2FA */}
-      <Section title="Two-Factor Authentication" description="Add a second layer of security to your account.">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <p className="text-[13.5px] font-semibold text-foreground">Authenticator app (TOTP)</p>
-            <p className="text-[12px] text-muted-foreground mt-0.5">
-              {privacy.twoFactor
-                ? "2FA is enabled. Your account is protected."
-                : "Protect your account with an authenticator app like Google Authenticator."}
-            </p>
+        <Section title="Two-Factor Authentication" description="Add a second layer of security to your account.">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-[13.5px] font-semibold text-foreground">Authenticator app (TOTP)</p>
+              <p className="text-[12px] text-muted-foreground mt-0.5">
+                {privacy.twoFactor
+                  ? "2FA is enabled. Your account is protected."
+                  : "Protect your account with an authenticator app like Google Authenticator."}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setPrivacy(p => ({ ...p, twoFactor: !p.twoFactor }))}
+              className={cn(
+                "flex-shrink-0 h-9 px-4 rounded-xl text-[13px] font-bold transition-all duration-150",
+                privacy.twoFactor
+                  ? "border border-border text-muted-foreground hover:text-foreground hover:bg-muted"
+                  : "bg-teal-600 dark:bg-teal-500 hover:bg-teal-700 dark:hover:bg-teal-600 text-white shadow-sm shadow-teal-600/20"
+              )}
+            >
+              {privacy.twoFactor ? "Disable" : "Enable 2FA"}
+            </button>
           </div>
-          <button
-            onClick={() => setPrivacy(p => ({ ...p, twoFactor: !p.twoFactor }))}
-            className={cn(
-              "flex-shrink-0 h-9 px-4 rounded-xl text-[13px] font-bold transition-all duration-150",
-              privacy.twoFactor
-                ? "border border-border text-muted-foreground hover:text-foreground hover:bg-muted"
-                : "bg-teal-600 dark:bg-teal-500 hover:bg-teal-700 dark:hover:bg-teal-600 text-white shadow-sm shadow-teal-600/20"
-            )}
-          >
-            {privacy.twoFactor ? "Disable" : "Enable 2FA"}
-          </button>
+        </Section>
+
+        <div className="flex justify-end">
+          <SaveButton loading={prefLoading} saved={prefSaved} />
         </div>
-      </Section>
+      </form>
 
       {/* Change password */}
       <Section title="Change Password" description="Update your login password.">

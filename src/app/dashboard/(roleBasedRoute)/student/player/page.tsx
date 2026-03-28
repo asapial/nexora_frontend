@@ -12,7 +12,7 @@ import {
   RiCalendarLine, RiTimeLine, RiPlayCircleLine,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
-import { studentApi } from "../../../../../lib/api";
+import { studentApi, paymentApi } from "../../../../../lib/api";
 import { toast } from "sonner";
 
 const fmtDate = (d: string) => new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
@@ -50,22 +50,40 @@ export default function MyLearningPage() {
 
   const load = useCallback(async () => {
     setLoading(true); setError(null);
-    try { const r = await studentApi.getMyEnrollments(); setEnrollments(Array.isArray(r.data) ? r.data : r.data?.data ?? []); }
-    catch (e: any) { setError(e.message); }
-    finally { setLoading(false); }
+    try {
+      await paymentApi.syncPendingPayments().catch(() => {});
+      const r = await studentApi.getMyEnrollments();
+      const raw = r.data as unknown;
+      const list = Array.isArray(raw)
+        ? raw
+        : raw && typeof raw === "object" && "data" in raw && Array.isArray((raw as { data: unknown }).data)
+          ? (raw as { data: unknown[] }).data
+          : [];
+      setEnrollments(list);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to load courses");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
-  const inProgress = enrollments.filter(e => !e.completedAt && (e.progress ?? 0) < 100);
-  const completed  = enrollments.filter(e => e.completedAt || (e.progress ?? 0) >= 100);
+  const inProgress = enrollments.filter(e => !e.completedAt && Number(e.progress ?? 0) < 100);
+  const completed  = enrollments.filter(e => e.completedAt || Number(e.progress ?? 0) >= 100);
+
+  // If everything landed under "Completed" (e.g. progress already 100%), don't leave the user on an empty "In Progress" tab.
+  useEffect(() => {
+    if (loading || enrollments.length === 0) return;
+    if (inProgress.length === 0 && completed.length > 0) setActiveTab("completed");
+  }, [loading, enrollments, inProgress.length, completed.length]);
 
   const EnrollCard = ({ e }: { e: any }) => {
     const course = e.course ?? {};
     const isDone = !!(e.completedAt || (e.progress ?? 0) >= 100);
     const pct = e.progress ?? 0;
     return (
-      <div onClick={() => router.push(`/student/courses/${course.id ?? e.courseId}`)}
+      <div onClick={() => router.push(`/dashboard/student/courses/${course.id ?? e.courseId}`)}
         className={cn(
           "group relative rounded-2xl border border-border bg-card/90 backdrop-blur-sm overflow-hidden cursor-pointer",
           "hover:border-teal-300/50 dark:hover:border-teal-700/40",
@@ -263,7 +281,7 @@ export function CoursePlayerPage() {
       <AmbientBg />
       <RiAlertLine className="text-4xl text-red-500" />
       <p className="text-[14px] font-bold text-foreground">{error ?? "Enrollment not found"}</p>
-      <button onClick={() => router.push("/student/courses")} className="h-9 px-4 rounded-xl bg-teal-600 dark:bg-teal-500 text-white text-[13px] font-bold hover:bg-teal-700 transition-colors">My courses</button>
+      <button onClick={() => router.push("/dashboard/student/courses")} className="h-9 px-4 rounded-xl bg-teal-600 dark:bg-teal-500 text-white text-[13px] font-bold hover:bg-teal-700 transition-colors">My courses</button>
     </div>
   );
 
@@ -275,7 +293,7 @@ export function CoursePlayerPage() {
 
       {/* Top bar */}
       <div className="sticky top-0 z-20 flex items-center gap-4 px-5 py-3.5 border-b border-border bg-card/95 backdrop-blur-md">
-        <button onClick={() => router.push("/student/courses")} className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all flex-shrink-0"><RiArrowLeftLine className="text-sm" /></button>
+        <button onClick={() => router.push("/dashboard/student/courses")} className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all flex-shrink-0"><RiArrowLeftLine className="text-sm" /></button>
         <div className="flex-1 min-w-0">
           <p className="text-[13.5px] font-extrabold text-foreground truncate">{course.title ?? "Course"}</p>
           <div className="flex items-center gap-2 mt-0.5">
@@ -386,7 +404,7 @@ export function CoursePlayerPage() {
                             {cnt.type === "PDF" && cnt.pdfUrl && (
                               <a href={cnt.pdfUrl} target="_blank" rel="noreferrer"
                                 className="flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-800/50 hover:bg-amber-100/60 transition-colors">
-                                <RiFileMarkLine className="text-amber-600 dark:text-amber-400 text-xl" />
+                                <RiFileMarkedLine className="text-amber-600 dark:text-amber-400 text-xl" />
                                 <div><p className="text-[13px] font-bold text-foreground">{cnt.title}</p><p className="text-[11.5px] text-muted-foreground">Click to open PDF in new tab</p></div>
                               </a>
                             )}

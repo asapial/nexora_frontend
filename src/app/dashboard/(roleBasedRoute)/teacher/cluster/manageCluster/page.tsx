@@ -41,13 +41,28 @@ interface Cluster {
     isDeleted: boolean;
 }
 
-// ─── Mock data (replace with real API calls) ───────────────
-const MOCK_CLUSTERS: Cluster[] = [
-    { id: "c1", name: "ML Research Group — 2025", slug: "ml-research-2025", description: "Weekly NLP and deep learning sessions.", batchTag: "Batch 2025", memberCount: 18, sessionCount: 12, healthScore: 94, status: "healthy", lastActivity: "2 hrs ago", createdAt: "2025-01-12", isDeleted: false },
-    { id: "c2", name: "NLP Reading Circle", slug: "nlp-reading-circle", description: "Paper reading and discussion group.", batchTag: "Spring 25", memberCount: 11, sessionCount: 7, healthScore: 67, status: "at-risk", lastActivity: "3 days ago", createdAt: "2025-02-01", isDeleted: false },
-    { id: "c3", name: "Bootcamp Cohort B", slug: "bootcamp-cohort-b", description: "Full-stack web development bootcamp.", batchTag: "Cohort B", memberCount: 42, sessionCount: 18, healthScore: 88, status: "healthy", lastActivity: "Yesterday", createdAt: "2025-01-05", isDeleted: false },
-    { id: "c4", name: "Computer Vision Seminar", slug: "cv-seminar-2024", description: "Advanced CV and image processing.", batchTag: "2024", memberCount: 9, sessionCount: 4, healthScore: 31, status: "inactive", lastActivity: "2 weeks ago", createdAt: "2024-11-10", isDeleted: false },
-];
+function mapClusterHealth(h?: string): ClusterStatus {
+    if (h === "AT_RISK") return "at-risk";
+    if (h === "INACTIVE") return "inactive";
+    return "healthy";
+}
+
+function mapApiCluster(c: Record<string, unknown>): Cluster {
+    const counts = c._count as { members?: number; sessions?: number } | undefined;
+    return {
+        id: String(c.id),
+        name: String(c.name),
+        slug: String(c.slug),
+        description: c.description ? String(c.description) : undefined,
+        batchTag: c.batchTag ? String(c.batchTag) : undefined,
+        memberCount: counts?.members ?? 0,
+        sessionCount: counts?.sessions,
+        healthScore: typeof c.healthScore === "number" ? Math.round(c.healthScore) : undefined,
+        status: mapClusterHealth(typeof c.healthStatus === "string" ? c.healthStatus : undefined),
+        createdAt: c.createdAt ? String(c.createdAt) : "",
+        isDeleted: false,
+    };
+}
 
 // ─── Token maps ───────────────────────────────────────────
 const HEALTH_BAR = (h: number) =>
@@ -441,7 +456,8 @@ function DeleteModal({
 
 // ─── Main page ────────────────────────────────────────────
 export default function ManageClustersPage() {
-    const [clusters, setClusters] = useState<Cluster[]>(MOCK_CLUSTERS);
+    const [clusters, setClusters] = useState<Cluster[]>([]);
+    const [listLoading, setListLoading] = useState(true);
     const [members, setMembers] = useState<Member[]>([]);
     const [selectedCluster, setSelectedCluster] = useState<Cluster | null>(null);
     const [search, setSearch] = useState("");
@@ -449,17 +465,20 @@ export default function ManageClustersPage() {
 
     useEffect(() => {
         const fetchClusters = async () => {
+            setListLoading(true);
             try {
                 const res = await fetch(`/api/cluster`, {
                     method: "GET",
                     credentials: "include",
                 });
                 const data = await res.json();
-                if (data.success) {
-                    setClusters(data.data);
+                if (data.success && Array.isArray(data.data)) {
+                    setClusters(data.data.map((c: Record<string, unknown>) => mapApiCluster(c)));
                 }
             } catch (err) {
                 console.error("Failed to fetch clusters:", err);
+            } finally {
+                setListLoading(false);
             }
         };
         fetchClusters();
@@ -473,13 +492,15 @@ export default function ManageClustersPage() {
             });
             const data = await res.json();
 
-            if (data.success) {
-                const mapped: Member[] = data.data.members.map((m: any) => ({
-                    id: m.userId,
-                    name: m.user?.name ?? m.user?.email?.split("@")[0] ?? "Unknown",
-                    email: m.user?.email ?? "",
+            if (data.success && data.data?.members) {
+                const mapped: Member[] = data.data.members.map((m: Record<string, unknown>) => ({
+                    id: String(m.userId),
+                    name: (m.user as { name?: string; email?: string } | undefined)?.name
+                        ?? (m.user as { email?: string } | undefined)?.email?.split("@")[0]
+                        ?? "Unknown",
+                    email: (m.user as { email?: string } | undefined)?.email ?? "",
                     subtype: m.subtype as MemberSubtype,
-                    joinedAt: new Date(m.joinedAt).toLocaleDateString("en-US", {
+                    joinedAt: new Date(m.joinedAt as string).toLocaleDateString("en-US", {
                         month: "short",
                         year: "numeric",
                     }),
@@ -501,10 +522,24 @@ export default function ManageClustersPage() {
 
     const confirmDelete = async () => {
         if (!deleteTarget) return;
-        // TODO: await fetch(`/api/cluster/${deleteTarget.id}`, { method: "DELETE", credentials: "include" })
-        setClusters(cs => cs.filter(c => c.id !== deleteTarget.id));
-        if (selectedCluster?.id === deleteTarget.id) setSelectedCluster(null);
-        setDeleteTarget(null);
+        try {
+            const res = await fetch(`/api/cluster/${deleteTarget.id}`, {
+                method: "DELETE",
+                credentials: "include",
+            });
+            const data = await res.json();
+            if (data.success) {
+                toast.success("Cluster deleted", { position: "top-right" });
+                setClusters(cs => cs.filter(c => c.id !== deleteTarget.id));
+                if (selectedCluster?.id === deleteTarget.id) setSelectedCluster(null);
+            } else {
+                toast.error(data.message ?? "Delete failed", { position: "top-right" });
+            }
+        } catch {
+            toast.error("Network error", { position: "top-right" });
+        } finally {
+            setDeleteTarget(null);
+        }
     };
 
     // ── Member actions ─────────────────────────────────────
@@ -632,7 +667,16 @@ export default function ManageClustersPage() {
 
                     {/* Cluster list */}
                     <div className="flex flex-col gap-4">
-                        {filtered.length === 0 ? (
+                        {listLoading ? (
+                            <div className="flex flex-col gap-4">
+                                {Array.from({ length: 4 }).map((_, i) => (
+                                    <div
+                                        key={i}
+                                        className="rounded-2xl border border-border h-44 animate-pulse bg-muted/30"
+                                    />
+                                ))}
+                            </div>
+                        ) : filtered.length === 0 ? (
                             <div className="rounded-2xl border border-border bg-card p-10
                               flex flex-col items-center text-center gap-3">
                                 <RiFlaskLine className="text-3xl text-muted-foreground/30" />
