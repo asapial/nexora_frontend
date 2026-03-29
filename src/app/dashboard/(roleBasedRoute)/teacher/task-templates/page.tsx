@@ -28,10 +28,10 @@ function TemplateCard({ tpl, onEdit, onDelete }: {
   onDelete: (id: string) => void;
 }) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-5 flex flex-col gap-3 group hover:border-violet-300/50 dark:hover:border-violet-700/50 hover:shadow-sm transition-all">
+    <div className="rounded-2xl border border-border bg-card p-5 flex flex-col gap-3 group hover:border-teal-300/50 dark:hover:border-teal-700/50 hover:shadow-sm transition-all">
       <div className="flex items-start justify-between gap-2">
-        <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-violet-100/70 dark:bg-violet-950/40 border border-violet-200/60 dark:border-violet-800/50 shrink-0">
-          <RiFileListLine className="text-violet-600 dark:text-violet-400" />
+        <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-teal-100/70 dark:bg-teal-950/40 border border-teal-200/60 dark:border-teal-800/50 shrink-0">
+          <RiFileListLine className="text-teal-600 dark:text-teal-400" />
         </div>
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <button onClick={() => onEdit(tpl)}
@@ -144,13 +144,13 @@ export default function TeacherTaskTemplatesPage() {
   );
 
   return (
-    <div className="flex flex-col gap-6 p-5 lg:p-7 pt-6 max-w-6xl mx-auto w-full">
+    <div className="flex flex-col gap-6 p-5 lg:p-7 pt-6 max-w-5xl mx-auto w-full">
 
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-1.5 mb-1">
-            <RiSparklingFill className="text-violet-500 dark:text-violet-400 text-sm animate-pulse" />
+            <RiSparklingFill className="text-teal-500 dark:text-teal-400 text-sm animate-pulse" />
             <span className="text-[10.5px] font-bold tracking-[.12em] uppercase text-muted-foreground">Teacher</span>
           </div>
           <h1 className="text-[1.5rem] font-extrabold tracking-tight text-foreground leading-none">Task Template Library</h1>
@@ -158,7 +158,7 @@ export default function TeacherTaskTemplatesPage() {
         </div>
         <button
           onClick={openCreate}
-          className="h-9 px-4 rounded-xl bg-violet-600 dark:bg-violet-500 hover:bg-violet-700 text-white text-[12.5px] font-bold flex items-center gap-1.5 transition-all shrink-0"
+          className="h-9 px-4 rounded-xl bg-teal-600 dark:bg-teal-500 hover:bg-teal-700 text-white text-[12.5px] font-bold flex items-center gap-1.5 transition-all shrink-0"
         >
           <RiAddLine /> New template
         </button>
@@ -171,7 +171,7 @@ export default function TeacherTaskTemplatesPage() {
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search templates…"
-            className="w-full h-10 pl-4 pr-4 rounded-xl text-[13px] bg-muted/40 border border-border text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-violet-400/20 transition-all"
+            className="w-full h-10 pl-4 pr-4 rounded-xl text-[13px] bg-muted/40 border border-border text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-teal-400/20 transition-all"
           />
         </div>
         <span className="text-[12px] text-muted-foreground ml-auto">
@@ -198,7 +198,7 @@ export default function TeacherTaskTemplatesPage() {
           {templates.length === 0 && (
             <button
               onClick={openCreate}
-              className="mt-5 h-9 px-5 rounded-xl bg-violet-600 dark:bg-violet-500 hover:bg-violet-700 text-white text-[12.5px] font-bold inline-flex items-center gap-1.5 transition-all"
+              className="mt-5 h-9 px-5 rounded-xl bg-teal-600 dark:bg-teal-500 hover:bg-teal-700 text-white text-[12.5px] font-bold inline-flex items-center gap-1.5 transition-all"
             >
               <RiAddLine /> Create first template
             </button>
@@ -232,7 +232,7 @@ export default function TeacherTaskTemplatesPage() {
                   value={title}
                   onChange={e => setTitle(e.target.value)}
                   placeholder="e.g. Weekly reflection homework"
-                  className="w-full h-10 px-3 rounded-xl border border-border bg-muted/30 text-[13px] text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-violet-400/25 transition-all"
+                  className="w-full h-10 px-3 rounded-xl border border-border bg-muted/30 text-[13px] text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-teal-400/25 transition-all"
                 />
               </div>
               <div>
@@ -242,14 +242,14 @@ export default function TeacherTaskTemplatesPage() {
                   onChange={e => setDescription(e.target.value)}
                   rows={5}
                   placeholder="Task description, rubric hints, submission format…"
-                  className="w-full px-3 py-2 rounded-xl border border-border bg-muted/30 text-[13px] text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-violet-400/25 transition-all resize-none"
+                  className="w-full px-3 py-2 rounded-xl border border-border bg-muted/30 text-[13px] text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-teal-400/25 transition-all resize-none"
                 />
               </div>
             </div>
             <button
               onClick={save}
               disabled={saving || !title.trim()}
-              className="h-11 rounded-xl bg-violet-600 dark:bg-violet-500 hover:bg-violet-700 disabled:opacity-50 text-white text-[13px] font-bold flex items-center justify-center gap-2 transition-all"
+              className="h-11 rounded-xl bg-teal-600 dark:bg-teal-500 hover:bg-teal-700 disabled:opacity-50 text-white text-[13px] font-bold flex items-center justify-center gap-2 transition-all"
             >
               {saving ? <RiLoader4Line className="animate-spin" /> : <RiCheckLine />}
               {editing ? "Save changes" : "Create template"}

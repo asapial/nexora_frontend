@@ -158,7 +158,7 @@ export default function CreateCoursePage() {
 
   if (success) {
     return (
-      <div className="relative flex flex-col gap-6 p-5 lg:p-7 pt-6 max-w-2xl mx-auto w-full">
+      <div className="relative flex flex-col gap-6 p-5 lg:p-7 pt-6 max-w-3xl mx-auto w-full">
         <AmbientBg />
         <div className="rounded-2xl border border-border bg-card/90 backdrop-blur-sm p-12 flex flex-col items-center text-center gap-4">
           <div className="w-16 h-16 rounded-2xl bg-teal-100/70 dark:bg-teal-950/50 border border-teal-200/60 dark:border-teal-800/50 flex items-center justify-center text-teal-600 dark:text-teal-400 text-2xl">

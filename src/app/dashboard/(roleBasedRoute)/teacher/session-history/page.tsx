@@ -9,7 +9,7 @@ import {
 import { cn } from "@/lib/utils";
 import { teacherDashApi } from "@/lib/api";
 import { toast } from "sonner";
-import { AmbientBg2 } from "@/components/backgrounds/AmbientBg";
+import { AmbientBg2, AmbientBg6 } from "@/components/backgrounds/AmbientBg";
 
 type Session = {
   id: string;
@@ -97,8 +97,8 @@ export default function TeacherSessionHistoryPage() {
     "h-9 px-3 rounded-xl text-[12.5px] bg-muted/40 border border-border text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-teal-400/20 transition-all";
 
   return (
-    <div className="flex flex-col gap-6 p-5 lg:p-7 pt-6 max-w-6xl mx-auto w-full" ref={printRef}>
-      <AmbientBg2></AmbientBg2>
+    <div className="flex flex-col gap-6 p-5 lg:p-7 pt-6 max-w-5xl mx-auto w-full" ref={printRef}>
+
       {/* Header */}
       <div>
         <div className="flex items-center gap-1.5 mb-1">

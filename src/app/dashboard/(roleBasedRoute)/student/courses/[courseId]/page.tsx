@@ -8,6 +8,8 @@ import {
   RiArrowLeftLine, RiMenuLine, RiCloseLine,  RiPlayCircleLine,
   RiVideoLine,
   RiArticleLine,
+  RiLoader4Line,
+  RiFileTextLine,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
 import { studentApi } from "../../../../../../lib/api";

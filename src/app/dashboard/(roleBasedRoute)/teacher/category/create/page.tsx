@@ -173,7 +173,7 @@ export default function ResourceCategoriesPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6 p-5 lg:p-7 pt-6 max-w-4xl mx-auto w-full">
+    <div className="flex flex-col gap-6 p-5 lg:p-7 pt-6 max-w-3xl mx-auto w-full">
       {/* Delete confirm */}
       {deleteTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
