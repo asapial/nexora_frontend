@@ -18,6 +18,7 @@ import {
     RiRobot2Line,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 // ─── imgbb upload config ──────────────────────────────────
 const IMGBB_API_KEY = process.env.NEXT_PUBLIC_IMGBB_API_KEY ?? "";
@@ -281,8 +282,6 @@ export default function SignUpPage() {
                 console.log(photoUrl)
             }
 
-            // 2. Register the user
-            // TODO: replace with your Better Auth call
 
             const res = await fetch(`/api/auth/register`, {
                 method: "POST",
@@ -299,24 +298,28 @@ export default function SignUpPage() {
             console.log(res)
 
             const data = await res.json();
-            switch (data.data.user.role) {
-                case "ADMIN":
-                    window.location.href = "/dashboard/admin"
-                    break
-                case "TEACHER":
-                    window.location.href = "/dashboard/teacher"
-                    break
-                case "STUDENT":
-                    window.location.href = "/dashboard/student"
-                    break
-                default:
-                    window.location.href = "/"
+            console.log("Data from the signup page :", data);
+
+            if (!data.success) {
+
+                if(data.error.body.code==="USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL"){
+
+                    setErrors({email: data.error.body.message})
+                }
+
+
+            }
+
+            if (data.success) {
+                toast.success("User registered successfully", { position: "top-right" });
+                window.location.href = "/dashboard"
             }
 
 
 
             // router.push("/verify-email");
         } catch (err: any) {
+            console.log("Error from the signup page :", err);
             setErrors({ email: err?.message ?? "Registration failed. Try again." });
         } finally {
             setIsLoading(false);

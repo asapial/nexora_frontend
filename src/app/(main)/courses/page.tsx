@@ -10,6 +10,7 @@ import { studentApi } from "@/lib/api";
 import { AmbientBg } from "@/components/courses/AmbientBg";
 import { CatalogCard } from "@/components/courses/CatalogCard";
 import { SkeletonCard } from "@/components/courses/SkeletonCard";
+import { AmbientBg6 } from "@/components/backgrounds/AmbientBg";
 
 
 
@@ -49,8 +50,8 @@ export default function CourseCatalogPage() {
   const hasFilters = search || filterPrice !== "all" || filterFeatured || filterTag;
 
   return (
-    <div className="relative flex flex-col gap-6 p-5 lg:p-8 pt-6 max-w-7xl mx-auto w-full min-h-screen">
-      <AmbientBg />
+    <div className="relative flex flex-col gap-6 p-5 lg:p-20 pt-6 max-w-7xl mx-auto w-full min-h-screen">
+       <AmbientBg6 />
 
       {/* Hero */}
       <div className="text-center pt-8 pb-2">

@@ -110,8 +110,9 @@ export default function TeacherMyResourcesPage() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
           {resources.map(r => {
+
             const visCls = VISIBILITY_CLS[r.visibility] ?? VISIBILITY_CLS.PUBLIC;
-            return (
+            return (r.visibility==="PUBLIC" && (
               <div key={r.id} className="rounded-2xl border border-border bg-card overflow-hidden hover:shadow-md hover:shadow-black/[0.04] dark:hover:shadow-black/20 transition-shadow duration-200 flex flex-col">
                 <div className="flex items-center gap-3 px-5 pt-5 pb-3">
                   <div className="w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center text-[18px] bg-violet-100/70 dark:bg-violet-950/50 border border-violet-200/70 dark:border-violet-800/50 text-violet-600 dark:text-violet-400">
@@ -157,7 +158,7 @@ export default function TeacherMyResourcesPage() {
                   </div>
                 </div>
               </div>
-            );
+            ));
           })}
         </div>
       )}

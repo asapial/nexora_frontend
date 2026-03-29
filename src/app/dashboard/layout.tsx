@@ -1,6 +1,7 @@
 "use client";
 
 import { AppSidebar } from "@/components/app-sidebar";
+import { AmbientBg2, AmbientBg3, AmbientBg4, AmbientBg5, AmbientBg6 } from "@/components/backgrounds/AmbientBg";
 import {
   Breadcrumb, BreadcrumbItem,
   BreadcrumbList, BreadcrumbPage,
@@ -101,6 +102,7 @@ export default function Layout({
         <SidebarInset>
           <DashboardHeader />
           <div>
+               <AmbientBg6></AmbientBg6>
             {children}
           </div>
         </SidebarInset>

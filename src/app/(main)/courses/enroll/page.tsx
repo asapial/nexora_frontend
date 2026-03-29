@@ -174,7 +174,7 @@ function StripePaymentForm({ course, clientSecret, paymentIntentId, onSuccess }:
               },
             }}
           /> */}
-          <Elements
+          {/* <Elements
             stripe={stripePromise}
             options={{
               clientSecret,
@@ -195,7 +195,9 @@ function StripePaymentForm({ course, clientSecret, paymentIntentId, onSuccess }:
                 layout: "tabs",
               }}
             />
-          </Elements>
+          </Elements> */}
+
+          
         </div>
       </div>
 
@@ -331,7 +333,7 @@ export default function EnrollPage() {
   }
 
   return (
-    <div className="relative flex flex-col gap-6 p-5 lg:p-8 pt-6 max-w-2xl mx-auto w-full min-h-screen">
+    <div className="relative flex flex-col gap-6 p-5 lg:p-8 pt-6 max-w-5xl mx-auto w-full min-h-screen">
       <AmbientBg />
 
       {/* Back */}

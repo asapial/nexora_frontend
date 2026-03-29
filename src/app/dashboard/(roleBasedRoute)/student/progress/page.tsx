@@ -112,7 +112,7 @@ export default function ProgressDashboardPage() {
     : [];
 
   return (
-    <div className="flex flex-1 flex-col gap-6 p-5 lg:p-7 pt-6">
+    <div className="flex flex-1 flex-col gap-6 p-5 lg:p-7 pt-6 max-w-5xl mx-auto">
       {/* Heading */}
       <div>
         <div className="flex items-center gap-1.5 mb-1">

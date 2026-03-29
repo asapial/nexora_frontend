@@ -29,6 +29,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { toast } from "sonner";
 
 export interface NavUserData {
   name:    string;
@@ -166,7 +167,7 @@ export function NavUser({ user }: { user: NavUserData }) {
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild className="gap-2.5 px-4 py-2.5 cursor-pointer">
-                <Link href="/dashboard/settings/change-password">
+                <Link href="/auth/changePassword">
                   <RiShieldCheckLine className="text-base text-muted-foreground" />
                   <span className="text-[13px]">Change Password</span>
                 </Link>
@@ -223,7 +224,16 @@ export function NavUser({ user }: { user: NavUserData }) {
             {/* Sign out */}
             <DropdownMenuItem
               className="gap-2.5 px-4 py-2.5 cursor-pointer text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400 focus:bg-red-50 dark:focus:bg-red-950/30"
-              onClick={() => { /* TODO: authClient.signOut() */ }}
+              onClick={async () => { 
+                const res = await fetch("/api/auth/logout", { method: "POST", credentials: "include" }); 
+                const data = await res.json();
+                if(data.success){
+                  toast.success("Logout Successfylly",{position:"top-right"});
+                  window.location.href="/"
+                  
+                }
+              
+              }}
             >
               <RiLogoutBoxLine className="text-base" />
               <span className="text-[13px]">Sign out</span>

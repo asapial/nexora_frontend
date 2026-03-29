@@ -14,6 +14,7 @@ import {
 } from "react-icons/ri";
 
 import { cn } from "@/lib/utils";
+import { AmbientBg2, AmbientBg3 } from "@/components/backgrounds/AmbientBg";
 
 // ─── Types ─────────────────────────────────────────────────
 type Accent  = "teal" | "violet" | "amber" | "sky";
@@ -112,6 +113,7 @@ function StatCardItem({ label, value, sub, up, icon, accent }: StatCard) {
 export default function DashboardPage() {
   return (
 <>
+       
         {/* ══ Page content ═════════════════════════════════ */}
         <div className="flex flex-1 flex-col gap-6 p-5 lg:p-7 pt-6">
 

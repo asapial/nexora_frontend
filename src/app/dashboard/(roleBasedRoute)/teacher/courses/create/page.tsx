@@ -148,7 +148,7 @@ export default function CreateCoursePage() {
       setCreatedId(res.data.id);
       setSuccess(true);
       toast.success("Course created successfully!", { position: "top-right" });
-      setTimeout(() => router.push(`/teacher/courses/${res.data.id}/edit`), 1400);
+      setTimeout(() => router.push(`/dashboard/teacher/courses/${res.data.id}`), 1500);
     } catch (err: any) {
       setErrors({ general: err.message ?? "Something went wrong" });
     } finally {
