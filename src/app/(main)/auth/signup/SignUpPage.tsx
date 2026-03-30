@@ -18,6 +18,7 @@ import {
     RiRobot2Line,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 // ─── imgbb upload config ──────────────────────────────────
 const IMGBB_API_KEY = process.env.NEXT_PUBLIC_IMGBB_API_KEY ?? "";
@@ -281,8 +282,6 @@ export default function SignUpPage() {
                 console.log(photoUrl)
             }
 
-            // 2. Register the user
-            // TODO: replace with your Better Auth call
 
             const res = await fetch(`/api/auth/register`, {
                 method: "POST",
@@ -299,24 +298,28 @@ export default function SignUpPage() {
             console.log(res)
 
             const data = await res.json();
-            switch (data.data.user.role) {
-                case "ADMIN":
-                    window.location.href = "/dashboard/admin"
-                    break
-                case "TEACHER":
-                    window.location.href = "/dashboard/teacher"
-                    break
-                case "STUDENT":
-                    window.location.href = "/dashboard/student"
-                    break
-                default:
-                    window.location.href = "/"
+            console.log("Data from the signup page :", data);
+
+            if (!data.success) {
+
+                if(data.error.body.code==="USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL"){
+
+                    setErrors({email: data.error.body.message})
+                }
+
+
+            }
+
+            if (data.success) {
+                toast.success("User registered successfully", { position: "top-right" });
+                window.location.href = "/dashboard"
             }
 
 
 
             // router.push("/verify-email");
         } catch (err: any) {
+            console.log("Error from the signup page :", err);
             setErrors({ email: err?.message ?? "Registration failed. Try again." });
         } finally {
             setIsLoading(false);
@@ -339,7 +342,7 @@ export default function SignUpPage() {
         <div className="min-h-screen flex bg-zinc-50 dark:bg-zinc-950">
 
             {/* ══ Left decorative panel ═══════════════════════════ */}
-            <div className="hidden lg:flex lg:w-[44%] relative overflow-hidden flex-col justify-center p-14"
+            <div className="hidden lg:flex lg:w-[45%] relative overflow-hidden flex-col justify-center p-14"
                 style={{ background: "linear-gradient(135deg, #0a0f14 0%, #0d1b1a 50%, #0f1a2e 100%)" }}
             >
                 <div className="absolute inset-0 bg-[linear-gradient(rgba(20,184,166,.03)_1px,transparent_1px),linear-gradient(90deg,rgba(20,184,166,.03)_1px,transparent_1px)] bg-[size:54px_54px]" />
@@ -420,7 +423,7 @@ export default function SignUpPage() {
                         </h2>
                         <p className="text-sm text-zinc-500 dark:text-zinc-400">
                             Already have an account?{" "}
-                            <Link href="/login" className="font-semibold text-teal-600 dark:text-teal-400 hover:underline">Sign in</Link>
+                            <Link href="/auth/signin" className="font-semibold text-teal-600 dark:text-teal-400 hover:underline">Sign in</Link>
                         </p>
                     </div>
 
@@ -511,9 +514,9 @@ export default function SignUpPage() {
 
                     <p className="mt-6 text-[11.5px] text-zinc-400 dark:text-zinc-600 text-center leading-relaxed">
                         By creating an account you agree to our{" "}
-                        <Link href="/terms" className="underline hover:text-zinc-600 dark:hover:text-zinc-400">Terms</Link>{" "}
+                        <Link href="/termsOfService" className="underline hover:text-zinc-600 dark:hover:text-zinc-400">Terms</Link>{" "}
                         and{" "}
-                        <Link href="/privacy" className="underline hover:text-zinc-600 dark:hover:text-zinc-400">Privacy Policy</Link>.
+                        <Link href="/privacyPolicy" className="underline hover:text-zinc-600 dark:hover:text-zinc-400">Privacy Policy</Link>.
                     </p>
                 </div>
             </div>

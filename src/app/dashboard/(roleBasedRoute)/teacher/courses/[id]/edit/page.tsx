@@ -83,7 +83,7 @@ export default function CourseEditPage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col gap-5 p-5 lg:p-7 pt-6 max-w-2xl mx-auto w-full animate-pulse">
+      <div className="flex flex-col gap-5 p-5 lg:p-7 pt-6 max-w-3xl mx-auto w-full animate-pulse">
         <div className="h-6 w-32 rounded bg-muted" />
         <div className="h-8 w-2/3 rounded-xl bg-muted" />
         <div className="h-64 rounded-2xl bg-muted/60" />
@@ -106,7 +106,7 @@ export default function CourseEditPage() {
   const canEdit = course.status === "DRAFT" || course.status === "REJECTED";
 
   return (
-    <div className="flex flex-col gap-6 p-5 lg:p-7 pt-6 max-w-2xl mx-auto w-full">
+    <div className="flex flex-col gap-6 p-5 lg:p-7 pt-6 max-w-3xl mx-auto w-full">
       {/* Back */}
       <button onClick={() => router.push(`/dashboard/teacher/courses/${id}`)}
         className="flex items-center gap-1.5 text-[12.5px] font-semibold text-muted-foreground hover:text-foreground transition-colors w-fit">

@@ -159,43 +159,8 @@ function StripePaymentForm({ course, clientSecret, paymentIntentId, onSuccess }:
           </div>
         </div>
         <div className="px-5 py-5">
-          {/* <PaymentElement
-            options={{
-              layout: "tabs",
-              appearance: {
-                theme: "stripe",
-                variables: {
-                  colorPrimary: "#0d9488",
-                  colorBackground: "transparent",
-                  colorText: "inherit",
-                  borderRadius: "12px",
-                  fontSizeBase: "13.5px",
-                },
-              },
-            }}
-          /> */}
-          <Elements
-            stripe={stripePromise}
-            options={{
-              clientSecret,
-              appearance: {
-                theme: "stripe",
-                variables: {
-                  colorPrimary: "#0d9488",
-                  colorBackground: "transparent",
-                  colorText: "inherit",
-                  borderRadius: "12px",
-                  fontSizeBase: "13.5px",
-                },
-              },
-            }}
-          >
-            <PaymentElement
-              options={{
-                layout: "tabs",
-              }}
-            />
-          </Elements>
+
+          
         </div>
       </div>
 
@@ -331,7 +296,7 @@ export default function EnrollPage() {
   }
 
   return (
-    <div className="relative flex flex-col gap-6 p-5 lg:p-8 pt-6 max-w-2xl mx-auto w-full min-h-screen">
+    <div className="relative flex flex-col gap-6 p-5 lg:p-8 pt-6 max-w-5xl mx-auto w-full min-h-screen">
       <AmbientBg />
 
       {/* Back */}

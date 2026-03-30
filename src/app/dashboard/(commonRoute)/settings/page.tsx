@@ -31,23 +31,16 @@ import {
   RiEyeOffLine,
 } from "react-icons/ri";
 
-import { AppSidebar }   from "@/components/app-sidebar";
-import {
-  Breadcrumb, BreadcrumbItem, BreadcrumbLink,
-  BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import { Separator }    from "@/components/ui/separator";
-import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { cn }           from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { settingsApi } from "@/lib/api";
 import { toast } from "sonner";
 
 // ─── Tabs ──────────────────────────────────────────────────
 const TABS = [
-  { id: "profile",       label: "Profile",       icon: <RiUserSettingsLine /> },
-  { id: "notifications", label: "Notifications", icon: <RiBellLine />         },
-  { id: "privacy",       label: "Privacy",        icon: <RiShieldLine />       },
-  { id: "danger",        label: "Danger Zone",   icon: <RiAlertLine />        },
+  { id: "profile", label: "Profile", icon: <RiUserSettingsLine /> },
+  { id: "notifications", label: "Notifications", icon: <RiBellLine /> },
+  { id: "privacy", label: "Privacy", icon: <RiShieldLine /> },
+  { id: "danger", label: "Danger Zone", icon: <RiAlertLine /> },
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
@@ -293,7 +286,7 @@ function ProfileTab() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loadingPage, setLoadingPage] = useState(true);
   const [loading, setLoading] = useState(false);
-  const [saved,   setSaved]   = useState(false);
+  const [saved, setSaved] = useState(false);
   const set = (k: keyof ProfileForm) => (v: string) => setForm(p => ({ ...p, [k]: v }));
 
   const load = useCallback(async () => {
@@ -404,22 +397,22 @@ function ProfileTab() {
       <Section title="Basic Information" description="Your name, contact details and how others find you.">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Full name">
-            <TextInput value={form.name}        onChange={set("name")}        icon={<RiUserLine />}       placeholder="Your full name" />
+            <TextInput value={form.name} onChange={set("name")} icon={<RiUserLine />} placeholder="Your full name" />
           </Field>
           <Field label="Email address" hint="Read-only. Use your auth provider to change email.">
             <TextInput value={form.email} icon={<RiMailLine />} placeholder="you@example.com" type="email" readonly />
           </Field>
           <Field label="Phone number">
-            <TextInput value={form.phone}       onChange={set("phone")}       icon={<RiPhoneLine />}      placeholder="+1 234 567 8900" />
+            <TextInput value={form.phone} onChange={set("phone")} icon={<RiPhoneLine />} placeholder="+1 234 567 8900" />
           </Field>
           <Field label="Location">
-            <TextInput value={form.location}    onChange={set("location")}    icon={<RiMapPinLine />}     placeholder="City, Country" />
+            <TextInput value={form.location} onChange={set("location")} icon={<RiMapPinLine />} placeholder="City, Country" />
           </Field>
           <Field label="Institution">
-            <TextInput value={form.institution} onChange={set("institution")} icon={<RiBriefcaseLine />}  placeholder="Your university / organisation" />
+            <TextInput value={form.institution} onChange={set("institution")} icon={<RiBriefcaseLine />} placeholder="Your university / organisation" />
           </Field>
           <Field label="Department">
-            <TextInput value={form.department}  onChange={set("department")}  icon={<RiBookOpenLine />}   placeholder="e.g. Computer Science" />
+            <TextInput value={form.department} onChange={set("department")} icon={<RiBookOpenLine />} placeholder="e.g. Computer Science" />
           </Field>
         </div>
       </Section>
@@ -434,13 +427,13 @@ function ProfileTab() {
       <Section title="Online Presence" description="Links shown on your profile.">
         <div className="flex flex-col gap-3">
           <Field label="Website">
-            <TextInput value={form.website}  onChange={set("website")}  icon={<RiGlobalLine />}       placeholder="https://yourwebsite.com" type="url" />
+            <TextInput value={form.website} onChange={set("website")} icon={<RiGlobalLine />} placeholder="https://yourwebsite.com" type="url" />
           </Field>
           <Field label="GitHub username">
-            <TextInput value={form.github}   onChange={set("github")}   icon={<RiGithubLine />}       placeholder="github-username" />
+            <TextInput value={form.github} onChange={set("github")} icon={<RiGithubLine />} placeholder="github-username" />
           </Field>
           <Field label="LinkedIn username">
-            <TextInput value={form.linkedin} onChange={set("linkedin")} icon={<RiLinkedinBoxLine />}  placeholder="linkedin-username" />
+            <TextInput value={form.linkedin} onChange={set("linkedin")} icon={<RiLinkedinBoxLine />} placeholder="linkedin-username" />
           </Field>
         </div>
       </Section>
@@ -603,12 +596,12 @@ function NotificationsTab() {
           </Link>
         </div>
 
-        <ToggleRow label="Session created"       description="When you or a co-supervisor creates a new session in any of your clusters."        checked={email.sessionCreated}  onChange={v => setEmail(p => ({ ...p, sessionCreated: v }))} />
-        <ToggleRow label="Submission alert"       description="When a member submits a task."                                                       checked={email.submissionAlert} onChange={v => setEmail(p => ({ ...p, submissionAlert: v }))} />
-        <ToggleRow label="At-risk cluster alert"  description="When a cluster's health score drops below 50."                                       checked={email.atRiskAlert}     onChange={v => setEmail(p => ({ ...p, atRiskAlert: v }))}     />
-        <ToggleRow label="Badge earned"           description="When a member earns a milestone badge in your cluster."                              checked={email.badgeEarned}     onChange={v => setEmail(p => ({ ...p, badgeEarned: v }))}     />
-        <ToggleRow label="Weekly digest"          description="A summary of cluster activity, pending reviews, and upcoming sessions every Monday." checked={email.weeklyDigest}    onChange={v => setEmail(p => ({ ...p, weeklyDigest: v }))}   />
-        <ToggleRow label="Product updates"        description="Occasional emails about new features and improvements to Nexora."                    checked={email.marketing}       onChange={v => setEmail(p => ({ ...p, marketing: v }))}      />
+        <ToggleRow label="Session created" description="When you or a co-supervisor creates a new session in any of your clusters." checked={email.sessionCreated} onChange={v => setEmail(p => ({ ...p, sessionCreated: v }))} />
+        <ToggleRow label="Submission alert" description="When a member submits a task." checked={email.submissionAlert} onChange={v => setEmail(p => ({ ...p, submissionAlert: v }))} />
+        <ToggleRow label="At-risk cluster alert" description="When a cluster's health score drops below 50." checked={email.atRiskAlert} onChange={v => setEmail(p => ({ ...p, atRiskAlert: v }))} />
+        <ToggleRow label="Badge earned" description="When a member earns a milestone badge in your cluster." checked={email.badgeEarned} onChange={v => setEmail(p => ({ ...p, badgeEarned: v }))} />
+        <ToggleRow label="Weekly digest" description="A summary of cluster activity, pending reviews, and upcoming sessions every Monday." checked={email.weeklyDigest} onChange={v => setEmail(p => ({ ...p, weeklyDigest: v }))} />
+        <ToggleRow label="Product updates" description="Occasional emails about new features and improvements to Nexora." checked={email.marketing} onChange={v => setEmail(p => ({ ...p, marketing: v }))} />
       </Section>
 
       {/* Push */}
@@ -624,10 +617,10 @@ function NotificationsTab() {
           </span>
         </div>
 
-        <ToggleRow label="Deadline reminders"    description="24 h and 1 h before a task deadline in any of your clusters."    checked={push.deadline}       onChange={v => setPush(p => ({ ...p, deadline: v }))}       />
-        <ToggleRow label="Inactive member alert" description="When a member has had zero activity for 7 consecutive days."     checked={push.memberInactive} onChange={v => setPush(p => ({ ...p, memberInactive: v }))} />
-        <ToggleRow label="New submission"        description="Instant ping for each new submission in your clusters."           checked={push.newSubmission}  onChange={v => setPush(p => ({ ...p, newSubmission: v }))}  />
-        <ToggleRow label="System announcements"  description="Platform maintenance, scheduled downtime and critical updates."  checked={push.systemAnnounce} onChange={v => setPush(p => ({ ...p, systemAnnounce: v }))} />
+        <ToggleRow label="Deadline reminders" description="24 h and 1 h before a task deadline in any of your clusters." checked={push.deadline} onChange={v => setPush(p => ({ ...p, deadline: v }))} />
+        <ToggleRow label="Inactive member alert" description="When a member has had zero activity for 7 consecutive days." checked={push.memberInactive} onChange={v => setPush(p => ({ ...p, memberInactive: v }))} />
+        <ToggleRow label="New submission" description="Instant ping for each new submission in your clusters." checked={push.newSubmission} onChange={v => setPush(p => ({ ...p, newSubmission: v }))} />
+        <ToggleRow label="System announcements" description="Platform maintenance, scheduled downtime and critical updates." checked={push.systemAnnounce} onChange={v => setPush(p => ({ ...p, systemAnnounce: v }))} />
       </Section>
 
       <div className="flex justify-end">
@@ -762,9 +755,9 @@ function PrivacyTab() {
               {pwError}
             </div>
           )}
-          <PasswordField label="Current password"    value={pw.current} onChange={v => setPw(p => ({ ...p, current: v }))}  placeholder="Your current password"       />
-          <PasswordField label="New password"        value={pw.newP}    onChange={v => setPw(p => ({ ...p, newP: v }))}     placeholder="Min. 8 characters"           />
-          <PasswordField label="Confirm new password"value={pw.confirm} onChange={v => setPw(p => ({ ...p, confirm: v }))} placeholder="Re-enter new password"       />
+          <PasswordField label="Current password" value={pw.current} onChange={v => setPw(p => ({ ...p, current: v }))} placeholder="Your current password" />
+          <PasswordField label="New password" value={pw.newP} onChange={v => setPw(p => ({ ...p, newP: v }))} placeholder="Min. 8 characters" />
+          <PasswordField label="Confirm new password" value={pw.confirm} onChange={v => setPw(p => ({ ...p, confirm: v }))} placeholder="Re-enter new password" />
           <div className="flex justify-start mt-1">
             <SaveButton loading={pwLoading} saved={pwSaved} />
           </div>
@@ -775,9 +768,9 @@ function PrivacyTab() {
       <Section title="Active Sessions" description="Devices currently logged into your account.">
         <div className="flex flex-col gap-2">
           {[
-            { device: "Chrome on macOS", location: "Tiruchirappalli, India", current: true,  last: "Right now"     },
-            { device: "Safari on iPhone", location: "Tiruchirappalli, India", current: false, last: "2 hours ago"  },
-            { device: "Firefox on Windows",location: "Mumbai, India",        current: false, last: "3 days ago"    },
+            { device: "Chrome on macOS", location: "Tiruchirappalli, India", current: true, last: "Right now" },
+            { device: "Safari on iPhone", location: "Tiruchirappalli, India", current: false, last: "2 hours ago" },
+            { device: "Firefox on Windows", location: "Mumbai, India", current: false, last: "3 days ago" },
           ].map((s, i) => (
             <div key={i} className="flex items-center justify-between gap-3 p-3.5 rounded-xl
                                     bg-muted/30 border border-border">
@@ -817,7 +810,7 @@ function PrivacyTab() {
 // ─── TAB: Danger Zone ──────────────────────────────────────
 function DangerTab() {
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [confirmText,   setConfirmText]   = useState("");
+  const [confirmText, setConfirmText] = useState("");
 
   return (
     <div className="flex flex-col gap-5">
@@ -939,93 +932,59 @@ export default function AccountSettingsPage() {
   const [activeTab, setActiveTab] = useState<TabId>("profile");
 
   return (
-    <SidebarProvider>
-      <AppSidebar />
-      <SidebarInset>
+    <div className="p-5 lg:p-7 pt-6 max-w-5xl mx-auto w-full">
 
-        {/* ── Header bar ── */}
-        <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2
-                            border-b border-border bg-background/80 backdrop-blur-md px-4
-                            transition-[width,height] ease-linear
-                            group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
-          <SidebarTrigger className="-ml-1 text-muted-foreground hover:text-foreground transition-colors" />
-          <Separator orientation="vertical" className="mx-1 data-[orientation=vertical]:h-4" />
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem className="hidden md:block">
-                <BreadcrumbLink href="/dashboard" className="text-[13px] text-muted-foreground hover:text-foreground">
-                  Dashboard
-                </BreadcrumbLink>
-              </BreadcrumbItem>
-              <BreadcrumbSeparator className="hidden md:block" />
-              <BreadcrumbItem>
-                <BreadcrumbPage className="text-[13.5px] font-semibold text-foreground">
-                  Account Settings
-                </BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
 
-          <div className="ml-auto">
-            <Link href="/dashboard/profile"
-              className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold
-                         text-muted-foreground hover:text-foreground transition-colors">
-              <RiArrowRightLine className="rotate-180" /> View profile
-            </Link>
-          </div>
-        </header>
+      {/* ── Page ── */}
+      <div className="flex flex-1 flex-col gap-6 p-5 lg:p-7 pt-6">
 
-        {/* ── Page ── */}
-        <div className="flex flex-1 flex-col gap-6 p-5 lg:p-7 pt-6">
-
-          {/* Page title */}
-          <div>
-            <h1 className="text-[1.4rem] font-extrabold tracking-tight text-foreground leading-none mb-0.5">
-              Account Settings
-            </h1>
-            <p className="text-[13px] text-muted-foreground">
-              Manage your profile, notifications, privacy, and account security.
-            </p>
-          </div>
-
-          {/* Tab bar */}
-          <div className="flex gap-1 p-1 rounded-2xl bg-muted/50 border border-border w-fit flex-wrap">
-            {TABS.map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={cn(
-                  "inline-flex items-center gap-2 h-9 px-4 rounded-xl",
-                  "text-[13px] font-semibold transition-all duration-150",
-                  activeTab === tab.id
-                    ? "bg-background text-foreground shadow-sm border border-border"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
-                  // Danger tab — red tint when active
-                  tab.id === "danger" && activeTab === "danger" && "!text-red-600 dark:!text-red-400"
-                )}
-              >
-                <span className={cn(
-                  "text-base",
-                  activeTab === tab.id && tab.id !== "danger" && "text-teal-600 dark:text-teal-400",
-                  activeTab === tab.id && tab.id === "danger" && "text-red-500 dark:text-red-400",
-                )}>
-                  {tab.icon}
-                </span>
-                <span className="hidden sm:block">{tab.label}</span>
-              </button>
-            ))}
-          </div>
-
-          {/* Tab content */}
-          <div className="max-w-3xl w-full">
-            {activeTab === "profile"       && <ProfileTab />}
-            {activeTab === "notifications" && <NotificationsTab />}
-            {activeTab === "privacy"       && <PrivacyTab />}
-            {activeTab === "danger"        && <DangerTab />}
-          </div>
-
+        {/* Page title */}
+        <div>
+          <h1 className="text-[1.4rem] font-extrabold tracking-tight text-foreground leading-none mb-0.5">
+            Account Settings
+          </h1>
+          <p className="text-[13px] text-muted-foreground">
+            Manage your profile, notifications, privacy, and account security.
+          </p>
         </div>
-      </SidebarInset>
-    </SidebarProvider>
+
+        {/* Tab bar */}
+        <div className="flex gap-1 p-1 rounded-2xl bg-muted/50 border border-border w-fit flex-wrap">
+          {TABS.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={cn(
+                "inline-flex items-center gap-2 h-9 px-4 rounded-xl",
+                "text-[13px] font-semibold transition-all duration-150",
+                activeTab === tab.id
+                  ? "bg-background text-foreground shadow-sm border border-border"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
+                // Danger tab — red tint when active
+                tab.id === "danger" && activeTab === "danger" && "!text-red-600 dark:!text-red-400"
+              )}
+            >
+              <span className={cn(
+                "text-base",
+                activeTab === tab.id && tab.id !== "danger" && "text-teal-600 dark:text-teal-400",
+                activeTab === tab.id && tab.id === "danger" && "text-red-500 dark:text-red-400",
+              )}>
+                {tab.icon}
+              </span>
+              <span className="hidden sm:block">{tab.label}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Tab content */}
+        <div className="max-w-3xl w-full">
+          {activeTab === "profile" && <ProfileTab />}
+          {activeTab === "notifications" && <NotificationsTab />}
+          {activeTab === "privacy" && <PrivacyTab />}
+          {activeTab === "danger" && <DangerTab />}
+        </div>
+
+      </div>
+    </div>
   );
 }

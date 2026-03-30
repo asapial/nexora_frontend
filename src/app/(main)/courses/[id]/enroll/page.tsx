@@ -11,7 +11,7 @@ import {
 import { cn } from "@/lib/utils";
 import { studentApi, paymentApi } from "../../../../../lib/api";
 import { toast } from "sonner";
-// NOTE: install: npm i @stripe/react-stripe-js @stripe/stripe-js
+
 import { loadStripe } from "@stripe/stripe-js";
 import {
     Elements,
@@ -19,24 +19,14 @@ import {
     useStripe,
     useElements,
 } from "@stripe/react-stripe-js";
-import { AmbientBg1, AmbientBg2, AmbientBg3 } from "@/components/backgrounds/AmbientBg";
+import { AmbientBg1, AmbientBg2, AmbientBg3, AmbientBg6 } from "@/components/backgrounds/AmbientBg";
 
 // Initialize Stripe (use your publishable key from env)
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
 const fmtUSD = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
 
-// ─── Ambient BG ───────────────────────────────────────────
-function AmbientBg() {
-    return (
-        <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden select-none">
-            <div className="absolute inset-0" style={{ backgroundImage: "radial-gradient(rgba(20,184,166,0.11) 1px,transparent 1px)", backgroundSize: "30px 30px" }} />
-            <div className="absolute -top-60 -left-40 w-[600px] h-[600px] rounded-full bg-teal-500/[0.06] blur-[120px]" />
-            <div className="absolute top-1/2 right-0 w-[400px] h-[400px] rounded-full bg-teal-400/[0.04] blur-[100px]" />
-            <div className="absolute -bottom-60 left-1/3 w-[500px] h-[400px] rounded-full bg-amber-500/[0.04] blur-[110px]" />
-        </div>
-    );
-}
+
 
 // ─── Course Summary Widget ────────────────────────────────
 function CourseSummary({ course }: { course: any }) {
@@ -141,9 +131,9 @@ function StripePaymentForm({ course, clientSecret, paymentIntentId, onSuccess }:
     };
 
     return (
-        <form onSubmit={handlePay} className="flex flex-col gap-5">
+        <form onSubmit={handlePay} className="flex flex-col gap-5  ">
             {/* Stripe Payment Element */}
-            <div className="rounded-2xl border border-border bg-card/90 backdrop-blur-sm overflow-hidden">
+            <div className="rounded-2xl border border-border bg-card/90 backdrop-blur-sm overflow-hidden w-full">
                 <div className="flex items-center gap-3 px-5 py-4 border-b border-border">
                     <div className="w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center bg-teal-100/70 dark:bg-teal-950/50 border border-teal-200/60 dark:border-teal-800/50 text-teal-600 dark:text-teal-400 text-base">
                         <RiBankCardLine />
@@ -159,22 +149,12 @@ function StripePaymentForm({ course, clientSecret, paymentIntentId, onSuccess }:
                     </div>
                 </div>
                 <div className="px-5 py-5">
-                    {/* <PaymentElement
-            options={{
-              layout: "tabs",
-              appearance: {
-                theme: "stripe",
-                variables: {
-                  colorPrimary: "#0d9488",
-                  colorBackground: "transparent",
-                  colorText: "inherit",
-                  borderRadius: "12px",
-                  fontSizeBase: "13.5px",
-                },
-              },
-            }}
-          /> */}
-                    <Elements
+                    <PaymentElement
+                        options={{
+                            layout: "tabs",
+                        }}
+                    />
+                    {/* <Elements
                         stripe={stripePromise}
                         options={{
                             clientSecret,
@@ -195,7 +175,7 @@ function StripePaymentForm({ course, clientSecret, paymentIntentId, onSuccess }:
                                 layout: "tabs",
                             }}
                         />
-                    </Elements>
+                    </Elements> */}
                 </div>
             </div>
 
@@ -316,8 +296,8 @@ export default function EnrollPage() {
     // ── Loading ──
     if (loading) {
         return (
-            <div className="relative flex flex-col gap-6 p-5 lg:p-8 max-w-2xl mx-auto pt-6 animate-pulse">
-                <AmbientBg />
+            <div className="relative flex flex-col gap-6 p-5 lg:pt-20 max-w-5xl mx-auto pt-6 animate-pulse">
+                <AmbientBg6 />
                 <div className="h-8 w-40 rounded-full bg-muted/60" />
                 <div className="h-48 rounded-2xl bg-muted/40" />
                 <div className="h-64 rounded-2xl bg-muted/40" />
@@ -328,7 +308,7 @@ export default function EnrollPage() {
     if (!course) {
         return (
             <div className="relative flex flex-col items-center gap-4 p-10 max-w-xl mx-auto text-center">
-                <AmbientBg />
+                <AmbientBg6 />
                 <RiAlertLine className="text-4xl text-red-500" />
                 <p className="text-[14px] font-bold text-foreground">{error ?? "Course not found"}</p>
                 <button onClick={() => router.push("/courses")} className="h-9 px-4 rounded-xl bg-teal-600 dark:bg-teal-500 text-white text-[13px] font-bold hover:bg-teal-700 transition-colors">Browse courses</button>
@@ -337,8 +317,8 @@ export default function EnrollPage() {
     }
 
     return (
-        <div className="relative flex flex-col gap-6 p-5 lg:p-8 pt-6 max-w-2xl mx-auto w-full min-h-screen">
-            <AmbientBg3></AmbientBg3>
+        <div className="relative flex flex-col gap-6 p-5 lg:pt-20 pt-6 max-w-5xl mx-auto w-full min-h-screen">
+            <AmbientBg6></AmbientBg6>
 
             {/* Back */}
             <div>

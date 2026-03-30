@@ -1,7 +1,7 @@
 import { createEnv } from "@t3-oss/env-nextjs";
 import { z } from "zod";
 
-export const envVars = createEnv({
+export const env = createEnv({
   server: {
     FRONTEND_URL: z.string().url(),
     BACKEND_URL: z.string().url(),

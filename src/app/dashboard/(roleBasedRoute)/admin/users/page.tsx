@@ -92,7 +92,7 @@ function EditModal({
           <div>
             <label className="text-[12px] font-semibold text-muted-foreground mb-1 block">Name</label>
             <input value={name} onChange={e => setName(e.target.value)}
-              className="w-full h-10 px-3 rounded-xl border border-border bg-muted/30 text-[13px] text-foreground focus:outline-none focus:ring-2 focus:ring-violet-400/25 transition-all" />
+              className="w-full h-10 px-3 rounded-xl border border-border bg-muted/30 text-[13px] text-foreground focus:outline-none focus:ring-2 focus:ring-teal-400/25 transition-all" />
           </div>
           <div>
             <label className="text-[12px] font-semibold text-muted-foreground mb-1 block">Role</label>
@@ -108,7 +108,7 @@ function EditModal({
           </div>
         </div>
         <button onClick={save} disabled={saving || !name.trim()}
-          className="h-11 rounded-xl bg-violet-600 dark:bg-violet-500 hover:bg-violet-700 disabled:opacity-50 text-white text-[13px] font-bold flex items-center justify-center gap-2 transition-all">
+          className="h-11 rounded-xl bg-teal-600 dark:bg-teal-500 hover:bg-teal-700 disabled:opacity-50 text-white text-[13px] font-bold flex items-center justify-center gap-2 transition-all">
           {saving ? <RiLoader4Line className="animate-spin" /> : <RiCheckLine />}
           Save changes
         </button>
@@ -222,11 +222,11 @@ export default function AdminUserManagementPage() {
   const totalPages = Math.ceil(total / LIMIT);
 
   return (
-    <div className="flex flex-col gap-6 p-5 lg:p-7 pt-6 max-w-7xl mx-auto w-full">
+    <div className="flex flex-col gap-6 p-5 lg:p-7 pt-6 max-w-5xl mx-auto w-full">
       {/* Header */}
       <div>
         <div className="flex items-center gap-1.5 mb-1">
-          <RiSparklingFill className="text-violet-500 dark:text-violet-400 text-sm animate-pulse" />
+          <RiSparklingFill className="text-teal-500 dark:text-teal-400 text-sm animate-pulse" />
           <span className="text-[10.5px] font-bold tracking-[.12em] uppercase text-muted-foreground">Admin</span>
         </div>
         <div className="flex items-start justify-between gap-4">
@@ -240,7 +240,7 @@ export default function AdminUserManagementPage() {
               <RiRefreshLine className={cn("text-sm", loading && "animate-spin")} />
             </button>
             <a href="/dashboard/admin/create"
-              className="h-9 px-4 rounded-xl bg-violet-600 dark:bg-violet-500 hover:bg-violet-700 text-white text-[12.5px] font-bold flex items-center gap-1.5 transition-all">
+              className="h-9 px-4 rounded-xl bg-teal-600 dark:bg-teal-500 hover:bg-teal-700 text-white text-[12.5px] font-bold flex items-center gap-1.5 transition-all">
               <RiAddLine /> Create users
             </a>
           </div>
@@ -251,7 +251,7 @@ export default function AdminUserManagementPage() {
       <div className="grid grid-cols-3 gap-3">
         {[
           { icon: <RiUserLine />, label: "Total Users", val: total, col: "text-teal-600 dark:text-teal-400 bg-teal-100/60 dark:bg-teal-950/40 border-teal-200/60" },
-          { icon: <RiUserStarLine />, label: "Admins", val: users.filter(u => u.role === "ADMIN").length, col: "text-violet-600 dark:text-violet-400 bg-violet-100/60 dark:bg-violet-950/40 border-violet-200/60" },
+          { icon: <RiUserStarLine />, label: "Admins", val: users.filter(u => u.role === "ADMIN").length, col: "text-teal-600 dark:text-teal-400 bg-teal-100/60 dark:bg-teal-950/40 border-teal-200/60" },
           { icon: <RiShieldUserLine />, label: "Teachers", val: users.filter(u => u.role === "TEACHER").length, col: "text-amber-600 dark:text-amber-400 bg-amber-100/60 dark:bg-amber-950/40 border-amber-200/60" },
         ].map(s => (
           <div key={s.label} className="rounded-2xl border border-border bg-card p-4">
@@ -268,13 +268,13 @@ export default function AdminUserManagementPage() {
           <RiSearchLine className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/50 pointer-events-none text-sm" />
           <input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }}
             placeholder="Search name or email…"
-            className="w-full h-10 pl-9 pr-4 rounded-xl text-[13px] bg-muted/40 border border-border text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-violet-400/20 transition-all" />
+            className="w-full h-10 pl-9 pr-4 rounded-xl text-[13px] bg-muted/40 border border-border text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-teal-400/20 transition-all" />
         </div>
         <div className="flex items-center gap-2">
           {(["all", "ADMIN", "TEACHER", "STUDENT"] as RoleFilter[]).map(f => (
             <button key={f} onClick={() => { setRoleFilter(f); setPage(1); }}
               className={cn("h-9 px-3 rounded-xl text-[12px] font-semibold border transition-all",
-                roleFilter === f ? "bg-violet-600 text-white border-violet-600" : "border-border text-muted-foreground hover:bg-muted/40")}>
+                roleFilter === f ? "bg-teal-600 text-white border-teal-600" : "border-border text-muted-foreground hover:bg-muted/40")}>
               {f === "all" ? "All" : f.charAt(0) + f.slice(1).toLowerCase() + "s"}
             </button>
           ))}

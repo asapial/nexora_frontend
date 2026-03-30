@@ -12,6 +12,7 @@ import {
   RiShieldCheckLine,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
+import { AmbientBg6 } from "@/components/backgrounds/AmbientBg";
 
 // ─── Types ────────────────────────────────────────────────
 interface FormData {
@@ -153,7 +154,7 @@ export default function ChangePasswordPage() {
     if (Object.keys(errs).length) { setErrors(errs); return; }
     setIsLoading(true);
     try {
-      // TODO: await authClient.changePassword({ currentPassword: form.currentPassword, newPassword: form.newPassword });
+
 
       const res = await fetch(`/api/auth/changePassword`, {
         method: "POST",
@@ -169,20 +170,7 @@ export default function ChangePasswordPage() {
 
       console.log(data);
       if (data.success) {
-        switch (data.data.user.role) {
-          case "ADMIN":
-            window.location.href = "/dashboard/admin"
-            break
-          case "TEACHER":
-            window.location.href = "/dashboard/teacher"
-            break
-          case "STUDENT":
-            window.location.href = "/dashboard/student"
-            break
-          default:
-            window.location.href = "/"
-        }
-
+        window.location.href = "/dashboard"
         setSuccess(true);
       }
 
@@ -198,8 +186,7 @@ export default function ChangePasswordPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-950 px-4 py-12">
 
-      {/* Background orb */}
-      <div className="fixed inset-0 bg-[radial-gradient(ellipse_60%_40%_at_50%_0%,rgba(20,184,166,0.06),transparent)] dark:bg-[radial-gradient(ellipse_60%_40%_at_50%_0%,rgba(20,184,166,0.09),transparent)] pointer-events-none" />
+<AmbientBg6></AmbientBg6>
 
       <div className="relative z-10 w-full max-w-[440px]">
 

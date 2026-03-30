@@ -15,6 +15,8 @@ import {
   RiKey2Line,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
+import { AmbientBg6 } from "@/components/backgrounds/AmbientBg";
+import { toast } from "sonner";
 
 const OTP_LENGTH = 6;
 
@@ -221,6 +223,7 @@ const handleResetPassword = async (e: React.FormEvent) => {
             throw new Error(data.message || "Reset failed. Please start over.");
         }
 
+    toast.success("Password has been reset successfully.", { position: "top-right" });
         setSuccess(true);
         setTimeout(() => router.push("/auth/signin"), 1000);
 
@@ -246,11 +249,15 @@ const handleResend = async () => {
         const data = await res.json();
 
         if (!data.success) throw new Error(data.message);
+        if(data.success){
+          toast.success("OTP has been sent for reset.", { position: "top-right" });
+          setDigits(Array(OTP_LENGTH).fill(""));
+          setOtpError("");
+          startCooldown();
+          inputRefs.current[0]?.focus();
 
-        setDigits(Array(OTP_LENGTH).fill(""));
-        setOtpError("");
-        startCooldown();
-        inputRefs.current[0]?.focus();
+        }
+
 
     } catch (err: any) {
         setOtpError(err.message || "Failed to resend. Try again.");
@@ -261,7 +268,7 @@ const handleResend = async () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-950 px-4 py-12">
-      <div className="fixed inset-0 bg-[radial-gradient(ellipse_50%_40%_at_50%_0%,rgba(20,184,166,0.06),transparent)] dark:bg-[radial-gradient(ellipse_50%_40%_at_50%_0%,rgba(20,184,166,0.09),transparent)] pointer-events-none" />
+    <AmbientBg6></AmbientBg6>
 
       <div className="relative z-10 w-full max-w-[440px]">
         <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200/80 dark:border-zinc-800/80 shadow-xl shadow-zinc-900/5 dark:shadow-zinc-900/30 overflow-hidden">

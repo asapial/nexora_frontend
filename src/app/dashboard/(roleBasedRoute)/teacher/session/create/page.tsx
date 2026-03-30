@@ -457,6 +457,7 @@ export default function CreateSessionPage() {
 
       toast.success("Session created successfully", { position: "top-right" })
       setSuccess(true);
+          setTimeout(() => router.push("/dashboard/teacher/session/manageSession"), 1500);
 
     } catch {
       setErrors({ general: "Network error — please try again" });
@@ -497,7 +498,7 @@ export default function CreateSessionPage() {
 
   return (
     <form onSubmit={handleSubmit}>
-      <div className="flex flex-col gap-6 p-5 lg:p-7 pt-6 max-w-3xl mx-auto w-full">
+      <div className="flex flex-col gap-6 p-5 lg:p-7 pt-6 max-w-5xl mx-auto w-full">
 
         {/* ── Page heading ── */}
         <div>

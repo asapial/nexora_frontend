@@ -17,9 +17,9 @@ export function CatalogCard({ course, onClick }: { course: any; onClick: () => v
       "hover:shadow-2xl hover:shadow-teal-600/[0.07]",
       "transition-all duration-300 ease-out"
     )}>
-      <div className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-teal-400/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-400" />
+      <div className="absolute top-0 inset-x-0  bg-gradient-to-r from-transparent via-teal-400/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-400" />
 
-      <div className="relative h-44 bg-gradient-to-br from-teal-950/80 via-slate-900 to-slate-950 overflow-hidden">
+      <div className="relative h-60 aspect-[16/9] bg-gradient-to-br from-teal-950/80 via-slate-900 to-slate-950 overflow-hidden">
         {course.thumbnailUrl
           ? <img src={course.thumbnailUrl} alt={course.title} className="w-full h-full object-cover opacity-75 group-hover:opacity-90 group-hover:scale-[1.03] transition-all duration-500 ease-out" />
           : <div className="w-full h-full flex items-center justify-center relative">
@@ -57,3 +57,4 @@ export function CatalogCard({ course, onClick }: { course: any; onClick: () => v
     </div>
   );
 }
+

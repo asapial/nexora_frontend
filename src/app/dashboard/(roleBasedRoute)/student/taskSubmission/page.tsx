@@ -133,7 +133,7 @@ function SubmissionPageInner() {
 
   if (loading) {
     return (
-      <div className="flex flex-col gap-5 p-5 lg:p-7 pt-6 max-w-2xl mx-auto w-full animate-pulse">
+      <div className="flex flex-col gap-5 p-5 lg:p-7 pt-6 max-w-5xl mx-auto w-full animate-pulse">
         <div className="h-6 w-32 rounded bg-muted" />
         <div className="h-8 w-2/3 rounded-xl bg-muted" />
         <div className="h-64 rounded-2xl bg-muted/60" />
@@ -159,7 +159,7 @@ function SubmissionPageInner() {
   const deadlineOverdue = task.deadline && new Date(task.deadline).getTime() < Date.now();
 
   return (
-    <div className="flex flex-col gap-6 p-5 lg:p-7 pt-6 max-w-2xl mx-auto w-full">
+    <div className="flex flex-col gap-6 p-5 lg:p-7 pt-6 max-w-5xl mx-auto w-full">
       {/* Back */}
       <button onClick={() => router.push("/dashboard/student/homework")}
         className="flex items-center gap-1.5 text-[12.5px] font-semibold text-muted-foreground hover:text-foreground transition-colors w-fit">

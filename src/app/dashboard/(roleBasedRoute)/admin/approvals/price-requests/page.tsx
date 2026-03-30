@@ -121,7 +121,7 @@ export default function PriceRequestApprovalsPage() {
       {rejectTarget && <RejectModal label={`$${rejectTarget.requestedPrice} — ${rejectTarget.course?.title}`} onClose={() => setRejectTarget(null)} onReject={(n) => handleReject(rejectTarget.id, n)} />}
       {approveTarget && <ApproveModal req={approveTarget} onClose={() => setApproveTarget(null)} onApprove={(p) => handleApprove(approveTarget.id, p)} />}
 
-      <div className="relative flex flex-col gap-6 p-5 lg:p-8 pt-6 max-w-4xl mx-auto w-full min-h-screen">
+      <div className="relative flex flex-col gap-6 p-5 lg:p-8 pt-6 max-w-5xl mx-auto w-full min-h-screen">
         <AmbientBg />
 
         <div className="flex items-start justify-between gap-4">

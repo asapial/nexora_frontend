@@ -367,7 +367,7 @@ const handleSubmit = async (e: React.FormEvent) => {
     const data = await res.json();
 
     if (!res.ok || !data.success) {
-      // ✅ slug conflict হলে slug field এ দেখাও
+
       if (res.status === 409) {
         setErrors({ slug: "This slug is already taken — try another" } as any);
         return;
@@ -376,8 +376,9 @@ const handleSubmit = async (e: React.FormEvent) => {
       return;
     }
 
+
     setSuccess(true);
-    // setTimeout(() => router.push("/dashboard/clusters"), 1800);
+    setTimeout(() => router.push("/dashboard/teacher/cluster/manageCluster"), 1500);
 
   } catch {
     setErrors({ general: "Network error — please try again" });
@@ -417,7 +418,7 @@ const handleSubmit = async (e: React.FormEvent) => {
 
   return (
     <form onSubmit={handleSubmit}>
-      <div className="flex flex-col gap-6 p-5 lg:p-7 pt-6 max-w-3xl mx-auto w-full">
+      <div className="flex flex-col gap-6 p-5 lg:p-7 pt-6 max-w-5xl mx-auto w-full">
 
         {/* ── Page heading ── */}
         <div>

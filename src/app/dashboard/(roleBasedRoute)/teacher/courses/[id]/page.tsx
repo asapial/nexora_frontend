@@ -237,7 +237,7 @@ export default function CourseDetailPage() {
       {activeTab === "overview" && (
         <div className="flex flex-col gap-5">
           {course.thumbnailUrl && (
-            <div className="rounded-2xl overflow-hidden h-52 relative shadow-xl">
+            <div className="rounded-2xl overflow-hidden h-[40vh] relative shadow-xl">
               <img src={course.thumbnailUrl} alt={course.title} className="w-full h-full object-cover" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
             </div>

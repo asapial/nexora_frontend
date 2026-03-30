@@ -11,7 +11,7 @@ import {
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
 import { studentApi } from "../../../../lib/api";
-import { AmbientBg } from "@/components/courses/AmbientBg";
+import { AmbientBg6 } from "@/components/backgrounds/AmbientBg";
 
 const fmtUSD = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
 
@@ -31,17 +31,17 @@ export default function CourseDetailPublicPage() {
   }, [id]);
 
   if (loading) return (
-    <div className="relative flex flex-col gap-4 p-5 lg:p-8 pt-6 max-w-4xl mx-auto animate-pulse">
-      <AmbientBg />
-      <div className="h-64 rounded-2xl bg-gradient-to-r from-muted/60 via-muted/40 to-muted/60" />
-      <div className="h-6 w-2/3 rounded-full bg-muted/60" />
-      <div className="h-4 w-full rounded-full bg-muted/40" />
+    <div className="relative flex flex-col gap-4  lg:pt-30 pt-6 max-w-5xl mx-auto animate-pulse h-[50vh]">
+      <AmbientBg6 />
+      <div className="h-64 rounded-2xl bg-gradient-to-r from-muted/60 via-muted/40 to-muted/60 w-full" />
+      <div className="h-6  rounded-full bg-muted/60 w-full" />
+      <div className="h-4  rounded-full bg-muted/40 w-full" />
     </div>
   );
 
   if (error || !course) return (
-    <div className="relative flex flex-col items-center gap-4 p-10 max-w-xl mx-auto text-center">
-      <AmbientBg />
+    <div className="relative flex flex-col items-center gap-4 p-20 max-w-xl mx-auto text-center">
+      <AmbientBg6 />
       <RiAlertLine className="text-4xl text-red-500" />
       <p className="text-[14px] font-bold text-foreground">{error ?? "Course not found"}</p>
       <button onClick={() => router.push("/courses")} className="h-9 px-4 rounded-xl bg-teal-600 dark:bg-teal-500 text-white text-[13px] font-bold hover:bg-teal-700 transition-colors">Browse courses</button>
@@ -49,12 +49,12 @@ export default function CourseDetailPublicPage() {
   );
 
   return (
-    <div className="relative flex flex-col gap-6 p-5 lg:p-8 mt-20 max-w-7xl mx-auto w-full min-h-screen ">
-      <AmbientBg />
+    <div className="relative flex flex-col gap-6 p-5 lg:p-20 mt-20 max-w-7xl mx-auto w-full min-h-screen ">
+      <AmbientBg6 />
 
       {/* Thumbnail hero */}
       {course.thumbnailUrl && (
-        <div className="rounded-2xl overflow-hidden h-64 shadow-2xl relative">
+        <div className="rounded-2xl overflow-hidden h-[40vh] shadow-2xl relative">
           <img src={course.thumbnailUrl} alt={course.title} className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
         </div>
