@@ -16,6 +16,7 @@ import {
   RiBookOpenLine,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 
 
@@ -164,25 +165,12 @@ export default function SignInPage() {
       });
 
       const data = await res.json();
-      console.log(data)
 
-      // if (!res.ok) {
-      //   throw new Error(data.message || "Login failed");
-      // }
-
-      switch (data.data.user.role) {
-        case "ADMIN":
-          window.location.href = "/dashboard/admin"
-          break
-        case "TEACHER":
-          window.location.href = "/dashboard/teacher"
-          break
-        case "STUDENT":
-          window.location.href = "/dashboard/student"
-          break
-        default:
-          window.location.href = "/"
+      if(data.success){
+        toast.success("User login successfully", {position:"top-right"})
+         window.location.href = "/dashboard"
       }
+
 
 
 
@@ -207,7 +195,7 @@ export default function SignInPage() {
     <div className="min-h-screen flex bg-zinc-50 dark:bg-zinc-950">
 
       {/* ══ Left decorative panel ══════════════════════════ */}
-      <div className="hidden lg:flex lg:w-[52%] relative overflow-hidden flex-col items-center justify-center p-16"
+      <div className="hidden lg:flex lg:w-[45%] relative overflow-hidden flex-col items-center justify-center p-16"
         style={{ background: "linear-gradient(135deg, #0d1117 0%, #0f2027 40%, #0a1f1c 100%)" }}
       >
         {/* Grid */}
@@ -281,7 +269,7 @@ export default function SignInPage() {
             </h2>
             <p className="text-sm text-zinc-500 dark:text-zinc-400">
               Don't have an account?{" "}
-              <Link href="/register" className="font-semibold text-teal-600 dark:text-teal-400 hover:underline">
+              <Link href="/auth/signup" className="font-semibold text-teal-600 dark:text-teal-400 hover:underline">
                 Create one free
               </Link>
             </p>
@@ -382,9 +370,9 @@ export default function SignInPage() {
           {/* Footer note */}
           <p className="mt-7 text-[11.5px] text-zinc-400 dark:text-zinc-600 text-center leading-relaxed">
             By signing in you agree to our{" "}
-            <Link href="/terms" className="underline hover:text-zinc-600 dark:hover:text-zinc-400">Terms</Link>{" "}
+            <Link href="/termsOfService" className="underline hover:text-zinc-600 dark:hover:text-zinc-400">Terms</Link>{" "}
             and{" "}
-            <Link href="/privacy" className="underline hover:text-zinc-600 dark:hover:text-zinc-400">Privacy Policy</Link>.
+            <Link href="/privacyPolicy" className="underline hover:text-zinc-600 dark:hover:text-zinc-400">Privacy Policy</Link>.
           </p>
         </div>
       </div>

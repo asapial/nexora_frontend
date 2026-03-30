@@ -43,10 +43,12 @@ function UserAvatar({
   name,
   src,
   size = "md",
+  isActive = true,
 }: {
   name: string;
   src?: string;
   size?: "sm" | "md";
+  isActive?: boolean;
 }) {
   const initials = name
     .split(" ")
@@ -55,33 +57,55 @@ function UserAvatar({
     .slice(0, 2)
     .toUpperCase();
 
-  const cls = size === "sm"
-    ? "h-7 w-7 text-[10.5px]"
-    : "h-8 w-8 text-[12px]";
-
-  if (src) {
-    return (
-      <img
-        src={src}
-        alt={name}
-        className={cn(
-          cls,
-          "rounded-full object-cover flex-shrink-0",
-          "ring-1 ring-sidebar-border"
-        )}
-      />
-    );
-  }
+  const dim = size === "sm" ? 28 : 36;
+  const textSize = size === "sm" ? "text-[10.5px]" : "text-[12px]";
 
   return (
-    <div className={cn(
-      cls,
-      "rounded-full flex items-center justify-center flex-shrink-0 font-bold",
-      "bg-teal-600/15 dark:bg-teal-400/12",
-      "text-teal-700 dark:text-teal-300",
-      "ring-1 ring-teal-400/30 dark:ring-teal-500/25"
-    )}>
-      {initials}
+    <div
+      className="relative flex-shrink-0"
+      style={{ width: dim, height: dim }}
+    >
+
+      <div className="absolute inset-0 rounded-full bg-teal-500/25 blur-md scale-110" />
+
+      <div className="relative w-full h-full rounded-full p-[2px] bg-gradient-to-br from-teal-400 to-teal-600">
+        <div className="w-full h-full rounded-full overflow-hidden bg-background flex items-center justify-center">
+          
+          {src ? (
+            <img
+              src={src}
+              alt={name}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <span
+              className={cn(
+                "font-bold text-teal-700 dark:text-teal-300",
+                textSize
+              )}
+            >
+              {initials}
+            </span>
+          )}
+
+        </div>
+      </div>
+
+
+      {isActive && (
+        <span
+          className="
+            absolute 
+            bottom-0 right-0
+            translate-x-1/4 translate-y-1/4
+            w-2.5 h-2.5
+            rounded-full
+            bg-green-500
+            border-2 border-background
+            shadow-md
+          "
+        />
+      )}
     </div>
   );
 }

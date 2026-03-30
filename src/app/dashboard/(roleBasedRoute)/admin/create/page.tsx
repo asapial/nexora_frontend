@@ -21,24 +21,7 @@ import { cn } from "@/lib/utils";
 import { adminApi } from "@/lib/api";
 import { toast } from "sonner";
 
-// ─── Ambient background ────────────────────────────────────
-function AmbientBg() {
-  return (
-    <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden select-none">
-      <div
-        className="absolute inset-0"
-        style={{
-          backgroundImage:
-            "radial-gradient(rgba(20,184,166,0.08) 1px,transparent 1px)",
-          backgroundSize: "30px 30px",
-        }}
-      />
-      <div className="absolute -top-60 -left-40 w-[600px] h-[600px] rounded-full bg-teal-500/[0.05] blur-[120px]" />
-      <div className="absolute top-1/2 right-0 w-[400px] h-[400px] rounded-full bg-violet-500/[0.04] blur-[110px]" />
-      <div className="absolute -bottom-60 left-1/3 w-[500px] h-[400px] rounded-full bg-teal-400/[0.04] blur-[120px]" />
-    </div>
-  );
-}
+
 
 // ─── Types ─────────────────────────────────────────────────
 type CreateResult = {
@@ -266,9 +249,9 @@ export default function AdminBulkCreatePage() {
 
   return (
     <>
-      <AmbientBg />
 
-      <div className="flex flex-col gap-6 p-5 lg:p-7 pt-6 max-w-4xl mx-auto w-full">
+
+      <div className="flex flex-col gap-6 p-5 lg:p-7 pt-6 max-w-5xl mx-auto w-full">
 
         {/* ── Page heading ──────────────────────────────── */}
         <div>
@@ -552,10 +535,10 @@ export default function AdminBulkCreatePage() {
         </div>
 
         {/* ── Footer note ─────────────────────────────────── */}
-        <div className="flex items-center gap-2 text-[12px] text-muted-foreground/60 pb-4">
+        {/* <div className="flex items-center gap-2 text-[12px] text-muted-foreground/60 pb-4">
           <RiInformationLine className="flex-shrink-0" />
           All account creation actions are recorded in the server audit log. Temp passwords expire after first login.
-        </div>
+        </div> */}
 
       </div>
     </>

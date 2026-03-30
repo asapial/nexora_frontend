@@ -115,11 +115,11 @@ export default function AdminAnalyticsPage() {
     { label: "Sessions",      value: totals.totalSessions,    icon: <RiBookOpenLine />,       accent: "text-teal-600 dark:text-teal-400 bg-teal-100/70 dark:bg-teal-950/50 border-teal-200/60 dark:border-teal-800/50" },
     { label: "Resources",     value: totals.totalResources,   icon: <RiFileTextLine />,       accent: "text-violet-600 dark:text-violet-400 bg-violet-100/70 dark:bg-violet-950/50 border-violet-200/60 dark:border-violet-800/50" },
     { label: "Enrollments",   value: totals.totalEnrollments, icon: <RiGroupLine />,         accent: "text-sky-600 dark:text-sky-400 bg-sky-100/70 dark:bg-sky-950/50 border-sky-200/60 dark:border-sky-800/50" },
-    { label: "Revenue (USD)", value: `$${(revenue?.totalRevenue ?? 0).toFixed(2)}`, icon: <RiMoneyDollarCircleLine />, accent: "text-teal-600 dark:text-teal-400 bg-teal-100/70 dark:bg-teal-950/50 border-teal-200/60 dark:border-teal-800/50" },
+    { label: "Revenue (USD)", value: `$${(revenue?.grossRevenue ?? 0).toFixed(2)}`, icon: <RiMoneyDollarCircleLine />, accent: "text-teal-600 dark:text-teal-400 bg-teal-100/70 dark:bg-teal-950/50 border-teal-200/60 dark:border-teal-800/50" },
   ] : [];
 
   return (
-    <div className="flex flex-col gap-6 p-5 lg:p-7 pt-6 max-w-6xl mx-auto w-full">
+    <div className="flex flex-col gap-6 p-5 lg:p-7 pt-6 max-w-5xl mx-auto w-full">
       <div>
         <div className="flex items-center gap-1.5 mb-1">
           <RiSparklingFill className="text-teal-500 dark:text-teal-400 text-sm animate-pulse" />
@@ -157,10 +157,13 @@ export default function AdminAnalyticsPage() {
             <BarChart
               data={signupTrend}
               getLabel={d => d.date}
-              getValue={d => d.count}
+              getValue={d => Number(d.count)}
               color="bg-violet-500/70 dark:bg-violet-400/60"
               title="New Signups (last 30 days)"
             />
+            {
+              console.log("This is the signupTrend data :", signupTrend)
+            }
             <div className="rounded-2xl border border-border bg-card overflow-hidden">
               <div className="px-5 py-4 border-b border-border">
                 <h2 className="text-[14px] font-bold text-foreground">Storage Breakdown (by file type)</h2>
@@ -195,9 +198,10 @@ export default function AdminAnalyticsPage() {
           <h2 className="text-[14px] font-bold text-foreground mb-4">Revenue Summary</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {[
-              { label: "Total Revenue", val: `$${(revenue.totalRevenue ?? 0).toFixed(2)}` },
-              { label: "Teacher Earnings", val: `$${(revenue.totalTeacherEarning ?? 0).toFixed(2)}` },
-              { label: "Platform Earnings", val: `$${(revenue.totalPlatformEarning ?? 0).toFixed(2)}` },
+              { label: "Total Revenue", val: `$${(revenue.grossRevenue ?? 0).toFixed(2)}` },
+              { label: "Teacher Earnings", val: `$${(revenue.teacherPayouts ?? 0).toFixed(2)}` },
+              { label: "Platform Earnings", val: `$${(revenue.platformEarnings ?? 0).toFixed(2)}` },
+              // { label: "Paid Enrollments", val: `$${(revenue.totalPaidEnrollments ?? 0).toFixed(2)}` },
             ].map(s => (
               <div key={s.label} className="rounded-xl bg-muted/20 border border-border p-4 text-center">
                 <p className="text-[1.25rem] font-extrabold tabular-nums text-foreground">{s.val}</p>

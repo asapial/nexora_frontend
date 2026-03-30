@@ -50,15 +50,12 @@ export default function CourseCatalogPage() {
   const hasFilters = search || filterPrice !== "all" || filterFeatured || filterTag;
 
   return (
-    <div className="relative flex flex-col gap-6 p-5 lg:p-20 pt-6 max-w-7xl mx-auto w-full min-h-screen">
+    <div className="relative flex flex-col gap-6 p-5 lg:pt-20 pt-6 max-w-7xl mx-auto w-full min-h-screen">
        <AmbientBg6 />
 
       {/* Hero */}
       <div className="text-center pt-8 pb-2">
-        <div className="flex items-center justify-center gap-1.5 mb-3">
-          <RiSparklingFill className="text-teal-500 dark:text-teal-400 text-sm animate-pulse" />
-          <span className="text-[10.5px] font-bold tracking-[.12em] uppercase text-muted-foreground">Nexora Learning</span>
-        </div>
+
         <h1 className="text-[2.2rem] sm:text-[2.8rem] font-extrabold tracking-tight text-foreground leading-none">
           Explore <span className="text-teal-600 dark:text-teal-400">Courses</span>
         </h1>
@@ -108,10 +105,10 @@ export default function CourseCatalogPage() {
       {!loading && <p className="text-[12.5px] text-muted-foreground text-center">{total.toLocaleString()} course{total !== 1 ? "s" : ""} found</p>}
 
       {loading
-        ? <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">{Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)}</div>
+        ? <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3  gap-4">{Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)}</div>
         : courses.length === 0
           ? <div className="rounded-2xl border border-border bg-card/80 py-20 flex flex-col items-center gap-4 text-center"><RiBookOpenLine className="text-4xl text-muted-foreground/30" /><p className="text-[14px] font-bold text-muted-foreground">No courses found</p><button onClick={() => { setSearch(""); setFilterPrice("all"); setFilterFeatured(false); }} className="text-[12.5px] font-semibold text-teal-600 dark:text-teal-400 hover:underline">Clear filters</button></div>
-          : <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">{courses.map(c => <CatalogCard key={c.id} course={c} onClick={() => router.push(`/courses/${c.id}`)} />)}</div>
+          : <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3  gap-4">{courses.map(c => <CatalogCard key={c.id} course={c} onClick={() => router.push(`/courses/${c.id}`)} />)}</div>
       }
 
       {totalPages > 1 && (

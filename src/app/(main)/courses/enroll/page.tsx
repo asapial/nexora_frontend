@@ -159,43 +159,6 @@ function StripePaymentForm({ course, clientSecret, paymentIntentId, onSuccess }:
           </div>
         </div>
         <div className="px-5 py-5">
-          {/* <PaymentElement
-            options={{
-              layout: "tabs",
-              appearance: {
-                theme: "stripe",
-                variables: {
-                  colorPrimary: "#0d9488",
-                  colorBackground: "transparent",
-                  colorText: "inherit",
-                  borderRadius: "12px",
-                  fontSizeBase: "13.5px",
-                },
-              },
-            }}
-          /> */}
-          {/* <Elements
-            stripe={stripePromise}
-            options={{
-              clientSecret,
-              appearance: {
-                theme: "stripe",
-                variables: {
-                  colorPrimary: "#0d9488",
-                  colorBackground: "transparent",
-                  colorText: "inherit",
-                  borderRadius: "12px",
-                  fontSizeBase: "13.5px",
-                },
-              },
-            }}
-          >
-            <PaymentElement
-              options={{
-                layout: "tabs",
-              }}
-            />
-          </Elements> */}
 
           
         </div>

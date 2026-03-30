@@ -334,7 +334,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild size="lg" className="rounded-xl px-3 py-2.5 gap-3 h-auto hover:bg-sidebar-accent transition-colors duration-150">
-              <Link href="/dashboard">
+              <Link href="/">
                 {/* Animated hex mark */}
                 <div className="relative flex h-8 w-8 flex-shrink-0 items-center justify-center select-none">
                   {/* Glow ring */}
@@ -355,20 +355,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                   {/* "Nexora" — letter-spaced with gradient shimmer */}
                   <div className="relative flex items-baseline gap-[0.5px] leading-none">
                     <span
-                      className="text-[15px] font-black tracking-[-0.02em] leading-none bg-gradient-to-r from-teal-600 via-teal-500 to-emerald-500  dark:from-teal-300 dark:via-teal-400 dark:to-emerald-400 bg-clip-text text-transparent [text-shadow:none]"
+                      className="text-xl font-black tracking-[-0.02em] leading-none bg-gradient-to-r from-teal-600 via-teal-500 to-emerald-500  dark:from-teal-300 dark:via-teal-400 dark:to-emerald-400 bg-clip-text text-transparent [text-shadow:none]"
                       style={{ fontVariantLigatures: "none" }}
                     >
                       Nexora
-                    </span>
-                    {/* Superscript dot accent */}
-                    <span className="text-[6px] leading-none mb-auto mt-[2px] text-teal-400/60 dark:text-teal-500/50 font-black">
-                      ●
                     </span>
                   </div>
 
                   {/* "Dashboard" — ultra-wide tracked label */}
                   <span
-                    className="text-[8.5px] font-semibold tracking-[.22em] uppercase leading-none mt-[3px]
+                    className="text-xs font-semibold tracking-[.22em] uppercase leading-none mt-[3px]
         text-sidebar-foreground/30 dark:text-sidebar-foreground/25
         [font-feature-settings:'ss01','ss03']"
                   >

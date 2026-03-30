@@ -16,11 +16,11 @@ export default function page() {
 
     <div>
       <HeroSection></HeroSection>
+      <CoursesSection></CoursesSection>
       <FeaturesSection></FeaturesSection>
       <HowItWorksSection></HowItWorksSection>
       <RolesSection></RolesSection>
       <BannerSection></BannerSection>
-      <CoursesSection></CoursesSection>
       <TestimonialsSection></TestimonialsSection>
       <FaqSection></FaqSection>
       <CtaSection></CtaSection>
