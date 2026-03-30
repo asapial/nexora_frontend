@@ -153,10 +153,6 @@ export default function SignInPage() {
     if (Object.keys(errs).length) { setErrors(errs); return; }
     setIsLoading(true);
     try {
-
-
-
-      // const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/auth/login`, {
       const res = await fetch(`/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -166,17 +162,20 @@ export default function SignInPage() {
 
       const data = await res.json();
 
-      if(data.success){
-        toast.success("User login successfully", {position:"top-right"})
-         window.location.href = "/dashboard"
+      if (!res.ok || !data.success) {
+        const msg = data.message || "Invalid email or password";
+        toast.error(msg, { position: "top-right" });
+        setErrors({ password: msg });
+        return;
       }
 
-
-
+      toast.success("User login successfully", { position: "top-right" });
+      window.location.href = "/dashboard";
 
     } catch (err: any) {
-
-      setErrors({ password: err.message || "Invalid email or password" });
+      const msg = err.message || "Something went wrong. Please try again.";
+      toast.error(msg, { position: "top-right" });
+      setErrors({ password: msg });
     } finally {
       setIsLoading(false);
     }

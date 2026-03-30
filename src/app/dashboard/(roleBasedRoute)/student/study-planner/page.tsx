@@ -163,7 +163,7 @@ export default function StudentStudyPlannerPage() {
   const moveGoal = async (id: string, to: KanbanStatus) => {
     try {
       const isDone = to === "DONE";
-      await studyPlannerApi.updateGoal(id, { isAchieved: isDone });
+      await studyPlannerApi.updateGoal(id, { kanbanStatus: to, isAchieved: isDone });
       // Optimistic update
       setGoals(prev => prev.map(g => g.id === id ? { ...g, kanbanStatus: to, isAchieved: isDone } : g));
       if (isDone) { toast.success("Goal marked as done! 🎉"); await load(); }

@@ -23,7 +23,7 @@
 
 | Service  | URL                                      |
 | -------- | ---------------------------------------- |
-| Frontend | [nexora-frontend.vercel.app](https://nexora-frontend.vercel.app) |
+| Frontend | [nexorafrontend-one.vercel.app](https://nexorafrontend-one.vercel.app) |
 | Backend  | [nexora-backend-rust.vercel.app](https://nexora-backend-rust.vercel.app) |
 
 > **Demo Credentials**  
@@ -273,10 +273,10 @@ A single `apiFetch<T>()` wrapper handles all API communication with:
 
 ## 👤 Author
 
-**Abu Syeed Sazzad**
+**Md Abu Syeed Abdullah**
 
 - 📧 Email: [abusyeed2001@gmail.com](mailto:abusyeed2001@gmail.com)
-- 🔗 GitHub: [github.com/abusyeed](https://github.com/abusyeed)
+- 🔗 GitHub: [github.com/asapial](https://github.com/asapial)
 
 ---
 
