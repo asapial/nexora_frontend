@@ -120,7 +120,7 @@ export default function NoticeBoardPage() {
   const unreadCount = filtered.filter((n) => !n.isRead).length;
 
   return (
-    <div className="flex flex-1 flex-col gap-6 p-5 lg:p-7 pt-6">
+    <div className="flex flex-1 flex-col gap-6 p-5 lg:p-7 pt-6 max-w-5xl mx-auto">
       {/* Heading */}
       <div className="flex items-start justify-between">
         <div>

@@ -11,6 +11,8 @@ import {
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
 import { redirect, useRouter } from "next/navigation";
+import { AmbientBg6 } from "@/components/backgrounds/AmbientBg";
+import { toast } from "sonner";
 
 export default function ForgotPasswordPage() {
     const router = useRouter(); 
@@ -53,6 +55,8 @@ export default function ForgotPasswordPage() {
                 return;
             }
 
+            toast.success("OTP has been sent for reset.", { position: "top-right" });
+
             setSent(true);
 
         } catch (err: any) {
@@ -68,10 +72,7 @@ export default function ForgotPasswordPage() {
         <div className="min-h-screen flex items-center justify-center
                     bg-zinc-50 dark:bg-zinc-950 px-4 py-12">
 
-            {/* ── Background teal orb ─────────────────────────── */}
-            <div className="fixed inset-0 pointer-events-none
-                      bg-[radial-gradient(ellipse_60%_40%_at_50%_0%,rgba(20,184,166,0.06),transparent)]
-                      dark:bg-[radial-gradient(ellipse_60%_40%_at_50%_0%,rgba(20,184,166,0.09),transparent)]" />
+<AmbientBg6></AmbientBg6>
 
             <div className="relative z-10 w-full max-w-[440px]">
 
@@ -88,14 +89,14 @@ export default function ForgotPasswordPage() {
 
                         {/* ── Back link ──────────────────────────────── */}
                         <Link
-                            href="/login"
+                            href="/"
                             className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold
                          text-zinc-500 dark:text-zinc-500
                          hover:text-teal-600 dark:hover:text-teal-400
                          transition-colors mb-6"
                         >
                             <RiArrowLeftLine className="text-sm" />
-                            Back to login
+                            Back
                         </Link>
 
                         {/* ── Icon + header ───────────────────────────── */}
@@ -246,7 +247,7 @@ export default function ForgotPasswordPage() {
                                 <p className="text-center text-[12px] text-zinc-400 dark:text-zinc-600 leading-relaxed">
                                     Remember your password?{" "}
                                     <Link
-                                        href="/login"
+                                        href="/auth/signin"
                                         className="font-semibold text-teal-600 dark:text-teal-400
                                hover:underline transition-colors"
                                     >
@@ -261,7 +262,7 @@ export default function ForgotPasswordPage() {
                 {/* ── Privacy note ──────────────────────────────────── */}
                 <p className="mt-5 text-center text-[11.5px] text-zinc-400 dark:text-zinc-600 leading-relaxed px-2">
                     For security, we never confirm whether an email is registered.
-                    The reset code expires in 10 minutes and is single-use only.
+                    The reset code expires in 5 minutes and is single-use only.
                 </p>
             </div>
         </div>

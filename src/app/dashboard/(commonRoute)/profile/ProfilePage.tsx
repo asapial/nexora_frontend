@@ -160,52 +160,52 @@ export default function ProfilePage({
                     {/* Name + badges */}
                     <div className="mb-4">
                         <div className="flex items-center gap-2.5 flex-wrap mb-2">
-  {/* ✅ name editable */}
-  {nameEditing ? (
-    <div className="flex items-center gap-2">
-      <input
-        autoFocus
-        value={name}
-        onChange={e => setName(e.target.value)}
-        onKeyDown={e => {
-          if (e.key === "Enter") {
-            setNameEditing(false);
-            handlePatch({ name } as any);
-            flashSaved();
-          }
-          if (e.key === "Escape") {
-            setName(user.name);
-            setNameEditing(false);
-          }
-        }}
-        className="h-9 px-3 rounded-xl text-[1.1rem] font-extrabold tracking-tight
+                            {/* ✅ name editable */}
+                            {nameEditing ? (
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        autoFocus
+                                        value={name}
+                                        onChange={e => setName(e.target.value)}
+                                        onKeyDown={e => {
+                                            if (e.key === "Enter") {
+                                                setNameEditing(false);
+                                                handlePatch({ name } as any);
+                                                flashSaved();
+                                            }
+                                            if (e.key === "Escape") {
+                                                setName(user.name);
+                                                setNameEditing(false);
+                                            }
+                                        }}
+                                        className="h-9 px-3 rounded-xl text-[1.1rem] font-extrabold tracking-tight
                    bg-muted/50 border border-teal-400/60 dark:border-teal-500/50
                    text-foreground focus:outline-none focus:ring-2 focus:ring-teal-400/25
                    transition-all w-48"
-      />
-      <button
-        onClick={() => { setNameEditing(false); handlePatch({ name } as any); flashSaved(); }}
-        className="w-8 h-8 rounded-lg bg-teal-600 dark:bg-teal-500 text-white
+                                    />
+                                    <button
+                                        onClick={() => { setNameEditing(false); handlePatch({ name } as any); flashSaved(); }}
+                                        className="w-8 h-8 rounded-lg bg-teal-600 dark:bg-teal-500 text-white
                    flex items-center justify-center text-sm transition-all">
-        <RiCheckLine />
-      </button>
-      <button
-        onClick={() => { setName(user.name); setNameEditing(false); }}
-        className="w-8 h-8 rounded-lg border border-border bg-muted/50
+                                        <RiCheckLine />
+                                    </button>
+                                    <button
+                                        onClick={() => { setName(user.name); setNameEditing(false); }}
+                                        className="w-8 h-8 rounded-lg border border-border bg-muted/50
                    text-muted-foreground flex items-center justify-center text-sm transition-all">
-        <RiCloseLine />
-      </button>
-    </div>
-  ) : (
-    <div
-      onClick={() => setNameEditing(true)}
-      className="group flex items-center gap-2 cursor-pointer">
-      <h1 className="text-[1.35rem] font-extrabold tracking-tight text-foreground leading-none">
-        {name}
-      </h1>
-      <RiEditLine className="text-sm text-muted-foreground/0 group-hover:text-muted-foreground/50 transition-colors" />
-    </div>
-  )}
+                                        <RiCloseLine />
+                                    </button>
+                                </div>
+                            ) : (
+                                <div
+                                    onClick={() => setNameEditing(true)}
+                                    className="group flex items-center gap-2 cursor-pointer">
+                                    <h1 className="text-[1.35rem] font-extrabold tracking-tight text-foreground leading-none">
+                                        {name}
+                                    </h1>
+                                    <RiEditLine className="text-sm text-muted-foreground/0 group-hover:text-muted-foreground/50 transition-colors" />
+                                </div>
+                            )}
                             <span className={cn("text-[10.5px] font-bold tracking-wider uppercase px-2.5 py-0.5 rounded-full border", roleMeta.color)}>
                                 {roleMeta.label}
                             </span>
@@ -528,7 +528,7 @@ export default function ProfilePage({
                     {/* Change password — replaces account settings */}
                     <div className="rounded-2xl border border-border bg-card p-5">
                         <p className="text-[13px] font-bold text-foreground mb-3">Account Security</p>
-                        <Link href="/dashboard/settings/change-password"
+                        <Link href="/auth/changePassword"
                             className="flex items-center gap-2.5 p-3 rounded-xl
                          bg-muted/30 hover:bg-muted/60 border border-border transition-all group">
                             <div className="w-7 h-7 rounded-lg

@@ -11,6 +11,8 @@ import {
   RiCheckboxCircleLine,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
+import { AmbientBg6 } from "@/components/backgrounds/AmbientBg";
+import { toast } from "sonner";
 
 // ─── OTP length ───────────────────────────────────────────
 const OTP_LENGTH = 6;
@@ -141,7 +143,7 @@ export default function VerifyEmailPage({
     if (code.length < OTP_LENGTH) { setError("Please enter the full 6-digit code"); return; }
     setIsLoading(true);
     try {
-      // TODO: await authClient.emailOtp.verifyEmail({ email, otp: code });
+
       console.log(code)
 
       const res = await fetch("/api/auth/verify-email", {
@@ -178,8 +180,8 @@ export default function VerifyEmailPage({
     if (resendCooldown > 0) return;
     setIsResending(true);
     try {
-      // TODO: await authClient.emailOtp.sendVerificationOtp({ email, type: "email-verification" });
-            const res = await fetch("/api/auth/resend-verification-email", {
+
+      const res = await fetch("/api/auth/resend-verification-email", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -189,10 +191,22 @@ export default function VerifyEmailPage({
         }),
         credentials: "include"
       })
-      setError("");
-      setDigits(Array(OTP_LENGTH).fill(""));
-      startCooldown();
-      inputRefs.current[0]?.focus();
+      const data = await res.json();
+
+      if (data.success) {
+        toast.success("Verification email has been resent.", { position: "top-right" });
+        setError("");
+        setDigits(Array(OTP_LENGTH).fill(""));
+        startCooldown();
+        inputRefs.current[0]?.focus();
+      }
+
+      if(!data.success){
+        if(data.message==="This email is already verified. No need to resend a verification code."){
+          setError("This email is already verified. No need to resend a verification code.")
+        }
+      }
+
     } finally {
       setIsResending(false);
     }
@@ -200,6 +214,7 @@ export default function VerifyEmailPage({
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-950 px-4 py-12">
+      <AmbientBg6></AmbientBg6>
       <div className="fixed inset-0 bg-[radial-gradient(ellipse_50%_40%_at_50%_0%,rgba(20,184,166,0.06),transparent)] dark:bg-[radial-gradient(ellipse_50%_40%_at_50%_0%,rgba(20,184,166,0.09),transparent)] pointer-events-none" />
 
       <div className="relative z-10 w-full max-w-[420px]">
@@ -207,7 +222,7 @@ export default function VerifyEmailPage({
           <div className="h-1 bg-gradient-to-r from-teal-500/0 via-teal-500 to-teal-500/0" />
 
           <div className="p-8">
-            <Link href="/register" className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-zinc-500 dark:text-zinc-500 hover:text-teal-600 dark:hover:text-teal-400 transition-colors mb-6">
+            <Link href="/auth/signup" className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-zinc-500 dark:text-zinc-500 hover:text-teal-600 dark:hover:text-teal-400 transition-colors mb-6">
               <RiArrowLeftLine className="text-sm" />
               Back
             </Link>

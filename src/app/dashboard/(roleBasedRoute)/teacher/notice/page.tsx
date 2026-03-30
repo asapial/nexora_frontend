@@ -112,7 +112,7 @@ export default function TeacherNoticePage() {
   const unreadCount = filtered.filter(n => !n.isRead).length;
 
   return (
-    <div className="flex flex-1 flex-col gap-6 p-5 lg:p-7 pt-6 max-w-3xl mx-auto w-full">
+    <div className="flex flex-1 flex-col gap-6 p-5 lg:p-7 pt-6 max-w-5xl mx-auto w-full">
       {/* Heading */}
       <div className="flex items-start justify-between">
         <div>

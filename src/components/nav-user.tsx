@@ -29,6 +29,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { toast } from "sonner";
 
 export interface NavUserData {
   name:    string;
@@ -42,10 +43,12 @@ function UserAvatar({
   name,
   src,
   size = "md",
+  isActive = true,
 }: {
   name: string;
   src?: string;
   size?: "sm" | "md";
+  isActive?: boolean;
 }) {
   const initials = name
     .split(" ")
@@ -54,33 +57,55 @@ function UserAvatar({
     .slice(0, 2)
     .toUpperCase();
 
-  const cls = size === "sm"
-    ? "h-7 w-7 text-[10.5px]"
-    : "h-8 w-8 text-[12px]";
-
-  if (src) {
-    return (
-      <img
-        src={src}
-        alt={name}
-        className={cn(
-          cls,
-          "rounded-full object-cover flex-shrink-0",
-          "ring-1 ring-sidebar-border"
-        )}
-      />
-    );
-  }
+  const dim = size === "sm" ? 28 : 36;
+  const textSize = size === "sm" ? "text-[10.5px]" : "text-[12px]";
 
   return (
-    <div className={cn(
-      cls,
-      "rounded-full flex items-center justify-center flex-shrink-0 font-bold",
-      "bg-teal-600/15 dark:bg-teal-400/12",
-      "text-teal-700 dark:text-teal-300",
-      "ring-1 ring-teal-400/30 dark:ring-teal-500/25"
-    )}>
-      {initials}
+    <div
+      className="relative flex-shrink-0"
+      style={{ width: dim, height: dim }}
+    >
+
+      <div className="absolute inset-0 rounded-full bg-teal-500/25 blur-md scale-110" />
+
+      <div className="relative w-full h-full rounded-full p-[2px] bg-gradient-to-br from-teal-400 to-teal-600">
+        <div className="w-full h-full rounded-full overflow-hidden bg-background flex items-center justify-center">
+          
+          {src ? (
+            <img
+              src={src}
+              alt={name}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <span
+              className={cn(
+                "font-bold text-teal-700 dark:text-teal-300",
+                textSize
+              )}
+            >
+              {initials}
+            </span>
+          )}
+
+        </div>
+      </div>
+
+
+      {isActive && (
+        <span
+          className="
+            absolute 
+            bottom-0 right-0
+            translate-x-1/4 translate-y-1/4
+            w-2.5 h-2.5
+            rounded-full
+            bg-green-500
+            border-2 border-background
+            shadow-md
+          "
+        />
+      )}
     </div>
   );
 }
@@ -166,7 +191,7 @@ export function NavUser({ user }: { user: NavUserData }) {
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild className="gap-2.5 px-4 py-2.5 cursor-pointer">
-                <Link href="/dashboard/settings/change-password">
+                <Link href="/auth/changePassword">
                   <RiShieldCheckLine className="text-base text-muted-foreground" />
                   <span className="text-[13px]">Change Password</span>
                 </Link>
@@ -223,7 +248,16 @@ export function NavUser({ user }: { user: NavUserData }) {
             {/* Sign out */}
             <DropdownMenuItem
               className="gap-2.5 px-4 py-2.5 cursor-pointer text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400 focus:bg-red-50 dark:focus:bg-red-950/30"
-              onClick={() => { /* TODO: authClient.signOut() */ }}
+              onClick={async () => { 
+                const res = await fetch("/api/auth/logout", { method: "POST", credentials: "include" }); 
+                const data = await res.json();
+                if(data.success){
+                  toast.success("Logout Successfylly",{position:"top-right"});
+                  window.location.href="/"
+                  
+                }
+              
+              }}
             >
               <RiLogoutBoxLine className="text-base" />
               <span className="text-[13px]">Sign out</span>

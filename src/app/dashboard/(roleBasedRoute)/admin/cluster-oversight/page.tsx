@@ -81,7 +81,7 @@ export default function ClusterOversightPage() {
   };
 
   return (
-    <div className="flex flex-col gap-6 p-5 lg:p-7 pt-6 max-w-7xl mx-auto w-full">
+    <div className="flex flex-col gap-6 p-5 lg:p-7 pt-6 max-w-5xl mx-auto w-full">
       {/* Header */}
       <div>
         <div className="flex items-center gap-1.5 mb-1">

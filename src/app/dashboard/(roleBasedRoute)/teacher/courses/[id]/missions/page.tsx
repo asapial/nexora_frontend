@@ -295,7 +295,7 @@ export default function ManageMissionsPage() {
           }} />
       )}
 
-      <div className="relative flex flex-col gap-6 p-5 lg:p-7 pt-6 max-w-4xl mx-auto w-full min-h-screen">
+      <div className="relative flex flex-col gap-6 p-5 lg:p-7 pt-6 max-w-5xl mx-auto w-full min-h-screen">
         <AmbientBg />
 
         {/* Heading */}

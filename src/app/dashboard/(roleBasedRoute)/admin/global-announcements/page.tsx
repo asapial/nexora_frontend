@@ -10,11 +10,12 @@ import {
 import { cn } from "@/lib/utils";
 import { adminPlatformApi, adminUsersApi } from "@/lib/api";
 import { toast } from "sonner";
+import { Avatar, AvatarBadge, AvatarImage } from "@/components/ui/avatar";
 
 const URGENCY_CFG: Record<string, { label: string; cls: string; icon: React.ReactNode }> = {
-  INFO:      { label: "Info",      icon: <RiInformationLine />, cls: "text-sky-700 dark:text-sky-400 bg-sky-50/80 dark:bg-sky-950/40 border-sky-200/60" },
-  IMPORTANT: { label: "Important", icon: <RiAlertLine />,       cls: "text-amber-700 dark:text-amber-400 bg-amber-50/80 dark:bg-amber-950/40 border-amber-200/60" },
-  CRITICAL:  { label: "Critical",  icon: <RiBroadcastLine />,   cls: "text-rose-700 dark:text-rose-400 bg-rose-50/80 dark:bg-rose-950/40 border-rose-200/60" },
+  INFO: { label: "Info", icon: <RiInformationLine />, cls: "text-sky-700 dark:text-sky-400 bg-sky-50/80 dark:bg-sky-950/40 border-sky-200/60" },
+  IMPORTANT: { label: "Important", icon: <RiAlertLine />, cls: "text-amber-700 dark:text-amber-400 bg-amber-50/80 dark:bg-amber-950/40 border-amber-200/60" },
+  CRITICAL: { label: "Critical", icon: <RiBroadcastLine />, cls: "text-rose-700 dark:text-rose-400 bg-rose-50/80 dark:bg-rose-950/40 border-rose-200/60" },
 };
 
 const ROLE_LABELS: Record<string, string> = { "": "All users", TEACHER: "Teachers only", STUDENT: "Students only" };
@@ -35,7 +36,14 @@ type Announcement = {
   author: { name: string; email: string };
 };
 
-type UserOption = { id: string; name: string; email: string; role: string };
+type UserOption = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  image?: string;
+  isDeleted: boolean;
+};
 
 function SkeletonCard() {
   return (
@@ -65,14 +73,14 @@ function PersonalNoticeModal({
   onClose: () => void;
   onSend: (targetUserId: string, payload: { title: string; body: string; urgency: string }) => Promise<void>;
 }) {
-  const [search, setSearch]       = useState("");
-  const [users, setUsers]         = useState<UserOption[]>([]);
+  const [search, setSearch] = useState("");
+  const [users, setUsers] = useState<UserOption[]>([]);
   const [searching, setSearching] = useState(false);
-  const [selected, setSelected]   = useState<UserOption | null>(null);
-  const [title, setTitle]         = useState("");
-  const [body, setBody]           = useState("");
-  const [urgency, setUrgency]     = useState("INFO");
-  const [saving, setSaving]       = useState(false);
+  const [selected, setSelected] = useState<UserOption | null>(null);
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+  const [urgency, setUrgency] = useState("INFO");
+  const [saving, setSaving] = useState(false);
 
   const searchUsers = useCallback(async (q: string) => {
     if (!q.trim()) { setUsers([]); return; }
@@ -135,7 +143,20 @@ function PersonalNoticeModal({
                     <button key={u.id} onClick={() => { setSelected(u); setUsers([]); }}
                       className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-muted/40 transition-colors text-left">
                       <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center shrink-0">
-                        <RiUserLine className="text-xs text-muted-foreground" />
+                        {u.image ? (
+                          <Avatar>
+                            <AvatarImage src={u.image} />
+                            {(u.isDeleted ? (
+                              <AvatarBadge className="bg-slate-600 dark:bg-slate-800" />
+                            ) : (
+                              <AvatarBadge className="bg-green-600 dark:bg-green-800" />
+                            )
+                            )}
+
+                          </Avatar>
+
+                        ) : (<RiUserLine className="text-xs text-muted-foreground" />)}
+
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-[12.5px] font-semibold text-foreground truncate">{u.name}</p>
@@ -247,7 +268,7 @@ export default function GlobalAnnouncementsPage() {
   };
 
   return (
-    <div className="flex flex-col gap-6 p-5 lg:p-7 pt-6 max-w-4xl mx-auto w-full">
+    <div className="flex flex-col gap-6 p-5 lg:p-7 pt-6 max-w-5xl mx-auto w-full">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
@@ -275,62 +296,62 @@ export default function GlobalAnnouncementsPage() {
         {loading
           ? Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
           : announcements.length === 0
-          ? (
-            <div className="py-20 text-center">
-              <RiGlobalLine className="text-5xl text-muted-foreground/20 mx-auto mb-4" />
-              <p className="text-[15px] font-semibold text-muted-foreground">No announcements yet</p>
-              <p className="text-[12.5px] text-muted-foreground/60 mt-1">Create the first platform-wide announcement</p>
-              <button onClick={() => setShowModal(true)}
-                className="mt-5 h-9 px-5 rounded-xl bg-amber-600 dark:bg-amber-500 hover:bg-amber-700 text-white text-[12.5px] font-bold inline-flex items-center gap-1.5 transition-all">
-                <RiAddLine /> Create announcement
-              </button>
-            </div>
-          )
-          : announcements.map(a => {
-            const urgCfg = URGENCY_CFG[a.urgency] ?? URGENCY_CFG.INFO;
-            const isPersonal = !!a.targetUserId;
-            return (
-              <div key={a.id} className="rounded-2xl border border-border bg-card p-5 flex flex-col gap-3 hover:border-amber-300/40 dark:hover:border-amber-700/40 transition-colors group">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center text-sm border shrink-0", urgCfg.cls)}>
-                      {urgCfg.icon}
+            ? (
+              <div className="py-20 text-center">
+                <RiGlobalLine className="text-5xl text-muted-foreground/20 mx-auto mb-4" />
+                <p className="text-[15px] font-semibold text-muted-foreground">No announcements yet</p>
+                <p className="text-[12.5px] text-muted-foreground/60 mt-1">Create the first platform-wide announcement</p>
+                <button onClick={() => setShowModal(true)}
+                  className="mt-5 h-9 px-5 rounded-xl bg-amber-600 dark:bg-amber-500 hover:bg-amber-700 text-white text-[12.5px] font-bold inline-flex items-center gap-1.5 transition-all">
+                  <RiAddLine /> Create announcement
+                </button>
+              </div>
+            )
+            : announcements.map(a => {
+              const urgCfg = URGENCY_CFG[a.urgency] ?? URGENCY_CFG.INFO;
+              const isPersonal = !!a.targetUserId;
+              return (
+                <div key={a.id} className="rounded-2xl border border-border bg-card p-5 flex flex-col gap-3 hover:border-amber-300/40 dark:hover:border-amber-700/40 transition-colors group">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center text-sm border shrink-0", urgCfg.cls)}>
+                        {urgCfg.icon}
+                      </div>
+                      <h3 className="text-[14px] font-bold text-foreground truncate">{a.title}</h3>
+                      {isPersonal && (
+                        <span className="text-[9.5px] font-bold tracking-wide uppercase px-1.5 py-0.5 rounded-full border border-violet-200/60 text-violet-600 dark:text-violet-400 bg-violet-50/60 dark:bg-violet-950/30 shrink-0">
+                          Personal
+                        </span>
+                      )}
                     </div>
-                    <h3 className="text-[14px] font-bold text-foreground truncate">{a.title}</h3>
-                    {isPersonal && (
-                      <span className="text-[9.5px] font-bold tracking-wide uppercase px-1.5 py-0.5 rounded-full border border-violet-200/60 text-violet-600 dark:text-violet-400 bg-violet-50/60 dark:bg-violet-950/30 shrink-0">
-                        Personal
+                    <button onClick={() => del(a.id)} disabled={deleting === a.id}
+                      className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-rose-600 hover:bg-rose-50/60 transition-all opacity-0 group-hover:opacity-100 shrink-0">
+                      {deleting === a.id ? <RiLoader4Line className="animate-spin text-xs" /> : <RiDeleteBinLine className="text-xs" />}
+                    </button>
+                  </div>
+                  <p className="text-[13px] text-muted-foreground leading-relaxed">{a.body}</p>
+                  <div className="flex items-center gap-2 flex-wrap border-t border-border/60 pt-3">
+                    <span className={cn("text-[10.5px] font-bold tracking-wide uppercase px-2 py-0.5 rounded-full border", urgCfg.cls)}>
+                      {urgCfg.label}
+                    </span>
+                    {!isPersonal && (
+                      <span className="text-[10.5px] font-bold tracking-wide uppercase px-2 py-0.5 rounded-full border border-border text-muted-foreground bg-muted/30">
+                        {ROLE_LABELS[a.targetRole ?? ""] ?? a.targetRole}
                       </span>
                     )}
+                    {a.scheduledAt && (
+                      <span className="flex items-center gap-1 text-[11px] text-muted-foreground/70">
+                        <RiTimeLine className="text-xs" />
+                        Scheduled: {fmtDate(a.scheduledAt)}
+                      </span>
+                    )}
+                    <span className="ml-auto text-[11px] text-muted-foreground/50">
+                      By {a.author?.name} · {fmtDate(a.createdAt)}
+                    </span>
                   </div>
-                  <button onClick={() => del(a.id)} disabled={deleting === a.id}
-                    className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:text-rose-600 hover:bg-rose-50/60 transition-all opacity-0 group-hover:opacity-100 shrink-0">
-                    {deleting === a.id ? <RiLoader4Line className="animate-spin text-xs" /> : <RiDeleteBinLine className="text-xs" />}
-                  </button>
                 </div>
-                <p className="text-[13px] text-muted-foreground leading-relaxed">{a.body}</p>
-                <div className="flex items-center gap-2 flex-wrap border-t border-border/60 pt-3">
-                  <span className={cn("text-[10.5px] font-bold tracking-wide uppercase px-2 py-0.5 rounded-full border", urgCfg.cls)}>
-                    {urgCfg.label}
-                  </span>
-                  {!isPersonal && (
-                    <span className="text-[10.5px] font-bold tracking-wide uppercase px-2 py-0.5 rounded-full border border-border text-muted-foreground bg-muted/30">
-                      {ROLE_LABELS[a.targetRole ?? ""] ?? a.targetRole}
-                    </span>
-                  )}
-                  {a.scheduledAt && (
-                    <span className="flex items-center gap-1 text-[11px] text-muted-foreground/70">
-                      <RiTimeLine className="text-xs" />
-                      Scheduled: {fmtDate(a.scheduledAt)}
-                    </span>
-                  )}
-                  <span className="ml-auto text-[11px] text-muted-foreground/50">
-                    By {a.author?.name} · {fmtDate(a.createdAt)}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
+              );
+            })}
       </div>
 
       {/* Create Global Announcement modal */}

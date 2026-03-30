@@ -9,6 +9,7 @@ import {
   RiArrowRightUpLine,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
 
 // ─── Types ────────────────────────────────────────────────
 export interface FooterLink {
@@ -49,13 +50,13 @@ export interface FooterData {
 // ─── Social icon map ───────────────────────────────────────
 function SocialIcon({ platform, customIcon }: Pick<SocialLink, "platform" | "customIcon">) {
   switch (platform) {
-    case "twitter":  return <RiTwitterXLine  className="text-[15px]" />;
-    case "github":   return <RiGithubLine    className="text-[15px]" />;
+    case "twitter": return <RiTwitterXLine className="text-[15px]" />;
+    case "github": return <RiGithubLine className="text-[15px]" />;
     case "linkedin": return <RiLinkedinBoxLine className="text-[15px]" />;
-    case "discord":  return <RiDiscordLine   className="text-[15px]" />;
-    case "email":    return <RiMailLine      className="text-[15px]" />;
-    case "custom":   return <>{customIcon}</>;
-    default:         return null;
+    case "discord": return <RiDiscordLine className="text-[15px]" />;
+    case "email": return <RiMailLine className="text-[15px]" />;
+    case "custom": return <>{customIcon}</>;
+    default: return null;
   }
 }
 
@@ -67,58 +68,58 @@ const DEFAULT_DATA: FooterData = {
   contactEmail: "hello@nexora.com",
   copyrightText: `© ${new Date().getFullYear()} Nexora Technologies. All rights reserved.`,
   socialLinks: [
-    { platform: "twitter",  href: "#", label: "Follow on X"        },
-    { platform: "github",   href: "#", label: "GitHub"             },
-    { platform: "linkedin", href: "#", label: "LinkedIn"           },
-    { platform: "discord",  href: "#", label: "Join our Discord"   },
+    { platform: "twitter", href: "#", label: "Follow on X" },
+    { platform: "github", href: "#", label: "GitHub" },
+    { platform: "linkedin", href: "#", label: "LinkedIn" },
+    { platform: "discord", href: "#", label: "Join our Discord" },
   ],
   navGroups: [
     {
       heading: "Platform",
       links: [
-        { label: "Features",   href: "#features"   },
-        { label: "Clusters",   href: "#clusters"   },
-        { label: "Sessions",   href: "#sessions"   },
-        { label: "Resources",  href: "#resources"  },
-        { label: "Courses",    href: "#courses"    },
-        { label: "Analytics",  href: "#analytics"  },
+        { label: "Features", href: "#features" },
+        { label: "Clusters", href: "#clusters" },
+        { label: "Sessions", href: "#sessions" },
+        { label: "Resources", href: "#resources" },
+        { label: "Courses", href: "#courses" },
+        { label: "Analytics", href: "#analytics" },
       ],
     },
     {
       heading: "Use Cases",
       links: [
-        { label: "Research Labs",       href: "#" },
-        { label: "Bootcamp Cohorts",    href: "#" },
-        { label: "Corporate Training",  href: "#" },
-        { label: "Tutoring Centres",    href: "#" },
-        { label: "Universities",        href: "#" },
+        { label: "Research Labs", href: "#" },
+        { label: "Bootcamp Cohorts", href: "#" },
+        { label: "Corporate Training", href: "#" },
+        { label: "Tutoring Centres", href: "#" },
+        { label: "Universities", href: "#" },
       ],
     },
     {
       heading: "Resources",
       links: [
-        { label: "Documentation", href: "#docs",       isExternal: true },
-        { label: "API Reference",  href: "#api",        isExternal: true },
-        { label: "Changelog",      href: "#changelog"                   },
-        { label: "Blog",           href: "#blog"                        },
-        { label: "Status",         href: "#status",     isExternal: true },
+        { label: "Documentation", href: "#docs", isExternal: true },
+        { label: "API Reference", href: "#api", isExternal: true },
+        { label: "Changelog", href: "#changelog" },
+        { label: "Blog", href: "#blog" },
+        { label: "Status", href: "#status", isExternal: true },
       ],
     },
     {
       heading: "Company",
       links: [
-        { label: "About",           href: "/about"   },
-        { label: "Pricing",         href: "/pricing" },
-        { label: "Contact",         href: "/contact" },
-        { label: "Privacy Policy",  href: "/privacyPolicy" },
-        { label: "Terms of Service",href: "/termsOfService"   },
+        { label: "About", href: "/about" },
+        { label: "Pricing", href: "/pricing" },
+        { label: "Contact", href: "/contact" },
+        { label: "Privacy Policy", href: "/privacyPolicy" },
+        { label: "Terms of Service", href: "/termsOfService" },
       ],
     },
   ],
   legalLinks: [
-    { label: "Privacy",  href: "#privacy" },
-    { label: "Terms",    href: "#terms"   },
-    { label: "Cookies",  href: "#cookies" },
+    { label: "Privacy", href: "#privacy" },
+    { label: "Terms", href: "#terms" },
+    { label: "Cookies", href: "#cookies" },
   ],
 };
 
@@ -145,7 +146,7 @@ export default function FooterSection({ data = DEFAULT_DATA }: { data?: FooterDa
           <div>
             {/* Logo */}
             <div className="flex items-center gap-2.5 mb-4">
-              {data.logo?.src ? (
+              {/* {data.logo?.src ? (
                 <img
                   src={data.logo.src}
                   alt={data.logo.name}
@@ -158,7 +159,33 @@ export default function FooterSection({ data = DEFAULT_DATA }: { data?: FooterDa
               )}
               <span className="text-[19px] font-extrabold tracking-tight text-white">
                 {data.logo?.name ?? "Nexora"}
-              </span>
+              </span> */}
+              <Link href="/" className=" flex gap-2">
+                {/* Animated hex mark */}
+                <div className="relative flex h-10 w-10 flex-shrink-0 items-center justify-center select-none">
+                  {/* Glow ring */}
+                  <div className="absolute inset-0 rounded-[10px] bg-teal-400/20 blur-[6px] opacity-70" />
+                  {/* Main hex container */}
+                  <div className="relative flex h-8 w-8 items-center justify-center rounded-[10px] bg-gradient-to-br from-teal-400/20 via-teal-500/10 to-emerald-500/15 dark:from-teal-400/15 dark:via-teal-500/8 dark:to-emerald-500/10 border border-teal-400/30 dark:border-teal-400/20 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] text-[17px] text-teal-500 dark:text-teal-400">
+                    ⬡
+                  </div>
+                </div>
+
+                {/* Wordmark */}
+                <div className="flex flex-col justify-center min-w-0">
+                  {/* "Nexora" — letter-spaced with gradient shimmer */}
+                  <div className="relative flex items-baseline gap-[0.5px] leading-none">
+                    <span
+                      className="text-2xl font-black tracking-[-0.02em] leading-none bg-gradient-to-r from-teal-600 via-teal-500 to-emerald-500  dark:from-teal-300 dark:via-teal-400 dark:to-emerald-400 bg-clip-text text-transparent [text-shadow:none]"
+                      style={{ fontVariantLigatures: "none" }}
+                    >
+                      Nexora
+                    </span>
+                    {/* Superscript dot accent */}
+                  </div>
+
+                </div>
+              </Link>
             </div>
 
             {/* Tagline */}

@@ -73,7 +73,7 @@ export default function StudentClusterDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col gap-5 p-5 lg:p-7 pt-6 max-w-4xl mx-auto w-full animate-pulse">
+      <div className="flex flex-col gap-5 p-5 lg:p-7 pt-6 max-w-5xl mx-auto w-full animate-pulse">
         <div className="h-6 w-32 rounded bg-muted" />
         <div className="h-8 w-2/3 rounded-xl bg-muted" />
         <div className="h-24 rounded-2xl bg-muted/60" />
@@ -104,7 +104,7 @@ export default function StudentClusterDetailPage() {
   ];
 
   return (
-    <div className="flex flex-col gap-6 p-5 lg:p-7 pt-6 max-w-4xl mx-auto w-full">
+    <div className="flex flex-col gap-6 p-5 lg:p-7 pt-6 max-w-5xl mx-auto w-full">
       {/* Back */}
       <button onClick={() => router.push("/dashboard/student/cluster")}
         className="flex items-center gap-1.5 text-[12.5px] font-semibold text-muted-foreground hover:text-foreground transition-colors w-fit">

@@ -128,6 +128,14 @@ const teacherNav: NavDocItem[] = [
       { title: "Task templates", url: "/dashboard/teacher/task-templates" },
     ],
   },
+    {
+    title: "Notices",
+    url: "/dashboard/student/notice",
+    icon: <RiNotificationLine />,
+    items: [
+      { title: "Notices", url: "/dashboard/teacher/notice" },
+    ],
+  },
 ];
 
 const studentNav: NavDocItem[] = [
@@ -172,14 +180,14 @@ const studentNav: NavDocItem[] = [
       { title: "My Homework", url: "/dashboard/student/homework" },
     ],
   },
-  {
-    title: "Sessions",
-    url: "/dashboard/student/sessions",
-    icon: <RiCalendarCheckLine />,
-    items: [
-      { title: "My Sessions", url: "/dashboard/student/sessions" },
-    ],
-  },
+  // {
+  //   title: "Sessions",
+  //   url: "/dashboard/student/sessions",
+  //   icon: <RiCalendarCheckLine />,
+  //   items: [
+  //     { title: "My Sessions", url: "/dashboard/student/sessions" },
+  //   ],
+  // },
   {
     title: "Progress",
     url: "/dashboard/student/progress",
@@ -194,6 +202,7 @@ const studentNav: NavDocItem[] = [
     icon: <RiBook2Line />,
     items: [
       { title: "All Resources", url: "/dashboard/student/resources/all" },
+      { title: "Upload Resources", url: "/dashboard/student/resources/upload" },
     ],
   },
   {
@@ -271,16 +280,16 @@ const adminNav: NavDocItem[] = [
 ];
 
 const commonNav: NavSecondaryItem[] = [
-  { title: "Profile",   url: "/dashboard/profile",   icon: <RiUserLine /> },
-  { title: "Settings",  url: "/dashboard/settings",  icon: <RiSettings4Line /> },
-  { title: "Help",      url: "/help",                icon: <RiQuestionLine /> },
+  { title: "Profile", url: "/dashboard/profile", icon: <RiUserLine /> },
+  { title: "Settings", url: "/dashboard/settings", icon: <RiSettings4Line /> },
+  // { title: "Help",      url: "/help",                icon: <RiQuestionLine /> },
 ];
 
 // ─── Role chip ────────────────────────────────────────────────────────────────
 const ROLE_CHIP: Record<string, { label: string; cls: string }> = {
-  TEACHER: { label: "Teacher",  cls: "text-teal-600 dark:text-teal-400 bg-teal-500/10 border-teal-500/25" },
-  STUDENT: { label: "Student",  cls: "text-sky-600  dark:text-sky-400  bg-sky-500/10  border-sky-500/25"  },
-  ADMIN:   { label: "Admin",    cls: "text-violet-600 dark:text-violet-400 bg-violet-500/10 border-violet-500/25" },
+  TEACHER: { label: "Teacher", cls: "text-teal-600 dark:text-teal-400 bg-teal-500/10 border-teal-500/25" },
+  STUDENT: { label: "Student", cls: "text-sky-600  dark:text-sky-400  bg-sky-500/10  border-sky-500/25" },
+  ADMIN: { label: "Admin", cls: "text-violet-600 dark:text-violet-400 bg-violet-500/10 border-violet-500/25" },
 };
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
@@ -295,10 +304,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         const data = await res.json();
         if (data.success) {
           setUser({
-            name:   data.data.userData.name,
-            email:  data.data.userData.email,
+            name: data.data.userData.name,
+            email: data.data.userData.email,
             avatar: data.data.userData.image,
-            role:   data.data.userData.role,
+            role: data.data.userData.role,
           });
         }
       } catch { /* silent */ }
@@ -313,9 +322,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   // Label shown above nav group
   const sectionLabel =
-    role === "TEACHER" ? "Teacher Tools"  :
-    role === "STUDENT" ? "My Learning"    :
-    role === "ADMIN"   ? "Administration" : "Navigation";
+    role === "TEACHER" ? "Teacher Tools" :
+      role === "STUDENT" ? "My Learning" :
+        role === "ADMIN" ? "Administration" : "Navigation";
 
   return (
     <Sidebar collapsible="offcanvas" {...props}>
@@ -325,14 +334,42 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild size="lg" className="rounded-xl px-3 py-2.5 gap-3 h-auto hover:bg-sidebar-accent transition-colors duration-150">
-              <Link href="/dashboard">
-                {/* Hex icon */}
-                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[10px] text-[17px] bg-teal-500/12 dark:bg-teal-400/10 border border-teal-500/25 dark:border-teal-400/20 text-teal-600 dark:text-teal-400 select-none">
-                  ⬡
+              <Link href="/">
+                {/* Animated hex mark */}
+                <div className="relative flex h-8 w-8 flex-shrink-0 items-center justify-center select-none">
+                  {/* Glow ring */}
+                  <div className="absolute inset-0 rounded-[10px] bg-teal-400/20 blur-[6px] opacity-70" />
+                  {/* Main hex container */}
+                  <div className="relative flex h-8 w-8 items-center justify-center rounded-[10px]
+      bg-gradient-to-br from-teal-400/20 via-teal-500/10 to-emerald-500/15
+      dark:from-teal-400/15 dark:via-teal-500/8 dark:to-emerald-500/10
+      border border-teal-400/30 dark:border-teal-400/20
+      shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]
+      text-[17px] text-teal-500 dark:text-teal-400">
+                    ⬡
+                  </div>
                 </div>
+
+                {/* Wordmark */}
                 <div className="flex flex-col justify-center min-w-0">
-                  <span className="text-[15px] font-extrabold tracking-tight leading-none text-sidebar-foreground">Nexora</span>
-                  <span className="text-[10px] font-medium tracking-[.07em] uppercase leading-none mt-0.5 text-sidebar-foreground/35">Dashboard</span>
+                  {/* "Nexora" — letter-spaced with gradient shimmer */}
+                  <div className="relative flex items-baseline gap-[0.5px] leading-none">
+                    <span
+                      className="text-xl font-black tracking-[-0.02em] leading-none bg-gradient-to-r from-teal-600 via-teal-500 to-emerald-500  dark:from-teal-300 dark:via-teal-400 dark:to-emerald-400 bg-clip-text text-transparent [text-shadow:none]"
+                      style={{ fontVariantLigatures: "none" }}
+                    >
+                      Nexora
+                    </span>
+                  </div>
+
+                  {/* "Dashboard" — ultra-wide tracked label */}
+                  <span
+                    className="text-xs font-semibold tracking-[.22em] uppercase leading-none mt-[3px]
+        text-sidebar-foreground/30 dark:text-sidebar-foreground/25
+        [font-feature-settings:'ss01','ss03']"
+                  >
+                    Dashboard
+                  </span>
                 </div>
               </Link>
             </SidebarMenuButton>

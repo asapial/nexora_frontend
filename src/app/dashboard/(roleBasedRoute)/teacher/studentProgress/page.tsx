@@ -220,7 +220,7 @@ export default function MemberProgressPage() {
     : 0;
 
   return (
-    <div className="flex flex-col gap-6 p-5 lg:p-7 pt-6 max-w-6xl mx-auto w-full">
+    <div className="flex flex-col gap-6 p-5 lg:p-7 pt-6 max-w-5xl mx-auto w-full">
 
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">

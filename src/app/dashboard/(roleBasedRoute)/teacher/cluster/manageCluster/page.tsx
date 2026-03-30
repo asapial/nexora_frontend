@@ -7,13 +7,12 @@ import {
     RiCheckLine, RiMoreLine, RiDeleteBinLine,
     RiArrowRightLine, RiSparklingFill, RiCalendarCheckLine,
     RiTimeLine, RiRefreshLine, RiAlertLine, RiUserLine,
-    RiShieldCheckLine, RiEditLine,
+    RiShieldCheckLine, RiEditLine, RiSaveLine, RiLoader4Line,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 // ─── Types ────────────────────────────────────────────────
-// FIX 2: Added "RUNNING" to match API subtype values
 type MemberSubtype = "EMERGING" | "ACTIVE" | "GRADUATED" | "ALUMNI" | "RUNNING";
 type ClusterStatus = "healthy" | "at-risk" | "inactive";
 
@@ -39,6 +38,14 @@ interface Cluster {
     lastActivity?: string;
     createdAt: string;
     isDeleted: boolean;
+}
+
+// ─── Edit cluster form state ──────────────────────────────
+interface EditForm {
+    name: string;
+    slug: string;
+    description: string;
+    batchTag: string;
 }
 
 function mapClusterHealth(h?: string): ClusterStatus {
@@ -73,11 +80,9 @@ const SUBTYPE_LABELS: Record<MemberSubtype, string> = {
     ACTIVE: "Active",
     GRADUATED: "Graduated",
     ALUMNI: "Alumni",
-    // FIX 2: Added RUNNING label
     RUNNING: "Running",
 };
 
-// FIX 3: Added RUNNING color so the selector never crashes with undefined class
 const SUBTYPE_COLORS: Record<MemberSubtype, string> = {
     EMERGING: "bg-sky-100/80 dark:bg-sky-950/50 text-sky-700 dark:text-sky-400 border-sky-200/70 dark:border-sky-800/50",
     ACTIVE: "bg-teal-100/80 dark:bg-teal-950/50 text-teal-700 dark:text-teal-400 border-teal-200/70 dark:border-teal-800/50",
@@ -85,6 +90,285 @@ const SUBTYPE_COLORS: Record<MemberSubtype, string> = {
     ALUMNI: "bg-zinc-100/80 dark:bg-zinc-800/50 text-zinc-600 dark:text-zinc-400 border-zinc-200/70 dark:border-zinc-700/50",
     RUNNING: "bg-orange-100/80 dark:bg-orange-950/50 text-orange-700 dark:text-orange-400 border-orange-200/70 dark:border-orange-800/50",
 };
+
+// ─── Shared input style ───────────────────────────────────
+const inputCls = (error?: boolean) => cn(
+    "w-full h-10 px-3.5 rounded-xl text-[13px] font-medium",
+    "bg-muted/40 border transition-all duration-150",
+    "text-foreground placeholder:text-muted-foreground/40",
+    "focus:outline-none focus:ring-2",
+    error
+        ? "border-red-400/60 dark:border-red-500/50 focus:ring-red-400/20"
+        : "border-border focus:border-teal-400/70 dark:focus:border-teal-500/60 focus:ring-teal-400/20"
+);
+
+// ─── Edit Cluster Modal ───────────────────────────────────
+function EditClusterModal({
+    cluster,
+    onClose,
+    onSaved,
+}: {
+    cluster: Cluster;
+    onClose: () => void;
+    onSaved: (updated: Cluster) => void;
+}) {
+    const [form, setForm] = useState<EditForm>({
+        name: cluster.name,
+        slug: cluster.slug,
+        description: cluster.description ?? "",
+        batchTag: cluster.batchTag ?? "",
+    });
+    const [errors, setErrors] = useState<Partial<EditForm>>({});
+    const [saving, setSaving] = useState(false);
+
+    const generateSlug = (name: string) =>
+        name.toLowerCase().trim()
+            .replace(/\s+/g, "-")
+            .replace(/[^a-z0-9-]/g, "")
+            .replace(/-+/g, "-")
+            .slice(0, 50);
+
+    const setField = (k: keyof EditForm) => (v: string) => {
+        setForm(p => ({ ...p, [k]: v }));
+        if (errors[k]) setErrors(p => ({ ...p, [k]: undefined }));
+    };
+
+    const setName = (v: string) => {
+        setForm(p => ({
+            ...p,
+            name: v,
+            slug: p.slug === generateSlug(p.name) || p.slug === cluster.slug
+                ? generateSlug(v)
+                : p.slug,
+        }));
+        if (errors.name) setErrors(p => ({ ...p, name: undefined }));
+    };
+
+    const validate = (): Partial<EditForm> => {
+        const e: Partial<EditForm> = {};
+        if (!form.name.trim()) e.name = "Name is required";
+        else if (form.name.trim().length < 3) e.name = "At least 3 characters";
+        if (!form.slug.trim()) e.slug = "Slug is required";
+        else if (form.slug.trim().length < 3) e.slug = "At least 3 characters";
+        return e;
+    };
+
+    const handleSave = async () => {
+        const errs = validate();
+        if (Object.keys(errs).length) { setErrors(errs); return; }
+
+        setSaving(true);
+        try {
+            const res = await fetch(`/api/cluster/${cluster.id}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify({
+                    name: form.name.trim(),
+                    slug: form.slug.trim(),
+                    description: form.description.trim() || undefined,
+                    batchTag: form.batchTag.trim() || undefined,
+                }),
+            });
+
+            const data = await res.json();
+
+            if (!res.ok || !data.success) {
+                if (res.status === 409) {
+                    setErrors({ slug: "Slug already taken — try another" });
+                    return;
+                }
+                toast.error(data.message ?? "Failed to update cluster", { position: "top-right" });
+                return;
+            }
+
+            const updated: Cluster = {
+                ...cluster,
+                name: form.name.trim(),
+                slug: form.slug.trim(),
+                description: form.description.trim() || undefined,
+                batchTag: form.batchTag.trim() || undefined,
+            };
+
+            onSaved(updated);
+            toast.success("Cluster updated", { position: "top-right" });
+            onClose();
+        } catch {
+            toast.error("Network error — please try again", { position: "top-right" });
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    // Close on Escape
+    useEffect(() => {
+        const handler = (e: globalThis.KeyboardEvent) => {
+            if (e.key === "Escape") onClose();
+        };
+        window.addEventListener("keydown", handler);
+        return () => window.removeEventListener("keydown", handler);
+    }, [onClose]);
+
+    return (
+        <>
+            {/* Backdrop */}
+            <div
+                className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm"
+                onClick={onClose}
+            />
+
+            {/* Modal */}
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+                <div className="pointer-events-auto w-full max-w-lg rounded-2xl border border-border bg-card shadow-2xl overflow-hidden">
+
+                    {/* Header */}
+                    <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+                        <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg flex items-center justify-center
+                                bg-teal-100/70 dark:bg-teal-950/50
+                                border border-teal-200/60 dark:border-teal-800/50
+                                text-teal-600 dark:text-teal-400">
+                                <RiEditLine className="text-sm" />
+                            </div>
+                            <div>
+                                <h2 className="text-[14px] font-bold text-foreground leading-none">Edit cluster</h2>
+                                <p className="text-[11.5px] text-muted-foreground mt-0.5 truncate max-w-[260px]">
+                                    {cluster.name}
+                                </p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={onClose}
+                            className="w-8 h-8 rounded-lg flex items-center justify-center
+                                text-muted-foreground/50 hover:text-foreground
+                                hover:bg-muted/60 transition-all">
+                            <RiCloseLine />
+                        </button>
+                    </div>
+
+                    {/* Body */}
+                    <div className="px-6 py-5 flex flex-col gap-4">
+
+                        {/* Name */}
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-[12.5px] font-semibold text-foreground/80">
+                                Cluster name <span className="text-red-500">*</span>
+                            </label>
+                            <div className="relative">
+                                <RiFlaskLine className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground/50 text-sm pointer-events-none" />
+                                <input
+                                    type="text"
+                                    value={form.name}
+                                    onChange={e => setName(e.target.value)}
+                                    maxLength={80}
+                                    placeholder="e.g. ML Research Group — 2025"
+                                    className={cn(inputCls(!!errors.name), "pl-9")}
+                                />
+                            </div>
+                            {errors.name && <p className="text-[11.5px] text-red-500 dark:text-red-400 font-medium">{errors.name}</p>}
+                        </div>
+
+                        {/* Slug */}
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-[12.5px] font-semibold text-foreground/80">
+                                Slug <span className="text-red-500">*</span>
+                                <span className="ml-1.5 text-[11px] font-normal text-muted-foreground">(auto-generated · editable)</span>
+                            </label>
+                            <div className="relative">
+                                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground/50 text-[13px] font-mono pointer-events-none">/</span>
+                                <input
+                                    type="text"
+                                    value={form.slug}
+                                    onChange={e => {
+                                        const slug = e.target.value
+                                            .toLowerCase()
+                                            .replace(/\s+/g, "-")
+                                            .replace(/[^a-z0-9-]/g, "")
+                                            .slice(0, 50);
+                                        setField("slug")(slug);
+                                    }}
+                                    placeholder="ml-research-group-2025"
+                                    className={cn(inputCls(!!errors.slug), "pl-7 font-mono")}
+                                />
+                            </div>
+                            {errors.slug
+                                ? <p className="text-[11.5px] text-red-500 dark:text-red-400 font-medium">{errors.slug}</p>
+                                : <p className="text-[11px] text-muted-foreground/60">Must be unique across all clusters.</p>
+                            }
+                        </div>
+
+                        {/* Description */}
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-[12.5px] font-semibold text-foreground/80">
+                                Description
+                                <span className="ml-1.5 text-[11px] font-normal text-muted-foreground">optional</span>
+                            </label>
+                            <textarea
+                                rows={3}
+                                value={form.description}
+                                onChange={e => setField("description")(e.target.value)}
+                                placeholder="What is this cluster about?"
+                                className={cn(
+                                    "w-full rounded-xl px-3.5 py-2.5 text-[13px] font-medium leading-relaxed resize-none",
+                                    "bg-muted/40 border border-border",
+                                    "text-foreground placeholder:text-muted-foreground/40",
+                                    "focus:outline-none focus:ring-2 focus:ring-teal-400/20 focus:border-teal-400/70",
+                                    "transition-all duration-150"
+                                )}
+                            />
+                        </div>
+
+                        {/* Batch tag */}
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-[12.5px] font-semibold text-foreground/80">
+                                Batch / cohort tag
+                                <span className="ml-1.5 text-[11px] font-normal text-muted-foreground">optional</span>
+                            </label>
+                            <input
+                                type="text"
+                                value={form.batchTag}
+                                onChange={e => setField("batchTag")(e.target.value)}
+                                maxLength={30}
+                                placeholder="e.g. Batch 2025"
+                                className={inputCls()}
+                            />
+                            <p className="text-[11px] text-muted-foreground/60">Short label shown as a badge on the cluster card.</p>
+                        </div>
+                    </div>
+
+                    {/* Footer */}
+                    <div className="px-6 py-4 border-t border-border flex items-center justify-between gap-3">
+                        <button
+                            onClick={onClose}
+                            disabled={saving}
+                            className="h-9 px-4 rounded-xl border border-border
+                                text-[13px] font-semibold text-muted-foreground
+                                hover:text-foreground hover:bg-muted/50
+                                disabled:opacity-50 transition-all">
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleSave}
+                            disabled={saving}
+                            className={cn(
+                                "inline-flex items-center gap-2 h-9 px-5 rounded-xl",
+                                "bg-teal-600 dark:bg-teal-500 hover:bg-teal-700 dark:hover:bg-teal-600",
+                                "text-white text-[13px] font-bold",
+                                "shadow-sm shadow-teal-600/20",
+                                "transition-all duration-150 hover:scale-[1.02] active:scale-[0.98]",
+                                "disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100"
+                            )}>
+                            {saving
+                                ? <><RiLoader4Line className="animate-spin text-sm" /> Saving…</>
+                                : <><RiSaveLine className="text-sm" /> Save changes</>
+                            }
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </>
+    );
+}
 
 // ─── Avatar initials ──────────────────────────────────────
 function MemberAvatar({ name }: { name: string }) {
@@ -101,7 +385,6 @@ function MemberAvatar({ name }: { name: string }) {
 }
 
 // ─── Add member email input ────────────────────────────────
-
 function AddMemberInput({
     onAdd,
     cluster,
@@ -121,7 +404,6 @@ function AddMemberInput({
         if (!isValid(email)) { setError("Enter a valid email address"); return; }
         setError("");
         setLoading(true);
-        // FIX: Pass cluster.id directly here — no ambiguity
         await onAdd(cluster.id, email);
         setInput("");
         setLoading(false);
@@ -179,11 +461,12 @@ function AddMemberInput({
 function ClusterCard({
     cluster,
     onDelete,
+    onEdit,
     handleManageCluster,
 }: {
     cluster: Cluster;
     onDelete: (id: string) => void;
-    // FIX 6: Removed unused `onSelect` prop — both menu and footer now use handleManageCluster
+    onEdit: (cluster: Cluster) => void;
     handleManageCluster: (c: Cluster) => void;
 }) {
     const [menuOpen, setMenuOpen] = useState(false);
@@ -216,9 +499,19 @@ function ClusterCard({
                                     </span>
                                 )}
                             </div>
-                            {cluster.description && (
-                                <p className="text-[12.5px] text-muted-foreground line-clamp-1">{cluster.description}</p>
-                            )}
+                            <div className="group">
+                                {cluster.description && (
+                                    <p className="
+      text-[12.5px] text-muted-foreground
+      overflow-hidden
+      max-h-[1.5em]
+      group-hover:max-h-[200px]
+      transition-all duration-300 ease-in-out
+    ">
+                                        {cluster.description}
+                                    </p>
+                                )}
+                            </div>
                         </div>
                     </div>
 
@@ -237,17 +530,21 @@ function ClusterCard({
                                 <div className="absolute right-0 top-full mt-1 z-20 w-48
                                 rounded-xl border border-border bg-popover
                                 shadow-xl overflow-hidden">
-                                    {/* FIX 6: Menu "Manage members" now calls handleManageCluster
-                                        so members are fetched — was calling onSelect(setSelectedCluster)
-                                        which skipped the API fetch entirely */}
                                     <button
                                         onClick={() => { handleManageCluster(cluster); setMenuOpen(false); }}
                                         className="flex items-center gap-2.5 w-full px-4 py-2.5
                                text-[13px] text-foreground hover:bg-accent transition-colors">
-                                        <RiEditLine className="text-muted-foreground text-base" /> Manage members
+                                        <RiGroupLine className="text-muted-foreground text-base" /> Manage members
+                                    </button>
+                                    {/* ── Edit cluster ── */}
+                                    <button
+                                        onClick={() => { onEdit(cluster); setMenuOpen(false); }}
+                                        className="flex items-center gap-2.5 w-full px-4 py-2.5
+                               text-[13px] text-foreground hover:bg-accent transition-colors">
+                                        <RiEditLine className="text-muted-foreground text-base" /> Edit cluster
                                     </button>
                                     <button
-                                        onClick={() => { /* TODO: navigate to sessions */ setMenuOpen(false); }}
+                                        onClick={() => { window.location.href = "/dashboard/teacher/session/manageSession"; setMenuOpen(false); }}
                                         className="flex items-center gap-2.5 w-full px-4 py-2.5
                                text-[13px] text-foreground hover:bg-accent transition-colors">
                                         <RiCalendarCheckLine className="text-muted-foreground text-base" /> View sessions
@@ -266,7 +563,6 @@ function ClusterCard({
                     </div>
                 </div>
 
-                {/* FIX 4: Health bar only renders when healthScore is defined */}
                 {cluster.healthScore !== undefined && (
                     <div className="flex items-center gap-3 mb-3">
                         <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
@@ -281,12 +577,10 @@ function ClusterCard({
                     </div>
                 )}
 
-                {/* Meta row */}
                 <div className="flex items-center gap-4 flex-wrap">
                     <span className="flex items-center gap-1 text-[12px] text-muted-foreground">
                         <RiGroupLine className="text-xs" /> {cluster.memberCount} members
                     </span>
-                    {/* FIX 4: Only show if present */}
                     {cluster.sessionCount !== undefined && (
                         <span className="flex items-center gap-1 text-[12px] text-muted-foreground">
                             <RiCalendarCheckLine className="text-xs" /> {cluster.sessionCount} sessions
@@ -300,16 +594,25 @@ function ClusterCard({
                 </div>
             </div>
 
-            {/* Footer */}
             <div className="px-5 py-3 border-t border-border flex items-center justify-between">
                 <span className="text-[11px] font-mono text-muted-foreground/50">/{cluster.slug}</span>
-                <button
-                    onClick={() => handleManageCluster(cluster)}
-                    className="flex items-center gap-1 text-[12.5px] font-semibold
-                     text-teal-600 dark:text-teal-400
-                     hover:text-teal-700 dark:hover:text-teal-300 transition-colors">
-                    Manage <RiArrowRightLine className="text-xs" />
-                </button>
+                <div className="flex items-center gap-3">
+                    {/* Quick edit button in footer */}
+                    <button
+                        onClick={() => onEdit(cluster)}
+                        className="flex items-center gap-1 text-[12px] font-semibold
+                         text-muted-foreground hover:text-foreground transition-colors">
+                        <RiEditLine className="text-xs" /> Edit
+                    </button>
+                    <span className="text-muted-foreground/30 text-xs">·</span>
+                    <button
+                        onClick={() => handleManageCluster(cluster)}
+                        className="flex items-center gap-1 text-[12.5px] font-semibold
+                         text-teal-600 dark:text-teal-400
+                         hover:text-teal-700 dark:hover:text-teal-300 transition-colors">
+                        Manage <RiArrowRightLine className="text-xs" />
+                    </button>
+                </div>
             </div>
         </div>
     );
@@ -324,13 +627,11 @@ function MemberRow({
     cluster,
 }: {
     member: Member;
-    // FIX 5: onRemove typed as (id: string) — clusterId is closed over in the parent
     onRemove: (id: string) => void;
     onSubtypeChange: (id: string, subtype: MemberSubtype) => void;
     onResendCredentials: (clusterId: string, memberId: string) => void;
     cluster: Cluster;
 }) {
-    // FIX 1: resending / resent state is now actually driven by async work
     const [resending, setResending] = useState(false);
     const [resent, setResent] = useState(false);
 
@@ -347,15 +648,12 @@ function MemberRow({
                     border-b border-border/60 last:border-0
                     hover:bg-muted/30 transition-colors duration-100">
             <MemberAvatar name={member.name} />
-
             <div className="flex-1 min-w-0">
                 <p className="text-[13.5px] font-semibold text-foreground leading-none mb-0.5 truncate">
                     {member.name}
                 </p>
                 <p className="text-[11.5px] text-muted-foreground truncate">{member.email}</p>
             </div>
-
-            {/* Subtype selector — FIX 3: RUNNING is now in SUBTYPE_COLORS so no crash */}
             <select
                 value={member.subtype}
                 onChange={e => onSubtypeChange(member.id, e.target.value as MemberSubtype)}
@@ -364,14 +662,11 @@ function MemberRow({
                     "focus:outline-none focus:ring-1 focus:ring-teal-400/40 transition-all",
                     "appearance-none bg-transparent",
                     SUBTYPE_COLORS[member.subtype]
-                )}
-            >
+                )}>
                 {(Object.keys(SUBTYPE_LABELS) as MemberSubtype[]).map(s => (
                     <option key={s} value={s}>{SUBTYPE_LABELS[s]}</option>
                 ))}
             </select>
-
-            {/* Actions */}
             <div className="flex items-center gap-1.5 flex-shrink-0">
                 <button
                     onClick={handleResend}
@@ -385,9 +680,7 @@ function MemberRow({
                     )}>
                     {resending
                         ? <span className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
-                        : resent
-                            ? <RiCheckLine className="text-xs" />
-                            : <RiRefreshLine className="text-xs" />
+                        : resent ? <RiCheckLine className="text-xs" /> : <RiRefreshLine className="text-xs" />
                     }
                 </button>
                 <button
@@ -462,15 +755,14 @@ export default function ManageClustersPage() {
     const [selectedCluster, setSelectedCluster] = useState<Cluster | null>(null);
     const [search, setSearch] = useState("");
     const [deleteTarget, setDeleteTarget] = useState<Cluster | null>(null);
+    // ── Edit state ──────────────────────────────────────────
+    const [editTarget, setEditTarget] = useState<Cluster | null>(null);
 
     useEffect(() => {
         const fetchClusters = async () => {
             setListLoading(true);
             try {
-                const res = await fetch(`/api/cluster`, {
-                    method: "GET",
-                    credentials: "include",
-                });
+                const res = await fetch(`/api/cluster`, { method: "GET", credentials: "include" });
                 const data = await res.json();
                 if (data.success && Array.isArray(data.data)) {
                     setClusters(data.data.map((c: Record<string, unknown>) => mapApiCluster(c)));
@@ -486,12 +778,8 @@ export default function ManageClustersPage() {
 
     const handleManageCluster = async (cluster: Cluster) => {
         try {
-            const res = await fetch(`/api/cluster/${cluster.id}`, {
-                method: "GET",
-                credentials: "include",
-            });
+            const res = await fetch(`/api/cluster/${cluster.id}`, { method: "GET", credentials: "include" });
             const data = await res.json();
-
             if (data.success && data.data?.members) {
                 const mapped: Member[] = data.data.members.map((m: Record<string, unknown>) => ({
                     id: String(m.userId),
@@ -500,12 +788,8 @@ export default function ManageClustersPage() {
                         ?? "Unknown",
                     email: (m.user as { email?: string } | undefined)?.email ?? "",
                     subtype: m.subtype as MemberSubtype,
-                    joinedAt: new Date(m.joinedAt as string).toLocaleDateString("en-US", {
-                        month: "short",
-                        year: "numeric",
-                    }),
+                    joinedAt: new Date(m.joinedAt as string).toLocaleDateString("en-US", { month: "short", year: "numeric" }),
                 }));
-
                 setMembers(mapped);
                 setSelectedCluster(cluster);
             }
@@ -514,7 +798,6 @@ export default function ManageClustersPage() {
         }
     };
 
-    // ── Cluster list actions ───────────────────────────────
     const handleDelete = (id: string) => {
         const c = clusters.find(c => c.id === id);
         if (c) setDeleteTarget(c);
@@ -523,10 +806,7 @@ export default function ManageClustersPage() {
     const confirmDelete = async () => {
         if (!deleteTarget) return;
         try {
-            const res = await fetch(`/api/cluster/${deleteTarget.id}`, {
-                method: "DELETE",
-                credentials: "include",
-            });
+            const res = await fetch(`/api/cluster/${deleteTarget.id}`, { method: "DELETE", credentials: "include" });
             const data = await res.json();
             if (data.success) {
                 toast.success("Cluster deleted", { position: "top-right" });
@@ -542,7 +822,15 @@ export default function ManageClustersPage() {
         }
     };
 
-    // ── Member actions ─────────────────────────────────────
+    // ── Cluster saved callback ─────────────────────────────
+    const handleClusterSaved = (updated: Cluster) => {
+        setClusters(cs => cs.map(c => c.id === updated.id ? updated : c));
+        // If this cluster is open in the member panel, sync its name too
+        if (selectedCluster?.id === updated.id) {
+            setSelectedCluster(updated);
+        }
+    };
+
     const handleAddMember = async (clusterId: string, email: string) => {
         try {
             const res = await fetch(`/api/cluster/${clusterId}/member`, {
@@ -552,7 +840,6 @@ export default function ManageClustersPage() {
                 credentials: "include",
             });
             const data = await res.json();
-
             if (data.success) {
                 toast.success("Member added successfully", { position: "top-right" });
                 const newMember: Member = {
@@ -569,21 +856,15 @@ export default function ManageClustersPage() {
             } else {
                 toast.error(data.message ?? "Failed to add member", { position: "top-right" });
             }
-        } catch (err) {
-            console.error("Failed to add member:", err);
+        } catch {
             toast.error("Something went wrong", { position: "top-right" });
         }
     };
 
-    // FIX 5: handler takes (id) only — clusterId is captured from selectedCluster in the JSX closure
     const handleRemoveMember = async (clusterId: string, id: string) => {
         try {
-            const res = await fetch(`/api/cluster/${clusterId}/members/${id}`, {
-                method: "DELETE",
-                credentials: "include",
-            });
+            const res = await fetch(`/api/cluster/${clusterId}/members/${id}`, { method: "DELETE", credentials: "include" });
             const data = await res.json();
-
             if (data.success) {
                 toast.success("Member removed successfully", { position: "top-right" });
                 setMembers(m => m.filter(m => m.id !== id));
@@ -593,37 +874,17 @@ export default function ManageClustersPage() {
             } else {
                 toast.error(data.message ?? "Failed to remove member", { position: "top-right" });
             }
-        } catch (err) {
-            console.error("Failed to remove member:", err);
+        } catch {
+            console.error("Failed to remove member");
         }
     };
 
     const handleSubtypeChange = async (id: string, subtype: MemberSubtype) => {
-        // TODO: persist via API
         setMembers(m => m.map(m => m.id === id ? { ...m, subtype } : m));
     };
 
-    // FIX 1: now returns a Promise so MemberRow can await it and toggle resending/resent
     const handleResendCredentials = async (clusterId: string, memberId: string): Promise<void> => {
-        // try {
-        //     const res = await fetch(`/api/cluster/${clusterId}/members/${memberId}/resend-credentials`, {
-        //         method: "POST",
-        //         headers: { "Content-Type": "application/json" },
-        //         credentials: "include",
-        //     });
-        //     const data = await res.json();
-
-        //     console.log(data)
-
-        //     if (data.success) {
-        //         toast.success("New credentials sent", { position: "top-right" });
-        //     } else {
-        //         toast.error(data.message ?? "Failed to resend credentials", { position: "top-right" });
-        //     }
-        // } catch (err) {
-        //     console.error("Failed to resend credentials:", err);
-        //     toast.error("Something went wrong", { position: "top-right" });
-        // }
+        // API call placeholder
     };
 
     const filtered = clusters.filter(c =>
@@ -641,14 +902,21 @@ export default function ManageClustersPage() {
                 />
             )}
 
-            <div className="flex flex-col gap-6 p-5 lg:p-7 pt-6 max-w-6xl mx-auto w-full">
+            {/* ── Edit modal ── */}
+            {editTarget && (
+                <EditClusterModal
+                    cluster={editTarget}
+                    onClose={() => setEditTarget(null)}
+                    onSaved={handleClusterSaved}
+                />
+            )}
 
-                {/* ── Page header ── */}
+            <div className="flex flex-col gap-6 p-5 lg:p-7 pt-6 max-w-5xl mx-auto w-full">
                 <div className="flex items-center justify-between gap-4 flex-wrap">
                     <div>
                         <h1 className="flex items-center gap-1.5 mb-1 text-[1.5rem] font-extrabold tracking-tight text-foreground leading-none">
                             <RiSparklingFill className="text-teal-500 dark:text-teal-400 text-sm animate-pulse" />
-                            My Clusters
+                            Manage Clusters
                         </h1>
                     </div>
                     <Link
@@ -662,18 +930,12 @@ export default function ManageClustersPage() {
                     </Link>
                 </div>
 
-                {/* ── Main grid ── */}
                 <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
-
-                    {/* Cluster list */}
                     <div className="flex flex-col gap-4">
                         {listLoading ? (
                             <div className="flex flex-col gap-4">
                                 {Array.from({ length: 4 }).map((_, i) => (
-                                    <div
-                                        key={i}
-                                        className="rounded-2xl border border-border h-44 animate-pulse bg-muted/30"
-                                    />
+                                    <div key={i} className="rounded-2xl border border-border h-44 animate-pulse bg-muted/30" />
                                 ))}
                             </div>
                         ) : filtered.length === 0 ? (
@@ -684,8 +946,7 @@ export default function ManageClustersPage() {
                                     {search ? "No clusters match your search" : "No clusters yet"}
                                 </p>
                                 {!search && (
-                                    <Link
-                                        href="/dashboard/clusters/create"
+                                    <Link href="/dashboard/clusters/create"
                                         className="text-[13px] font-semibold text-teal-600 dark:text-teal-400
                                hover:underline flex items-center gap-1">
                                         Create your first cluster <RiArrowRightLine />
@@ -697,19 +958,17 @@ export default function ManageClustersPage() {
                                 <ClusterCard
                                     key={c.id}
                                     cluster={c}
-                                    // FIX 6: removed onSelect prop entirely
                                     onDelete={handleDelete}
+                                    onEdit={setEditTarget}      // ← wire edit
                                     handleManageCluster={handleManageCluster}
                                 />
                             ))
                         )}
                     </div>
 
-                    {/* Member panel — shown when a cluster is selected */}
                     {selectedCluster ? (
                         <div className="rounded-2xl border border-border bg-card overflow-hidden
                             lg:sticky lg:top-20 h-fit">
-                            {/* Panel header */}
                             <div className="flex items-center justify-between px-5 py-4 border-b border-border">
                                 <div className="flex-1 min-w-0">
                                     <p className="text-[11px] font-bold tracking-[.1em] uppercase text-muted-foreground mb-0.5">
@@ -727,26 +986,17 @@ export default function ManageClustersPage() {
                                     <RiCloseLine />
                                 </button>
                             </div>
-
-                            {/* Add member */}
                             <div className="px-5 py-4 border-b border-border">
                                 <p className="text-[12.5px] font-semibold text-foreground mb-2.5 flex items-center gap-1.5">
                                     <RiAddLine className="text-teal-600 dark:text-teal-400" /> Add member by email
                                 </p>
                                 <AddMemberInput onAdd={handleAddMember} cluster={selectedCluster} />
                             </div>
-
-                            {/* Members list */}
                             <div>
                                 <div className="flex items-center justify-between px-5 py-3 border-b border-border/50">
-                                    <span className="text-[12px] font-bold text-muted-foreground uppercase tracking-wider">
-                                        Members
-                                    </span>
-                                    <span className="text-[12px] font-semibold text-muted-foreground">
-                                        {members.length}
-                                    </span>
+                                    <span className="text-[12px] font-bold text-muted-foreground uppercase tracking-wider">Members</span>
+                                    <span className="text-[12px] font-semibold text-muted-foreground">{members.length}</span>
                                 </div>
-
                                 <div className="max-h-[400px] overflow-y-auto">
                                     {members.length === 0 ? (
                                         <div className="px-5 py-8 text-center">
@@ -758,7 +1008,6 @@ export default function ManageClustersPage() {
                                             <MemberRow
                                                 key={m.id}
                                                 member={m}
-                                                // FIX 5: close over selectedCluster.id so MemberRow only gets (id)
                                                 onRemove={(id) => handleRemoveMember(selectedCluster.id, id)}
                                                 onSubtypeChange={handleSubtypeChange}
                                                 onResendCredentials={handleResendCredentials}
@@ -768,12 +1017,10 @@ export default function ManageClustersPage() {
                                     )}
                                 </div>
                             </div>
-
-                            {/* Panel footer */}
                             <div className="px-5 py-3 border-t border-border bg-muted/20">
                                 <p className="text-[11.5px] text-muted-foreground/60 flex items-center gap-1.5">
                                     <RiShieldCheckLine className="text-xs text-teal-600 dark:text-teal-400" />
-                                    Credentials are emailed when members are added. Use the resend button to re-send.
+                                    Credentials are emailed when members are added.
                                 </p>
                             </div>
                         </div>
