@@ -275,7 +275,7 @@ export default function SignInPage() {
           </div>
 
           {/* Google */}
-          <button
+          {/* <button
             onClick={handleGoogle}
             disabled={isGoogleLoading}
             className={cn(
@@ -295,16 +295,16 @@ export default function SignInPage() {
               <RiGoogleLine className="text-base" />
             )}
             Continue with Google
-          </button>
+          </button> */}
 
           {/* Divider */}
-          <div className="flex items-center gap-3 my-6">
+          {/* <div className="flex items-center gap-3 my-6">
             <div className="flex-1 h-px bg-zinc-200 dark:bg-zinc-800" />
             <span className="text-[11.5px] font-semibold text-zinc-400 dark:text-zinc-600 tracking-wider uppercase">
               or
             </span>
             <div className="flex-1 h-px bg-zinc-200 dark:bg-zinc-800" />
-          </div>
+          </div> */}
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">

@@ -428,7 +428,7 @@ export default function SignUpPage() {
                     </div>
 
                     {/* Google */}
-                    <button
+                    {/* <button
                         onClick={handleGoogle}
                         disabled={isGoogleLoading}
                         className={cn(
@@ -445,14 +445,14 @@ export default function SignUpPage() {
                             <span className="w-4 h-4 border-2 border-zinc-300 border-t-teal-500 rounded-full animate-spin" />
                         ) : <RiGoogleLine className="text-base" />}
                         Continue with Google
-                    </button>
+                    </button> */}
 
                     {/* Divider */}
-                    <div className="flex items-center gap-3 my-5">
+                    {/* <div className="flex items-center gap-3 my-5">
                         <div className="flex-1 h-px bg-zinc-200 dark:bg-zinc-800" />
                         <span className="text-[11.5px] font-semibold text-zinc-400 dark:text-zinc-600 tracking-wider uppercase">or</span>
                         <div className="flex-1 h-px bg-zinc-200 dark:bg-zinc-800" />
-                    </div>
+                    </div> */}
 
                     {/* Form */}
                     <form onSubmit={handleSubmit} className="flex flex-col gap-4">

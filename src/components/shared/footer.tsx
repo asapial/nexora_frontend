@@ -88,11 +88,11 @@ const DEFAULT_DATA: FooterData = {
     {
       heading: "Use Cases",
       links: [
-        { label: "Research Labs", href: "#" },
-        { label: "Bootcamp Cohorts", href: "#" },
-        { label: "Corporate Training", href: "#" },
-        { label: "Tutoring Centres", href: "#" },
-        { label: "Universities", href: "#" },
+        { label: "Research Labs", href: "/researchLab" },
+        { label: "Bootcamp Cohorts", href: "/Bootcampcohorts" },
+        { label: "Corporate Training", href: "/Corporatetraining" },
+        { label: "Tutoring Centres", href: "/Tutoringcentre" },
+        { label: "Universities", href: "/Universities" },
       ],
     },
     {

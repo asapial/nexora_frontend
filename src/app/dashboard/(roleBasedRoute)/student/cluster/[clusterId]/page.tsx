@@ -100,7 +100,7 @@ export default function StudentClusterDetailPage() {
     { key: "overview",    label: "Overview",    icon: <RiFlaskLine />,             count: undefined },
     { key: "members",     label: "Members",     icon: <RiGroupLine />,             count: cluster.memberCount },
     { key: "tasks",       label: "My Tasks",    icon: <RiFileTextLine />,          count: cluster.myTasks.length },
-    { key: "attendance",  label: "Attendance",  icon: <RiCalendarLine />,          count: cluster.myAttendance.length },
+    // { key: "attendance",  label: "Attendance",  icon: <RiCalendarLine />,          count: cluster.myAttendance.length },
   ];
 
   return (
