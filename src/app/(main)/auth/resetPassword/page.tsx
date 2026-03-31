@@ -275,7 +275,7 @@ const handleResend = async () => {
           <div className="h-1 bg-gradient-to-r from-teal-500/0 via-teal-500 to-teal-500/0" />
 
           <div className="p-8">
-            <Link href="/login" className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-zinc-500 dark:text-zinc-500 hover:text-teal-600 dark:hover:text-teal-400 transition-colors mb-5">
+            <Link href="/auth/signin" className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-zinc-500 dark:text-zinc-500 hover:text-teal-600 dark:hover:text-teal-400 transition-colors mb-5">
               <RiArrowLeftLine className="text-sm" />
               Back to login
             </Link>

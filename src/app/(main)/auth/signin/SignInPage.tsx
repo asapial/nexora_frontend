@@ -153,10 +153,6 @@ export default function SignInPage() {
     if (Object.keys(errs).length) { setErrors(errs); return; }
     setIsLoading(true);
     try {
-
-
-
-      // const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/auth/login`, {
       const res = await fetch(`/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -166,17 +162,20 @@ export default function SignInPage() {
 
       const data = await res.json();
 
-      if(data.success){
-        toast.success("User login successfully", {position:"top-right"})
-         window.location.href = "/dashboard"
+      if (!res.ok || !data.success) {
+        const msg = data.message || "Invalid email or password";
+        toast.error(msg, { position: "top-right" });
+        setErrors({ password: msg });
+        return;
       }
 
-
-
+      toast.success("User login successfully", { position: "top-right" });
+      window.location.href = "/dashboard";
 
     } catch (err: any) {
-
-      setErrors({ password: err.message || "Invalid email or password" });
+      const msg = err.message || "Something went wrong. Please try again.";
+      toast.error(msg, { position: "top-right" });
+      setErrors({ password: msg });
     } finally {
       setIsLoading(false);
     }
@@ -276,7 +275,7 @@ export default function SignInPage() {
           </div>
 
           {/* Google */}
-          <button
+          {/* <button
             onClick={handleGoogle}
             disabled={isGoogleLoading}
             className={cn(
@@ -296,16 +295,16 @@ export default function SignInPage() {
               <RiGoogleLine className="text-base" />
             )}
             Continue with Google
-          </button>
+          </button> */}
 
           {/* Divider */}
-          <div className="flex items-center gap-3 my-6">
+          {/* <div className="flex items-center gap-3 my-6">
             <div className="flex-1 h-px bg-zinc-200 dark:bg-zinc-800" />
             <span className="text-[11.5px] font-semibold text-zinc-400 dark:text-zinc-600 tracking-wider uppercase">
               or
             </span>
             <div className="flex-1 h-px bg-zinc-200 dark:bg-zinc-800" />
-          </div>
+          </div> */}
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
