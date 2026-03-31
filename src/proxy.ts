@@ -19,15 +19,23 @@ export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   // -------------------------
-  // COURSES RULES (public)
+  // COURSES RULES
   // -------------------------
   const isCoursesRoot = pathname === "/courses";
   const isCourseDetail =
     pathname.startsWith("/courses/") && pathname.split("/").length === 3;
 
-  // 🔓 Allow public courses pages
+  // 🔓 Allow public courses pages (catalog + detail)
   if (isCoursesRoot || isCourseDetail) {
     return NextResponse.next();
+  }
+
+  // 🔒 Protect /courses/:id/enroll (requires auth)
+  const isCourseEnroll =
+    pathname.startsWith("/courses/") && pathname.endsWith("/enroll");
+
+  if (isCourseEnroll && !isAuthenticated) {
+    return NextResponse.redirect(new URL("/auth/signin", request.url));
   }
 
   // -------------------------
@@ -107,6 +115,6 @@ export const config = {
   matcher: [
     "/dashboard/:path*",
     "/auth/verifyEmail",
-    "/courses/enroll/:path*",
+    "/courses/:id/enroll",
   ],
 };

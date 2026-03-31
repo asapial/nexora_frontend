@@ -87,6 +87,7 @@ const DASHBOARD_ROUTE: Record<Role, string> = {
 
 const DEFAULT_MENU: MenuItem[] = [
   { title: "Home", url: "/" },
+  { title: "Courses", url: "/courses" },
   {
     title: "Dashboard", url: "/dashboard",
     // items: [
