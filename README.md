@@ -26,8 +26,7 @@
 | Frontend | [nexorafrontend-one.vercel.app](https://nexorafrontend-one.vercel.app) |
 | Backend  | [nexora-backend-rust.vercel.app](https://nexora-backend-rust.vercel.app) |
 
-> **Demo Credentials**  
-> Admin: `admin@clinova.com` / `Admin@123456`
+
 
 ---
 
@@ -177,7 +176,7 @@ nexora_frontend/
 
 - **Node.js** ≥ 18.x
 - **npm** ≥ 9.x
-- A running instance of the [Nexora Backend](../nexora_backend)
+- A running instance of the [Nexora Backend](https://nexora-backend-rust.vercel.app)
 
 ### 1. Install dependencies
 
