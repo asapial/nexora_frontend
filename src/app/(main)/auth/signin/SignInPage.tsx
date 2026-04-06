@@ -12,6 +12,7 @@ import {
   RiArrowRightLine,
   RiSparklingFill,
   RiShieldCheckLine,
+  RiShieldKeyholeLine,
   RiGroupLine,
   RiBookOpenLine,
   RiAlertLine,
@@ -136,6 +137,12 @@ export default function SignInPage() {
 
   const [serverError, setServerError] = useState("");
 
+  // ── 2FA TOTP state ──
+  const [showTOTP, setShowTOTP] = useState(false);
+  const [totpCode, setTotpCode] = useState("");
+  const [totpLoading, setTotpLoading] = useState(false);
+  const [totpError, setTotpError] = useState("");
+
   const set = (k: keyof LoginForm) => (v: string) => {
     setForm((p) => ({ ...p, [k]: v }));
     if (errors[k]) setErrors((p) => ({ ...p, [k]: "" }));
@@ -185,6 +192,15 @@ export default function SignInPage() {
         return;
       }
 
+      // ── 2FA required: show TOTP input ──
+      if (data.data?.twoFactorRedirect) {
+        setShowTOTP(true);
+        setTotpCode("");
+        setTotpError("");
+        toast.info("Please enter your authenticator code", { position: "top-right" });
+        return;
+      }
+
       toast.success("User login successfully", { position: "top-right" });
       window.location.href = "/dashboard";
 
@@ -199,6 +215,40 @@ export default function SignInPage() {
       toast.error(msg, { position: "top-right" });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // ── Handle TOTP submission ──
+  const handleTOTPSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setTotpError("");
+    if (!totpCode || totpCode.length !== 6) {
+      setTotpError("Please enter a valid 6-digit code");
+      return;
+    }
+    setTotpLoading(true);
+    try {
+      const res = await fetch(`/api/auth/verify-login-totp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: totpCode }),
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        const msg = data.message || "Invalid TOTP code";
+        setTotpError(msg);
+        toast.error(msg, { position: "top-right" });
+        return;
+      }
+      toast.success("Login successful!", { position: "top-right" });
+      window.location.href = "/dashboard";
+    } catch (err: any) {
+      const msg = err?.message || "Failed to verify code. Please try again.";
+      setTotpError(msg);
+      toast.error(msg, { position: "top-right" });
+    } finally {
+      setTotpLoading(false);
     }
   };
 
@@ -407,6 +457,97 @@ export default function SignInPage() {
           </p>
         </div>
       </div>
+
+      {/* ══ 2FA TOTP Modal Overlay ═══════════════════════ */}
+      {showTOTP && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
+          <div className="w-full max-w-[380px] bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl p-8">
+            {/* Header */}
+            <div className="flex flex-col items-center text-center mb-6">
+              <div className="w-14 h-14 rounded-2xl bg-teal-500/10 dark:bg-teal-500/15 border border-teal-500/20 flex items-center justify-center text-teal-600 dark:text-teal-400 text-2xl mb-4">
+                <RiShieldKeyholeLine />
+              </div>
+              <h3 className="text-[20px] font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50 mb-1">
+                Two-Factor Authentication
+              </h3>
+              <p className="text-[13px] text-zinc-500 dark:text-zinc-400">
+                Enter the 6-digit code from your authenticator app
+              </p>
+            </div>
+
+            {/* TOTP Form */}
+            <form onSubmit={handleTOTPSubmit} className="flex flex-col gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="totp-code" className="text-[13px] font-semibold text-zinc-700 dark:text-zinc-300">
+                  Authenticator Code
+                </label>
+                <input
+                  id="totp-code"
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  maxLength={6}
+                  placeholder="000000"
+                  value={totpCode}
+                  onChange={(e) => {
+                    const v = e.target.value.replace(/\D/g, "").slice(0, 6);
+                    setTotpCode(v);
+                    if (totpError) setTotpError("");
+                  }}
+                  className={cn(
+                    "w-full h-12 text-center text-2xl font-mono font-bold tracking-[0.5em] rounded-xl",
+                    "bg-zinc-100 dark:bg-zinc-800/80",
+                    "border",
+                    totpError
+                      ? "border-red-400 dark:border-red-500/70 focus:ring-red-400/30"
+                      : "border-zinc-200 dark:border-zinc-700/60 focus:border-teal-400 dark:focus:border-teal-500",
+                    "text-zinc-900 dark:text-zinc-50",
+                    "placeholder:text-zinc-300 dark:placeholder:text-zinc-700",
+                    "focus:outline-none focus:ring-2",
+                    totpError ? "focus:ring-red-400/20" : "focus:ring-teal-400/20",
+                    "transition-all duration-150"
+                  )}
+                  autoFocus
+                />
+              </div>
+
+              {totpError && (
+                <div className="flex items-start gap-2.5 px-3.5 py-2.5 rounded-xl border border-red-200 dark:border-red-800/50 bg-red-50/80 dark:bg-red-950/20">
+                  <RiAlertLine className="text-red-500 text-base mt-0.5 shrink-0" />
+                  <p className="text-[13px] font-semibold text-red-700 dark:text-red-400 leading-snug">{totpError}</p>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={totpLoading || totpCode.length !== 6}
+                className={cn(
+                  "w-full h-11 mt-1 rounded-xl flex items-center justify-center gap-2",
+                  "bg-teal-600 hover:bg-teal-700 dark:bg-teal-500 dark:hover:bg-teal-600",
+                  "text-white text-[15px] font-bold",
+                  "shadow-sm shadow-teal-600/20",
+                  "transition-all duration-200 hover:scale-[1.01] active:scale-[0.99]",
+                  "disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100"
+                )}
+              >
+                {totpLoading ? (
+                  <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <>Verify & Sign in <RiArrowRightLine className="text-base" /></>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => { setShowTOTP(false); setTotpCode(""); setTotpError(""); }}
+                className="text-[13px] font-semibold text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors text-center"
+              >
+                ← Back to sign in
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

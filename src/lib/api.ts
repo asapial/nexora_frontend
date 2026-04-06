@@ -117,6 +117,64 @@ export const settingsApi = {
   getAccount: () => apiFetch<any>("/api/settings/account"),
   updateAccount: (body: Record<string, unknown>) =>
     apiFetch<any>("/api/settings/account", { method: "PATCH", body: JSON.stringify(body) }),
+  // Password change — uses existing auth route
+  changePassword: (oldPassword: string, newPassword: string) =>
+    apiFetch<any>("/api/auth/changePassword", { method: "POST", body: JSON.stringify({ oldPassword, newPassword }) }),
+  // Sessions
+  getSessions: () => apiFetch<any>("/api/settings/sessions"),
+  revokeSession: (sessionId: string) =>
+    apiFetch<any>(`/api/settings/sessions/${sessionId}/revoke`, { method: "POST" }),
+  revokeAllSessions: () =>
+    apiFetch<any>("/api/settings/sessions/revoke-all", { method: "POST" }),
+  // Danger zone
+  deactivateAccount: () =>
+    apiFetch<any>("/api/settings/deactivate", { method: "POST" }),
+  deleteAccount: (confirmText: string) =>
+    apiFetch<any>("/api/settings/delete-account", { method: "POST", body: JSON.stringify({ confirmText }) }),
+  exportData: () =>
+    apiFetch<any>("/api/settings/export-data", { method: "POST" }),
+  // PDF export — streams binary
+  exportDataPDF: async () => {
+    const res = await fetch("/api/settings/export-data-pdf", { credentials: "include" });
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => null);
+      throw new Error(errJson?.message ?? "PDF export failed");
+    }
+    return res.blob();
+  },
+  // Two-Factor Authentication
+  getTwoFactorStatus: () =>
+    apiFetch<{ twoFactorEnabled: boolean }>("/api/settings/two-factor-status"),
+  enableTwoFactor: async (password: string) => {
+    const res = await apiFetch<any>("/api/settings/two-factor/enable", {
+      method: "POST",
+      body: JSON.stringify({ password }),
+    });
+    return res.data ?? res;
+  },
+  verifyTwoFactor: async (code: string) => {
+    const res = await apiFetch<any>("/api/settings/two-factor/verify-totp", {
+      method: "POST",
+      body: JSON.stringify({ code }),
+    });
+    return res.data ?? res;
+  },
+  disableTwoFactor: async (password: string) => {
+    const res = await apiFetch<any>("/api/settings/two-factor/disable", {
+      method: "POST",
+      body: JSON.stringify({ password }),
+    });
+    return res.data ?? res;
+  },
+  // API Key management
+  getApiKeys: () =>
+    apiFetch<any[]>("/api/settings/api-keys"),
+  generateApiKey: (label: string) =>
+    apiFetch<any>("/api/settings/api-keys", { method: "POST", body: JSON.stringify({ label }) }),
+  deleteApiKey: (keyId: string) =>
+    apiFetch<any>(`/api/settings/api-keys/${keyId}`, { method: "DELETE" }),
+  revokeAllApiKeys: () =>
+    apiFetch<any>("/api/settings/api-keys/revoke-all", { method: "POST" }),
 };
 
 // ─── Stripe / Payment API ─────────────────────────────────

@@ -551,10 +551,7 @@ export default function DashboardPage() {
     return (
       <div className="min-h-screen text-foreground font-sans">
         <main className="flex flex-col gap-6 p-5 lg:p-7 pt-6 max-w-7xl mx-auto">
-          <div className="flex items-center gap-3 mb-4">
-            <RiLoader4Line className="text-teal-500 text-xl animate-spin" />
-            <span className="text-[14px] font-semibold text-muted-foreground">Loading dashboard…</span>
-          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
             {Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="h-32 rounded-2xl bg-muted/40 animate-pulse border border-border" />
