@@ -244,7 +244,7 @@ export default function EarningsDashboardPage() {
                   enrollments={c._count?.id ?? 0}
                   revenuePercent={Math.round(c.teacherRevenuePercent ?? 70)}
                   max={maxCourseEarning}
-                  onClick={() => router.push(`/teacher/courses/${c.courseId}`)} />
+                  onClick={() => router.push(`/dashboard/teacher/courses/${c.courseId}`)} />
               ))
         }
       </div>

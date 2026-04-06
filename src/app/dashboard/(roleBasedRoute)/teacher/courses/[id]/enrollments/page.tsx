@@ -40,7 +40,7 @@ export default function EnrollmentsDetailPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  const fetchData = useCallback(async () => {
+    const fetchData = useCallback(async () => {
     setLoading(true); setError(null);
     try {
       const params: Record<string, string> = { page: String(page), limit: "20" };
@@ -50,8 +50,11 @@ export default function EnrollmentsDetailPage() {
         courseApi.getEnrollments(courseId, params),
         courseApi.getEnrollmentStats(courseId),
       ]);
-      setEnrollments(eRes.data.data);
-      setTotalPages(eRes.data.totalPages);
+      // Handle various response shapes
+      const eData = eRes.data;
+      const enrollmentList = Array.isArray(eData?.data) ? eData.data : Array.isArray(eData) ? eData : [];
+      setEnrollments(enrollmentList);
+      setTotalPages(eData?.totalPages ?? 1);
       setStats(sRes.data);
     } catch (e: any) { setError(e.message); }
     finally { setLoading(false); }

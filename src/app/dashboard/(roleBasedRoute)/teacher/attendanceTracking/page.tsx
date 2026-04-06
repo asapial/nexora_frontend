@@ -196,11 +196,24 @@ export default function AttendanceTrackingPage() {
   useEffect(() => {
     if (!showHistory || !members.length) return;
     setLoadingHistory(true);
-    Promise.all(members.map(async m => {
-      const res = await fetch(`/api/sessions/students/${m.studentProfileId}/attendance-history`, { credentials: "include" }).catch(() => null);
-      if (!res) return { id: m.studentProfileId, entries: [] as HistEntry[] };
-      const d = await res.json().catch(() => ({ data: [] }));
-      return { id: m.studentProfileId, entries: (d.data ?? []) as HistEntry[] };
+    const validMembers = members.filter(m => m.studentProfileId);
+    if (validMembers.length === 0) {
+      setLoadingHistory(false);
+      return;
+    }
+    Promise.all(validMembers.map(async m => {
+      try {
+        const res = await fetch(`/api/sessions/students/${m.studentProfileId}/attendance-history`, { credentials: "include" });
+        if (!res.ok) {
+          console.warn(`Attendance history failed for ${m.studentProfileId}:`, res.status);
+          return { id: m.studentProfileId, entries: [] as HistEntry[] };
+        }
+        const d = await res.json();
+        return { id: m.studentProfileId, entries: (d.data ?? []) as HistEntry[] };
+      } catch (err) {
+        console.warn(`Attendance history error for ${m.studentProfileId}:`, err);
+        return { id: m.studentProfileId, entries: [] as HistEntry[] };
+      }
     }))
       .then(results => {
         const h: Record<string, HistEntry[]> = {};

@@ -31,6 +31,7 @@ import {
   RiSparklingLine,
   RiTrophyLine,
   RiBarChartBoxLine,
+  RiAwardLine,
 } from "react-icons/ri";
 
 import { NavDocuments, type NavDocItem } from "@/components/nav-documents";
@@ -211,6 +212,14 @@ const studentNav: NavDocItem[] = [
     icon: <RiNotificationLine />,
     items: [
       { title: "Notices", url: "/dashboard/student/notice" },
+    ],
+  },
+  {
+    title: "Certificates",
+    url: "/dashboard/student/certificates",
+    icon: <RiAwardLine />,
+    items: [
+      { title: "My Certificates", url: "/dashboard/student/certificates" },
     ],
   },
 ];

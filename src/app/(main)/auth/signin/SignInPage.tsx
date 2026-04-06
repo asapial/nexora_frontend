@@ -14,6 +14,7 @@ import {
   RiShieldCheckLine,
   RiGroupLine,
   RiBookOpenLine,
+  RiAlertLine,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -133,9 +134,12 @@ export default function SignInPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
+  const [serverError, setServerError] = useState("");
+
   const set = (k: keyof LoginForm) => (v: string) => {
     setForm((p) => ({ ...p, [k]: v }));
     if (errors[k]) setErrors((p) => ({ ...p, [k]: "" }));
+    if (serverError) setServerError("");
   };
 
   const validate = () => {
@@ -149,6 +153,7 @@ export default function SignInPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
+    setServerError("");
     const errs = validate();
     if (Object.keys(errs).length) { setErrors(errs); return; }
     setIsLoading(true);
@@ -164,8 +169,19 @@ export default function SignInPage() {
 
       if (!res.ok || !data.success) {
         const msg = data.message || "Invalid email or password";
-        toast.error(msg, { position: "top-right" });
-        setErrors({ password: msg });
+        // Map common backend error messages to user-friendly ones
+        let userMsg = msg;
+        if (msg.toLowerCase().includes("not found") || msg.toLowerCase().includes("no user")) {
+          userMsg = "No account found with this email address.";
+        } else if (msg.toLowerCase().includes("password") && msg.toLowerCase().includes("incorrect")) {
+          userMsg = "Incorrect password. Please try again.";
+        } else if (msg.toLowerCase().includes("verify") || msg.toLowerCase().includes("verification")) {
+          userMsg = "Please verify your email address before signing in.";
+        } else if (msg.toLowerCase().includes("blocked") || msg.toLowerCase().includes("locked") || msg.toLowerCase().includes("deactivat")) {
+          userMsg = "Your account has been deactivated. Please contact support.";
+        }
+        setServerError(userMsg);
+        toast.error(userMsg, { position: "top-right" });
         return;
       }
 
@@ -173,9 +189,14 @@ export default function SignInPage() {
       window.location.href = "/dashboard";
 
     } catch (err: any) {
-      const msg = err.message || "Something went wrong. Please try again.";
+      let msg = "Something went wrong. Please try again.";
+      if (err instanceof TypeError && err.message === "Failed to fetch") {
+        msg = "Unable to connect to the server. Please check your internet connection.";
+      } else if (err.message) {
+        msg = err.message;
+      }
+      setServerError(msg);
       toast.error(msg, { position: "top-right" });
-      setErrors({ password: msg });
     } finally {
       setIsLoading(false);
     }
@@ -306,6 +327,8 @@ export default function SignInPage() {
             <div className="flex-1 h-px bg-zinc-200 dark:bg-zinc-800" />
           </div> */}
 
+
+
           {/* Form */}
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <AuthInput
@@ -337,6 +360,15 @@ export default function SignInPage() {
                 </button>
               }
             />
+                      {/* Server Error Banner */}
+          {serverError && (
+            <div className="flex items-start gap-2.5 px-3.5 py-3 rounded-xl border border-red-200 dark:border-red-800/50 bg-red-50/80 dark:bg-red-950/20 mb-2">
+              <RiAlertLine className="text-red-500 text-base mt-0.5 shrink-0" />
+              <div>
+                <p className="text-[13px] font-semibold text-red-700 dark:text-red-400 leading-snug">{serverError}</p>
+              </div>
+            </div>
+          )}
 
             {/* Forgot password */}
             <div className="flex justify-end -mt-1">
