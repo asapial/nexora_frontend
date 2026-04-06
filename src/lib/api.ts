@@ -25,6 +25,7 @@ export const courseApi = {
   update: (id: string, body: any) => apiFetch<any>(`${T}/courses/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   submit: (id: string) => apiFetch<any>(`${T}/courses/${id}/submit`, { method: "POST" }),
   close: (id: string) => apiFetch<any>(`${T}/courses/${id}/close`, { method: "POST" }),
+  finish: (id: string) => apiFetch<any>(`${T}/courses/${id}/finish`, { method: "POST" }),
   getMissions: (courseId: string) => apiFetch<any[]>(`${T}/courses/${courseId}/missions`),
   createMission: (courseId: string, body: any) => apiFetch<any>(`${T}/courses/${courseId}/missions`, { method: "POST", body: JSON.stringify(body) }),
   updateMission: (cId: string, mId: string, body: any) => apiFetch<any>(`${T}/courses/${cId}/missions/${mId}`, { method: "PATCH", body: JSON.stringify(body) }),

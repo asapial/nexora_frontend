@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   RiSparklingFill, RiAddLine, RiSearchLine, RiBookOpenLine,
   RiGroupLine, RiMoneyDollarCircleLine, RiCheckLine,
-  RiAlertLine, RiTimeLine, RiDraftLine, RiPauseCircleLine,
+  RiAlertLine,
   RiArrowRightLine, RiEditLine, RiEyeLine, RiMoreLine,
   RiFileTextLine, RiStarLine, RiRefreshLine,
 } from "react-icons/ri";
@@ -63,10 +63,11 @@ function SkeletonCard() {
 function StatusBadge({ status }: { status: CourseStatus }) {
   const cfg = STATUS_CONFIG[status];
   return (
-    <span className={cn("inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold tracking-wide border", cfg.badge)}>
-      <span className={cn("w-1.5 h-1.5 rounded-full flex-shrink-0", cfg.dot)} />
-      {cfg.label}
-    </span>
+    // <span className={cn("inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold tracking-wide border", cfg.badge)}>
+    //   <span className={cn("w-1.5 h-1.5 rounded-full flex-shrink-0", cfg.dot)} />
+    //   {cfg.label}
+    // </span>
+    <div></div>
   );
 }
 

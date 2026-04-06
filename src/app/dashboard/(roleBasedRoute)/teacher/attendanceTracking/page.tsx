@@ -18,7 +18,7 @@ type Status = "PRESENT" | "ABSENT" | "EXCUSED" | "UNMARKED";
 interface ATRecord { memberId: string; status: Status; note: string }
 interface Member { studentProfileId: string; userId: string; name: string; email: string; image: string | null }
 interface Session { id: string; title: string; scheduledAt: string; status: string; clusterId: string; cluster: { id: string; name: string } }
-interface HistEntry { status: Status; StudySession: { title: string; scheduledAt: string } }
+interface HistEntry { status: Status; session: { title: string; scheduledAt: string } }
 
 // ─── Config ───────────────────────────────────────────────
 const STATUS_CONFIG: Record<Status, { label: string; icon: React.ReactNode; activeClass: string; dotClass: string }> = {
@@ -194,7 +194,7 @@ export default function AttendanceTrackingPage() {
 
   // ── Fetch history when showHistory turned on
   useEffect(() => {
-    if (!showHistory || !members.length) return;
+    if (!showHistory || !members.length || !clusterId) return;
     setLoadingHistory(true);
     const validMembers = members.filter(m => m.studentProfileId);
     if (validMembers.length === 0) {
@@ -203,7 +203,7 @@ export default function AttendanceTrackingPage() {
     }
     Promise.all(validMembers.map(async m => {
       try {
-        const res = await fetch(`/api/sessions/students/${m.studentProfileId}/attendance-history`, { credentials: "include" });
+        const res = await fetch(`/api/sessions/students/${m.studentProfileId}/attendance-history?clusterId=${clusterId}`, { credentials: "include" });
         if (!res.ok) {
           console.warn(`Attendance history failed for ${m.studentProfileId}:`, res.status);
           return { id: m.studentProfileId, entries: [] as HistEntry[] };
@@ -221,7 +221,7 @@ export default function AttendanceTrackingPage() {
         setHistory(h);
       })
       .finally(() => setLoadingHistory(false));
-  }, [showHistory, members]);
+  }, [showHistory, members, clusterId]);
 
   // ── Record helpers
   const sessionRecords = useMemo(() => members.map(m => records[m.studentProfileId] ?? { memberId: m.studentProfileId, status: "UNMARKED" as Status, note: "" }), [members, records]);
@@ -465,7 +465,7 @@ export default function AttendanceTrackingPage() {
                         <div className="flex gap-1">
                           {(history[member.studentProfileId] ?? []).slice(0, 10).map((e, i) => (
                             <div key={i}
-                              title={`${e.StudySession?.title} · ${fmtDate(e.StudySession?.scheduledAt ?? "")} · ${e.status}`}
+                              title={`${e.session?.title} · ${fmtDate(e.session?.scheduledAt ?? "")} · ${e.status}`}
                               className={cn("w-3 h-3 rounded-sm transition-all", STATUS_CONFIG[e.status]?.dotClass ?? "bg-muted-foreground/30")} />
                           ))}
                         </div>

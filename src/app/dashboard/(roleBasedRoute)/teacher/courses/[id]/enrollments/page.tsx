@@ -1,19 +1,16 @@
 "use client";
 
-
 import { useEffect, useState, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import {
   RiSparklingFill, RiArrowLeftLine, RiSearchLine, RiDownloadLine,
   RiGroupLine, RiMoneyDollarCircleLine, RiCheckboxCircleLine, RiRefreshLine,
-RiPercentLine,
+  RiPercentLine,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
-import { courseApi } from "../../../../../../../lib/api";
+import { courseApi } from "@/lib/api";
 
-import type { CourseEnrollment, PaymentStatus } from "../../../../../../../types/course.type";
-
-
+import type { CourseEnrollment, PaymentStatus } from "@/types/course.type";
 
 const fmtCurrency = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
 const fmtDate = (d: string) => new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
@@ -25,7 +22,6 @@ const PAYMENT_CFG: Record<PaymentStatus, { label: string; badge: string }> = {
   FAILED:   { label: "Failed",   badge: "text-red-600 dark:text-red-400 bg-red-50/40 dark:bg-red-950/20 border-red-200/60 dark:border-red-800/50" },
   REFUNDED: { label: "Refunded", badge: "text-muted-foreground bg-muted/40 border-border" },
 };
-
 
 // ─── Enrollments Page ─────────────────────────────────────
 export default function EnrollmentsDetailPage() {
@@ -40,23 +36,43 @@ export default function EnrollmentsDetailPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-    const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true); setError(null);
     try {
       const params: Record<string, string> = { page: String(page), limit: "20" };
       if (search) params.search = search;
       if (filterPayment !== "ALL") params.paymentStatus = filterPayment;
-      const [eRes, sRes] = await Promise.all([
-        courseApi.getEnrollments(courseId, params),
-        courseApi.getEnrollmentStats(courseId),
-      ]);
-      // Handle various response shapes
-      const eData = eRes.data;
-      const enrollmentList = Array.isArray(eData?.data) ? eData.data : Array.isArray(eData) ? eData : [];
+
+      // Fetch enrollments and stats separately so one failing doesn't block the other
+      let enrollmentList: CourseEnrollment[] = [];
+      let enrollTotalPages = 1;
+
+      try {
+        const eRes = await courseApi.getEnrollments(courseId, params);
+        // eRes.data = { data: [...], total, page, limit, totalPages }
+        const eData = eRes.data;
+        enrollmentList = Array.isArray(eData?.data) ? eData.data : Array.isArray(eData) ? eData : [];
+        enrollTotalPages = eData?.totalPages ?? 1;
+      } catch (e: any) {
+        console.error("Failed to load enrollments:", e);
+        setError(e.message ?? "Failed to load enrollments");
+      }
+
       setEnrollments(enrollmentList);
-      setTotalPages(eData?.totalPages ?? 1);
-      setStats(sRes.data);
-    } catch (e: any) { setError(e.message); }
+      setTotalPages(enrollTotalPages);
+
+      // Stats fetch — independent
+      try {
+        const sRes = await courseApi.getEnrollmentStats(courseId);
+        setStats(sRes.data);
+      } catch (e: any) {
+        console.warn("Failed to load enrollment stats:", e);
+        // Don't set error — enrollments might still be fine
+      }
+
+    } catch (e: any) {
+      setError(e.message ?? "Unexpected error");
+    }
     finally { setLoading(false); }
   }, [courseId, page, search, filterPayment]);
 
@@ -87,10 +103,22 @@ export default function EnrollmentsDetailPage() {
         </div>
       </div>
 
+      {/* Error */}
+      {error && (
+        <div className="flex items-center gap-3 px-4 py-3.5 rounded-xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800/50">
+          <span className="text-red-500 text-base flex-shrink-0">⚠</span>
+          <div className="flex-1">
+            <p className="text-[13px] font-bold text-red-600 dark:text-red-400">Failed to load enrollment data</p>
+            <p className="text-[12px] text-red-600/80 dark:text-red-400/80 mt-0.5">{error}</p>
+          </div>
+          <button onClick={fetchData} className="text-[12px] font-semibold text-red-600 dark:text-red-400 hover:underline flex-shrink-0">Retry</button>
+        </div>
+      )}
+
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { icon: <RiGroupLine />, label: "Total enrolled", value: stats?.total ?? 0, a: "teal" },
+          { icon: <RiGroupLine />, label: "Total enrolled", value: stats?.total ?? enrollments.length, a: "teal" },
           { icon: <RiMoneyDollarCircleLine />, label: "Paid", value: stats?.paid ?? 0, a: "blue" },
           { icon: <RiCheckboxCircleLine />, label: "Completed", value: stats?.completed ?? 0, a: "teal" },
           { icon: <RiPercentLine />, label: "Your earnings", value: fmtCurrency(stats?.teacherEarning ?? 0), a: "amber" },
@@ -139,24 +167,24 @@ export default function EnrollmentsDetailPage() {
               {enrollments.length === 0
                 ? <div className="py-14 flex flex-col items-center gap-2 text-center"><RiGroupLine className="text-2xl text-muted-foreground/30" /><p className="text-[13px] text-muted-foreground">No enrollments found</p></div>
                 : enrollments.map(e => {
-                    const pcfg = PAYMENT_CFG[e.paymentStatus];
+                    const pcfg = PAYMENT_CFG[e.paymentStatus] ?? PAYMENT_CFG.FREE;
                     return (
                       <div key={e.id} className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr] gap-4 px-5 py-3.5 items-center hover:bg-muted/20 transition-colors">
                         <div className="flex items-center gap-3 min-w-0">
                           <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-500/30 to-blue-500/30 flex-shrink-0 flex items-center justify-center text-[11px] font-bold text-teal-700 dark:text-teal-300 border border-teal-200/40 dark:border-teal-800/40">
-                            {e.user?.name?.charAt(0).toUpperCase()}
+                            {e.user?.name?.charAt(0)?.toUpperCase() ?? "?"}
                           </div>
                           <div className="min-w-0">
-                            <p className="text-[13px] font-bold text-foreground truncate">{e.user?.name}</p>
-                            <p className="text-[11.5px] text-muted-foreground truncate">{e.user?.email}</p>
+                            <p className="text-[13px] font-bold text-foreground truncate">{e.user?.name ?? "Unknown"}</p>
+                            <p className="text-[11.5px] text-muted-foreground truncate">{e.user?.email ?? ""}</p>
                           </div>
                         </div>
                         <p className="text-[12.5px] text-muted-foreground">{fmtDate(e.enrolledAt)}</p>
                         <span className={cn("inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold border w-fit", pcfg.badge)}>{pcfg.label}</span>
                         <p className="text-[13px] font-bold text-foreground">{e.amountPaid ? fmtCurrency(e.amountPaid) : "—"}</p>
                         <div className="flex items-center gap-2">
-                          <div className="flex-1 h-1.5 rounded-full bg-muted/50"><div className="h-full rounded-full bg-teal-500" style={{ width: `${e.progress}%` }} /></div>
-                          <span className={cn("text-[11px] font-bold flex-shrink-0", e.completedAt ? "text-teal-600 dark:text-teal-400" : "text-muted-foreground")}>{e.progress}%</span>
+                          <div className="flex-1 h-1.5 rounded-full bg-muted/50"><div className="h-full rounded-full bg-teal-500" style={{ width: `${e.progress ?? 0}%` }} /></div>
+                          <span className={cn("text-[11px] font-bold flex-shrink-0", e.completedAt ? "text-teal-600 dark:text-teal-400" : "text-muted-foreground")}>{e.progress ?? 0}%</span>
                         </div>
                       </div>
                     );
@@ -180,4 +208,3 @@ export default function EnrollmentsDetailPage() {
     </div>
   );
 }
-
