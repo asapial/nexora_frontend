@@ -15,11 +15,12 @@ import type { Course, CourseStatus } from "../../../../../types/course.type";
 
 // ─── Status Config ────────────────────────────────────────
 const STATUS_CONFIG: Record<CourseStatus, { label: string; badge: string; dot: string }> = {
-  DRAFT:            { label: "Draft",    badge: "text-muted-foreground bg-muted/50 border-border",                                                                         dot: "bg-muted-foreground/50" },
-  PENDING_APPROVAL: { label: "Pending",  badge: "text-amber-600 dark:text-amber-400 bg-amber-50/60 dark:bg-amber-950/30 border-amber-200/60 dark:border-amber-800/50",    dot: "bg-amber-500 animate-pulse" },
-  PUBLISHED:        { label: "Published",badge: "text-teal-600 dark:text-teal-400 bg-teal-50/60 dark:bg-teal-950/30 border-teal-200/60 dark:border-teal-800/50",          dot: "bg-teal-500" },
-  CLOSED:           { label: "Closed",   badge: "text-blue-600 dark:text-blue-400 bg-blue-50/60 dark:bg-blue-950/30 border-blue-200/60 dark:border-blue-800/50",          dot: "bg-blue-500" },
-  REJECTED:         { label: "Rejected", badge: "text-red-600 dark:text-red-400 bg-red-50/40 dark:bg-red-950/20 border-red-200/60 dark:border-red-800/50",                dot: "bg-red-500" },
+  DRAFT:            { label: "Draft",     badge: "text-muted-foreground bg-muted/50 border-border",                                                                       dot: "bg-muted-foreground/50" },
+  PENDING_APPROVAL: { label: "Pending",   badge: "text-amber-600 dark:text-amber-400 bg-amber-50/60 dark:bg-amber-950/30 border-amber-200/60 dark:border-amber-800/50",  dot: "bg-amber-500 animate-pulse" },
+  PUBLISHED:        { label: "Published", badge: "text-teal-600 dark:text-teal-400 bg-teal-50/60 dark:bg-teal-950/30 border-teal-200/60 dark:border-teal-800/50",        dot: "bg-teal-500" },
+  CLOSED:           { label: "Closed",    badge: "text-blue-600 dark:text-blue-400 bg-blue-50/60 dark:bg-blue-950/30 border-blue-200/60 dark:border-blue-800/50",        dot: "bg-blue-500" },
+  REJECTED:         { label: "Rejected",  badge: "text-red-600 dark:text-red-400 bg-red-50/40 dark:bg-red-950/20 border-red-200/60 dark:border-red-800/50",              dot: "bg-red-500" },
+  FINISHED:         { label: "Finished",  badge: "text-purple-600 dark:text-purple-400 bg-purple-50/60 dark:bg-purple-950/30 border-purple-200/60 dark:border-purple-800/50", dot: "bg-purple-500" },
 };
 
 const fmtCurrency = (n: number) =>

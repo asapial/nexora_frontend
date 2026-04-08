@@ -17,7 +17,7 @@ interface FormState {
   batchTag: string;
   slug: string;
 }
-type FormErrors = Partial<FormState> & { emails?: string; general?: string;   slug?:    string;  };
+type FormErrors = Partial<FormState> & { emails?: string; general?: string; slug?: string; };
 
 // ─── Email chip input ──────────────────────────────────────
 function EmailChipInput({
@@ -294,6 +294,142 @@ function PreviewCard({
   );
 }
 
+// ─── Description field with AI suggestions ────────────────
+function DescriptionField({
+  value,
+  onChange,
+  clusterName,
+  error,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  clusterName: string;
+  error?: string;
+}) {
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [loadingAI, setLoadingAI] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  const fetchSuggestions = async () => {
+    if (!clusterName || clusterName.trim().length < 3) return;
+    setLoadingAI(true);
+    setShowSuggestions(true);
+    try {
+      const res = await fetch("/api/ai/suggest-description", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ clusterName }),
+      });
+      const data = await res.json();
+      console.log(data);
+      setSuggestions(data.data || []);
+    } catch {
+      setSuggestions([]);
+    } finally {
+      setLoadingAI(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-center justify-between">
+        <label htmlFor="description" className="text-[13px] font-semibold text-foreground/80">
+          Description
+        </label>
+        <button
+          type="button"
+          onClick={fetchSuggestions}
+          disabled={loadingAI || clusterName.trim().length < 3}
+          className={cn(
+            "inline-flex items-center gap-1.5 h-7 px-3 rounded-lg text-[11.5px] font-semibold",
+            "border transition-all duration-150",
+            clusterName.trim().length >= 3
+              ? "border-teal-300/70 dark:border-teal-700/60 text-teal-600 dark:text-teal-400 bg-teal-50/60 dark:bg-teal-950/30 hover:bg-teal-100/60 dark:hover:bg-teal-900/30"
+              : "border-border text-muted-foreground/40 bg-muted/20 cursor-not-allowed"
+          )}
+        >
+          {loadingAI
+            ? <span className="w-3 h-3 border-2 border-teal-300 border-t-teal-500 rounded-full animate-spin" />
+            : <RiSparklingFill className="text-xs" />
+          }
+          {loadingAI ? "Generating…" : "AI Suggest"}
+        </button>
+      </div>
+
+      <textarea
+        id="description"
+        rows={5}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder="What is this cluster about?"
+        className={cn(
+          "w-full rounded-xl px-4 py-3 text-[13.5px] font-medium leading-relaxed resize-none",
+          "bg-muted/40 border text-justify",
+          error
+            ? "border-red-400/60 dark:border-red-500/50"
+            : "border-border focus:border-teal-400/70 dark:focus:border-teal-500/60 focus:ring-teal-400/20 dark:focus:ring-teal-500/20",
+          "text-foreground placeholder:text-muted-foreground/40",
+          "focus:outline-none focus:ring-2 transition-all duration-150"
+        )}
+      />
+
+      {/* AI Suggestions Panel */}
+      {showSuggestions && (
+        <div className="rounded-xl border border-teal-200/60 dark:border-teal-800/50 overflow-hidden">
+          <div className="flex items-center justify-between px-3 py-2
+                          bg-teal-50/60 dark:bg-teal-950/30 border-b border-teal-200/40 dark:border-teal-800/40">
+            <div className="flex items-center gap-1.5">
+              <RiSparklingFill className="text-teal-500 dark:text-teal-400 text-xs animate-pulse" />
+              <span className="text-[11px] font-bold tracking-wide uppercase text-teal-600 dark:text-teal-400">
+                AI Suggestions
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => { setShowSuggestions(false); setSuggestions([]); }}
+              className="text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+            >
+              <RiCloseLine className="text-sm" />
+            </button>
+          </div>
+
+          <div className="flex flex-col divide-y divide-border/50">
+            {loadingAI
+              ? [1, 2, 3].map(i => (
+                <div key={i} className="px-4 py-3 animate-pulse">
+                  <div className="h-3 bg-muted rounded-full w-full mb-1.5" />
+                  <div className="h-3 bg-muted rounded-full w-3/4" />
+                </div>
+              ))
+              : suggestions.map((s, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => { onChange(s); setShowSuggestions(false); setSuggestions([]); }}
+                  className="w-full text-left px-4 py-3 text-[12.5px] text-muted-foreground
+                               hover:bg-teal-50/50 dark:hover:bg-teal-950/20
+                               hover:text-foreground transition-colors leading-relaxed group"
+                >
+                  <span className="flex items-start gap-2 text-justify">
+                    <RiCheckLine className="text-teal-500 dark:text-teal-400 text-sm flex-shrink-0 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    {s}
+                  </span>
+                </button>
+              ))
+            }
+          </div>
+        </div>
+      )}
+
+      {error
+        ? <p className="text-[12px] text-red-500 dark:text-red-400 font-medium">{error}</p>
+        : <p className="text-[11.5px] text-muted-foreground/60">Optional — shown on the cluster page.</p>
+      }
+    </div>
+  );
+}
+
 
 // ─── Page ─────────────────────────────────────────────────
 export default function CreateClusterPage() {
@@ -344,48 +480,48 @@ export default function CreateClusterPage() {
     return e;
   };
 
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  const errs = validate();
-  if (Object.keys(errs).length) { setErrors(errs); return; }
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const errs = validate();
+    if (Object.keys(errs).length) { setErrors(errs); return; }
 
-  setLoading(true);
-  try {
-    const res = await fetch("/api/cluster/create", {
-      method:  "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({
-        name:        form.name.trim(),
-        slug:        form.slug.trim(),
-        description: form.description.trim() || undefined,
-        batchTag:    form.batchTag.trim()    || undefined,
-        emails,
-      }),
-    });
+    setLoading(true);
+    try {
+      const res = await fetch("/api/cluster/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          name: form.name.trim(),
+          slug: form.slug.trim(),
+          description: form.description.trim() || undefined,
+          batchTag: form.batchTag.trim() || undefined,
+          emails,
+        }),
+      });
 
-    const data = await res.json();
+      const data = await res.json();
 
-    if (!res.ok || !data.success) {
+      if (!res.ok || !data.success) {
 
-      if (res.status === 409) {
-        setErrors({ slug: "This slug is already taken — try another" } as any);
+        if (res.status === 409) {
+          setErrors({ slug: "This slug is already taken — try another" } as any);
+          return;
+        }
+        setErrors({ general: data.message ?? "Something went wrong" });
         return;
       }
-      setErrors({ general: data.message ?? "Something went wrong" });
-      return;
+
+
+      setSuccess(true);
+      setTimeout(() => router.push("/dashboard/teacher/cluster/manageCluster"), 1500);
+
+    } catch {
+      setErrors({ general: "Network error — please try again" });
+    } finally {
+      setLoading(false);
     }
-
-
-    setSuccess(true);
-    setTimeout(() => router.push("/dashboard/teacher/cluster/manageCluster"), 1500);
-
-  } catch {
-    setErrors({ general: "Network error — please try again" });
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   // ── Success state ──────────────────────────────────────
   if (success) {
@@ -509,11 +645,11 @@ const handleSubmit = async (e: React.FormEvent) => {
                 }
               </div>
 
-              <TextArea
-                label="Description" id="description"
-                placeholder="What is this cluster about?"
-                value={form.description} onChange={set("description")}
-                hint="Optional — shown on the cluster page."
+              <DescriptionField
+                value={form.description}
+                onChange={set("description")}
+                clusterName={form.name}
+                error={errors.description}
               />
               <Field
                 label="Batch / cohort tag" id="batchTag"

@@ -1258,7 +1258,7 @@ export default function AccountSettingsPage() {
         <div className="max-w-3xl w-full">
           {activeTab === "notifications" && <NotificationsTab />}
           {activeTab === "privacy" && <PrivacyTab />}
-          {activeTab === "api" && <ApiTab />}
+          {/* {activeTab === "api" && <ApiTab />} */}
           {activeTab === "danger" && <DangerTab />}
         </div>
 
