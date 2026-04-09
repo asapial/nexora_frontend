@@ -285,11 +285,12 @@ export const adminUsersApi = {
 // ─── Teacher Dashboard Extended APIs ─────────────────────
 const TA = "/api/teacher";
 export const teacherDashApi = {
-  getAnalytics:     () => apiFetch<any>(`${TA}/analytics`),
-  getSessionHistory:(p?: any) => apiFetch<any>(`${TA}/session-history${qs(p)}`),
-  getTemplates:     () => apiFetch<any[]>(`${TA}/task-templates`),
-  createTemplate:   (body: any) => apiFetch<any>(`${TA}/task-templates`, { method: "POST", body: JSON.stringify(body) }),
-  updateTemplate:   (id: string, body: any) => apiFetch<any>(`${TA}/task-templates/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
-  deleteTemplate:   (id: string) => apiFetch<any>(`${TA}/task-templates/${id}`, { method: "DELETE" }),
-  getClusters:      () => apiFetch<any[]>(`/api/cluster`),
+  getAnalytics:       () => apiFetch<any>(`${TA}/analytics`),
+  getSessionHistory:  (p?: any) => apiFetch<any>(`${TA}/session-history${qs(p)}`),
+  getTemplates:       () => apiFetch<any[]>(`${TA}/task-templates`),
+  createTemplate:     (body: any) => apiFetch<any>(`${TA}/task-templates`, { method: "POST", body: JSON.stringify(body) }),
+  updateTemplate:     (id: string, body: any) => apiFetch<any>(`${TA}/task-templates/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  deleteTemplate:     (id: string) => apiFetch<any>(`${TA}/task-templates/${id}`, { method: "DELETE" }),
+  getClusters:        () => apiFetch<any[]>(`/api/cluster`),
+  getClusterMembers:  (clusterId: string) => apiFetch<any[]>(`${TA}/tasks/clusters/${clusterId}/members`),
 };

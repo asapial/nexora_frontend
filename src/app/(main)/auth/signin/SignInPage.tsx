@@ -186,6 +186,9 @@ export default function SignInPage() {
           userMsg = "Please verify your email address before signing in.";
         } else if (msg.toLowerCase().includes("blocked") || msg.toLowerCase().includes("locked") || msg.toLowerCase().includes("deactivat")) {
           userMsg = "Your account has been deactivated. Please contact support.";
+        } else if (msg.toLowerCase().includes("misconfigured") || msg.toLowerCase().includes("two-factor") && msg.toLowerCase().includes("reset")) {
+          // 2FA was stale and has been cleared — user must retry immediately
+          userMsg = "Security settings were reset. Please try signing in again.";
         }
         setServerError(userMsg);
         toast.error(userMsg, { position: "top-right" });

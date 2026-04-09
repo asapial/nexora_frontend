@@ -49,12 +49,12 @@ const DEFAULT_ROLES: RoleCard[] = [
     gradient: "",             // overridden by ROLE_GRADIENTS[0]
     glowColor: "rgba(13,148,136,0.45)",
     ctaText: "Start teaching",
-    ctaLink: "/sign-up?role=teacher",
+    ctaLink: "/apply-as-teacher",
   },
   {
-    id: "member",
+    id: "student",
     icon: <RiBookOpenLine className="text-[28px]" />,
-    badge: "Member",
+    badge: "Student",
     title: "Learn. Submit.\nEarn your badge.",
     description:
       "Join clusters, submit tasks, browse resources, track your own progress, and build a verified certificate portfolio that speaks for itself.",
@@ -67,8 +67,8 @@ const DEFAULT_ROLES: RoleCard[] = [
     ],
     gradient: "",             // overridden by ROLE_GRADIENTS[1]
     glowColor: "rgba(109,40,217,0.45)",
-    ctaText: "Join as member",
-    ctaLink: "/sign-up?role=student",
+    ctaText: "Join as Student",
+    ctaLink: "/auth/signin",
   },
 ];
 

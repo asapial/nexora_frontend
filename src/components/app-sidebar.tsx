@@ -32,6 +32,8 @@ import {
   RiTrophyLine,
   RiBarChartBoxLine,
   RiAwardLine,
+  RiMessage2Line,
+  RiUserAddLine,
 } from "react-icons/ri";
 
 import { NavDocuments, type NavDocItem } from "@/components/nav-documents";
@@ -284,6 +286,22 @@ const adminNav: NavDocItem[] = [
       { title: "Content moderation", url: "/dashboard/admin/content-moderation" },
       { title: "Cluster oversight", url: "/dashboard/admin/cluster-oversight" },
       { title: "Certificates", url: "/dashboard/admin/certificates" },
+    ],
+  },
+  {
+    title: "Testimonials",
+    url: "/dashboard/admin/testimonials",
+    icon: <RiMessage2Line />,
+    items: [
+      { title: "Submitted", url: "/dashboard/admin/testimonials" },
+    ],
+  },
+  {
+    title: "Teacher Requests",
+    url: "/dashboard/admin/teacher-requests",
+    icon: <RiUserAddLine />,
+    items: [
+      { title: "All Applications", url: "/dashboard/admin/teacher-requests" },
     ],
   },
 ];

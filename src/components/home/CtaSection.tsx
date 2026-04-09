@@ -36,8 +36,8 @@ const DEFAULT_DATA: CtaSectionData = {
   subtext:
     "Join thousands of teachers and researchers who use Nexora to manage groups, track progress, and grow knowledge together.",
   buttons: [
-    { text: "Create free account", link: "/sign-up", variant: "primary" },
-    { text: "Watch a demo", link: "#demo", variant: "ghost" },
+    { text: "Create free account", link: "/auth/signup", variant: "primary" },
+    { text: "Watch a demo", link: "/watch-demo", variant: "ghost" },
   ],
   trustItems: [
     { text: "No credit card" },

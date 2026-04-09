@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
 import SectionContainer from "@/utils/SectionContainer";
 
 // ─── Types ────────────────────────────────────────────────
@@ -503,21 +504,23 @@ export default function HeroSection() {
                 <RiArrowRightLine className="text-lg transition-transform duration-200 group-hover:translate-x-0.5" />
               </Button>
 
-              <Button
-                variant="outline"
-                size="lg"
-                className={cn(
-                  "h-12 px-7 rounded-xl font-semibold text-base gap-2",
-                  "border-zinc-300 dark:border-zinc-700 bg-white/70 dark:bg-zinc-900/50",
-                  "text-zinc-700 dark:text-zinc-200",
-                  "backdrop-blur-sm",
-                  "transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]",
-                  "hover:border-teal-400 dark:hover:border-teal-600 hover:text-teal-700 dark:hover:text-teal-400"
-                )}
-              >
-                <RiPlayCircleLine className="text-lg text-teal-600 dark:text-teal-400" />
-                Watch Demo
-              </Button>
+              <Link href="/watch-demo">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className={cn(
+                    "h-12 px-7 rounded-xl font-semibold text-base gap-2",
+                    "border-zinc-300 dark:border-zinc-700 bg-white/70 dark:bg-zinc-900/50",
+                    "text-zinc-700 dark:text-zinc-200",
+                    "backdrop-blur-sm",
+                    "transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]",
+                    "hover:border-teal-400 dark:hover:border-teal-600 hover:text-teal-700 dark:hover:text-teal-400"
+                  )}
+                >
+                  <RiPlayCircleLine className="text-lg text-teal-600 dark:text-teal-400" />
+                  Watch Demo
+                </Button>
+              </Link>
             </div>
 
             {/* Trust line */}

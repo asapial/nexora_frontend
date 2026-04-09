@@ -20,7 +20,7 @@ export default function page() {
       <FeaturesSection></FeaturesSection>
       <HowItWorksSection></HowItWorksSection>
       <RolesSection></RolesSection>
-      <BannerSection></BannerSection>
+      {/* <BannerSection></BannerSection> */}
       <TestimonialsSection></TestimonialsSection>
       <FaqSection></FaqSection>
       <CtaSection></CtaSection>
