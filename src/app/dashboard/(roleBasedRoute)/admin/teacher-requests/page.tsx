@@ -6,7 +6,6 @@ import {
   RiCheckboxCircleLine,
   RiCloseCircleLine,
   RiLoaderLine,
-  RiRefreshLine,
   RiUserLine,
   RiMailLine,
   RiPhoneLine,
@@ -20,6 +19,7 @@ import {
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import RefreshIcon from "@/components/shared/RefreshIcon";
 
 // ─── Types ────────────────────────────────────────────────
 interface Application {
@@ -327,12 +327,7 @@ export default function AdminTeacherRequestsPage() {
           </div>
           <p className="text-sm text-zinc-500 dark:text-zinc-400">Review and manage teacher role applications from users.</p>
         </div>
-        <button
-          onClick={() => { fetchPending(); fetchAll(); }}
-          className="flex items-center gap-1.5 h-9 px-3 rounded-lg text-xs font-semibold border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
-        >
-          <RiRefreshLine /> Refresh
-        </button>
+        <RefreshIcon onClick={() => { fetchPending(); fetchAll(); }} loading={loading} />
       </div>
 
       {/* Tabs */}

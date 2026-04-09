@@ -7,11 +7,12 @@ import {
   RiGroupLine, RiMoneyDollarCircleLine, RiCheckLine,
   RiAlertLine,
   RiArrowRightLine, RiEditLine, RiEyeLine, RiMoreLine,
-  RiFileTextLine, RiStarLine, RiRefreshLine,
+  RiFileTextLine, RiStarLine,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
 import { courseApi } from "../../../../../lib/api";
 import type { Course, CourseStatus } from "../../../../../types/course.type";
+import RefreshIcon from "@/components/shared/RefreshIcon";
 
 // ─── Status Config ────────────────────────────────────────
 const STATUS_CONFIG: Record<CourseStatus, { label: string; badge: string; dot: string }> = {
@@ -269,10 +270,7 @@ export default function MyCoursesPage() {
           <p className="text-[13.5px] text-muted-foreground mt-1">Create, manage and track all your courses in one place.</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={fetchCourses} disabled={loading}
-            className="w-9 h-9 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all disabled:opacity-50" title="Refresh">
-            <RiRefreshLine className={cn("text-sm", loading && "animate-spin")} />
-          </button>
+          <RefreshIcon onClick={fetchCourses} loading={loading} />
           <button onClick={() => router.push("/dashboard/teacher/courses/create")}
             className="inline-flex items-center gap-2 h-9 px-5 rounded-xl bg-teal-600 dark:bg-teal-500 hover:bg-teal-700 dark:hover:bg-teal-600 text-white text-[13.5px] font-bold shadow-md shadow-teal-600/20 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]">
             <RiAddLine /> New course

@@ -20,6 +20,7 @@ import {
   RiUserAddLine, RiAlertLine, RiLoader4Line,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
+import RefreshIcon from "@/components/shared/RefreshIcon";
 
 // ─────────────────────────────────────────────────────────
 // TYPES
@@ -438,7 +439,7 @@ function QuickActions({ role }: { role: Role }) {
 // ─────────────────────────────────────────────────────────
 // WELCOME SECTION
 // ─────────────────────────────────────────────────────────
-function WelcomeSection({ role, name, stats }: { role: Role; name: string; stats: Record<string, number> }) {
+function WelcomeSection({ role, name, stats, onRefresh, refreshing }: { role: Role; name: string; stats: Record<string, number>; onRefresh: () => void; refreshing: boolean }) {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
@@ -470,6 +471,7 @@ function WelcomeSection({ role, name, stats }: { role: Role; name: string; stats
         </h1>
         <p className="text-[13.5px] text-muted-foreground mt-1.5">{subtitle}</p>
       </div>
+      <RefreshIcon onClick={onRefresh} loading={refreshing} />
     </div>
   );
 }
@@ -513,39 +515,37 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchAll = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        // Fetch user info
-        const userRes = await fetch("/api/auth/me", { credentials: "include" });
-        const userData = await userRes.json();
+  const fetchAll = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      // Fetch user info
+      const userRes = await fetch("/api/auth/me", { credentials: "include" });
+      const userData = await userRes.json();
 
-        if (userData.success) {
-          const fullName = userData?.data?.userData?.name || "";
-          const userRole = userData?.data?.userData?.role || "STUDENT";
-          setUserName(fullName);
-          setRole(userRole);
-        }
-
-        // Fetch dashboard data
-        const dashRes = await fetch("/api/dashboard/stats", { credentials: "include" });
-        const dashJson = await dashRes.json();
-
-        if (dashJson.success && dashJson.data) {
-          setDashData(dashJson.data);
-        }
-      } catch (err: any) {
-        console.error("Failed to fetch dashboard:", err);
-        setError(err.message);
-      } finally {
-        setLoading(false);
+      if (userData.success) {
+        const fullName = userData?.data?.userData?.name || "";
+        const userRole = userData?.data?.userData?.role || "STUDENT";
+        setUserName(fullName);
+        setRole(userRole);
       }
-    };
 
-    fetchAll();
+      // Fetch dashboard data
+      const dashRes = await fetch("/api/dashboard/stats", { credentials: "include" });
+      const dashJson = await dashRes.json();
+
+      if (dashJson.success && dashJson.data) {
+        setDashData(dashJson.data);
+      }
+    } catch (err: any) {
+      console.error("Failed to fetch dashboard:", err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => { fetchAll(); }, [fetchAll]);
 
   if (loading) {
     return (
@@ -573,7 +573,7 @@ export default function DashboardPage() {
     <div className={cn("min-h-screen text-foreground transition-colors duration-300", "font-sans")}>
       <main className="flex flex-col gap-6 p-5 lg:p-7 pt-6 max-w-7xl mx-auto">
         {/* Welcome */}
-        <WelcomeSection role={role} name={userName} stats={stats} />
+        <WelcomeSection role={role} name={userName} stats={stats} onRefresh={fetchAll} refreshing={loading} />
 
         {/* Stats grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">

@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import {
   RiSparklingFill,
-  RiRefreshLine,
   RiBankCardLine,
   RiCheckLine,
   RiTimeLine,
@@ -12,9 +11,11 @@ import {
   RiRefundLine,
   RiAlertLine,
   RiArrowRightLine,
+  RiLoader4Line,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
 import { studentApi } from "@/lib/api";
+import RefreshIcon from "@/components/shared/RefreshIcon";
 
 const fmtUsd = (n: number) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
@@ -100,15 +101,7 @@ export default function StudentPaymentHistoryPage() {
             Course purchases processed through Stripe. Free enrollments are not listed here.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => void load()}
-          disabled={loading}
-          className="w-9 h-9 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all disabled:opacity-50"
-          title="Refresh"
-        >
-          <RiRefreshLine className={cn("text-sm", loading && "animate-spin")} />
-        </button>
+        <RefreshIcon onClick={() => void load()} loading={loading} />
       </div>
 
       {error && (
@@ -143,7 +136,7 @@ export default function StudentPaymentHistoryPage() {
         </div>
         {loading ? (
           <div className="p-10 flex justify-center">
-            <RiRefreshLine className="animate-spin text-2xl text-teal-500" />
+            <RiLoader4Line className="animate-spin text-2xl text-teal-500" />
           </div>
         ) : payments.length === 0 ? (
           <div className="py-16 px-6 text-center">

@@ -9,12 +9,12 @@ import {
   RiErrorWarningLine,
   RiCheckboxCircleLine,
   RiFilterLine,
-  RiRefreshLine,
   RiUserLine,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
 import { teacherNoticeApi } from "@/lib/api";
 import { toast } from "sonner";
+import RefreshIcon from "@/components/shared/RefreshIcon";
 
 type Urgency = "INFO" | "IMPORTANT" | "CRITICAL";
 type TabKey = "all" | "teachers" | "personal";
@@ -131,13 +131,7 @@ export default function TeacherNoticePage() {
             </p>
           )}
         </div>
-        <button
-          onClick={fetchNotices}
-          className="flex items-center gap-1.5 text-[12.5px] font-semibold text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-lg border border-border hover:bg-muted/40"
-        >
-          <RiRefreshLine className={cn("text-sm", loading && "animate-spin")} />
-          Refresh
-        </button>
+        <RefreshIcon onClick={fetchNotices} loading={loading} />
       </div>
 
       {/* Tabs */}

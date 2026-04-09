@@ -2,12 +2,13 @@
 
 import { useCallback, useEffect, useState } from "react";
 import {
-  RiSparklingFill, RiAwardLine, RiRefreshLine,
+  RiSparklingFill, RiAwardLine,
   RiLinkM, RiDownloadLine, RiBookOpenLine, RiCheckboxCircleLine,
   RiShieldCheckLine, RiTimeLine,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import RefreshIcon from "@/components/shared/RefreshIcon";
 
 type Certificate = {
   id: string;
@@ -95,10 +96,7 @@ export default function StudentCertificatesPage() {
           <h1 className="text-[1.5rem] font-extrabold tracking-tight text-foreground leading-none">My Certificates</h1>
           <p className="text-[13px] text-muted-foreground mt-1">Certificates earned upon completing courses — download anytime</p>
         </div>
-        <button onClick={load}
-          className="w-9 h-9 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all">
-          <RiRefreshLine className={cn("text-sm", loading && "animate-spin")} />
-        </button>
+        <RefreshIcon onClick={load} loading={loading} />
       </div>
 
       {/* Stats */}

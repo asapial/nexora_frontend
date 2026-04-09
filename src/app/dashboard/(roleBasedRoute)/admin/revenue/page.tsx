@@ -2,13 +2,14 @@
 
 import { useCallback, useEffect, useState } from "react";
 import {
-  RiSparklingFill, RiRefreshLine, RiMoneyDollarCircleLine, RiGroupLine,
+  RiSparklingFill, RiMoneyDollarCircleLine, RiGroupLine,
   RiBookOpenLine, RiLineChartLine, RiCalendarLine, RiArrowUpLine,
   RiFileTextLine, RiUserLine,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
 import { adminApi } from "../../../../../lib/api";
 import { toast } from "sonner";
+import RefreshIcon from "@/components/shared/RefreshIcon";
 
 const fmtUSD  = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n ?? 0);
 const fmtDate = (d: string) => new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
@@ -57,10 +58,7 @@ export default function AdminRevenuePage() {
             <h1 className="text-[1.5rem] font-extrabold tracking-tight text-foreground leading-none">Revenue Overview</h1>
             <p className="text-[13px] text-muted-foreground mt-1">Platform-wide earnings, per-course and per-teacher breakdown</p>
           </div>
-          <button onClick={() => { loadRevenue(); loadTransactions(); }}
-            className="w-9 h-9 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all flex-shrink-0">
-            <RiRefreshLine className={cn("text-sm", loading && "animate-spin")} />
-          </button>
+          <RefreshIcon onClick={() => { loadRevenue(); loadTransactions(); }} loading={loading} />
         </div>
       </div>
 

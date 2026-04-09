@@ -2,13 +2,14 @@
 
 import { useCallback, useEffect, useState } from "react";
 import {
-  RiSparklingFill, RiAwardLine, RiRefreshLine, RiLoader4Line,
+  RiSparklingFill, RiAwardLine, RiLoader4Line,
   RiCheckLine, RiLinkM, RiDownloadLine, RiUserLine, RiBookOpenLine,
   RiCheckboxCircleLine, RiSearchLine, RiFilterLine,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
 import { adminPlatformApi, adminApi } from "@/lib/api";
 import { toast } from "sonner";
+import RefreshIcon from "@/components/shared/RefreshIcon";
 
 type Certificate = {
   id: string;
@@ -144,10 +145,7 @@ export default function CertificatesPage() {
             <h1 className="text-[1.5rem] font-extrabold tracking-tight text-foreground leading-none">Certificate Management</h1>
             <p className="text-[13px] text-muted-foreground mt-1">Generate completion certificates with Cloudinary PDF storage and unique verification URLs</p>
           </div>
-          <button onClick={loadCerts}
-            className="w-9 h-9 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all">
-            <RiRefreshLine className={cn("text-sm", loading && "animate-spin")} />
-          </button>
+          <RefreshIcon onClick={loadCerts} loading={loading} />
         </div>
       </div>
 

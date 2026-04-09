@@ -14,7 +14,16 @@ const QUICK_CHIPS: Record<string, string[]> = {
   STUDENT: ["My courses", "Pending tasks?", "Who is my teacher?", "Next session?"],
   TEACHER: ["List my clusters", "How many students?", "My courses", "Upcoming sessions"],
   ADMIN:   ["Total users", "Active courses", "How many teachers?", "Recent activity"],
-  GUEST:   ["What is Nexora?", "How does it work?", "What can teachers do?"],
+  GUEST:   [
+    "How do I register?",
+    "How do I login?",
+    "Try the demo",
+    "Is Nexora free?",
+    "How to apply as teacher?",
+    "How do paid courses work?",
+    "What is a cluster?",
+    "How does health score work?",
+  ],
 };
 
 // ── Typing dots ────────────────────────────────────────────
@@ -40,6 +49,96 @@ function TypingIndicator() {
   );
 }
 
+// ── Markdown inline renderer ───────────────────────────────
+function renderInline(text: string, isUser = false): React.ReactNode[] {
+  // Parse **bold** and [label](url) patterns
+  const parts: React.ReactNode[] = [];
+  const regex = /(\*\*(.+?)\*\*|\[([^\]]+)\]\(([^)]+)\))/g;
+  let last = 0;
+  let match: RegExpExecArray | null;
+  let key = 0;
+
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > last) {
+      parts.push(<span key={key++}>{text.slice(last, match.index)}</span>);
+    }
+    if (match[1].startsWith("**")) {
+      parts.push(<strong key={key++} className="font-semibold">{match[2]}</strong>);
+    } else {
+      const href  = match[4];
+      const label = match[3];
+      const isExternal = href.startsWith("http");
+      parts.push(
+        <a
+          key={key++}
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className={cn(
+            "inline-flex items-center gap-1 px-2 py-[2px] rounded-full text-[11px] font-semibold",
+            "no-underline transition-all duration-150 hover:scale-[1.04] active:scale-[0.97]",
+            isUser
+              ? "bg-white/20 hover:bg-white/30 text-white border border-white/30"
+              : "bg-teal-50 dark:bg-teal-950/60 border border-teal-200/60 dark:border-teal-700/60 text-teal-700 dark:text-teal-300 hover:bg-teal-100 dark:hover:bg-teal-950/80"
+          )}
+        >
+          {label}
+          <svg className="w-2.5 h-2.5 opacity-70" fill="none" viewBox="0 0 10 10" stroke="currentColor" strokeWidth={2}>
+            <path d="M2 8L8 2M8 2H4M8 2v4" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </a>
+      );
+    }
+    last = match.index + match[0].length;
+  }
+
+  if (last < text.length) {
+    parts.push(<span key={key++}>{text.slice(last)}</span>);
+  }
+
+  return parts;
+}
+
+function renderLine(line: string, idx: number, isUser: boolean): React.ReactNode {
+  if (line === "") return <div key={idx} className="h-1.5" />;
+
+  // Numbered list: "1. " "2. "
+  const numberedMatch = line.match(/^(\d+)\.\s+(.+)$/);
+  if (numberedMatch) {
+    return (
+      <div key={idx} className="flex gap-2 items-start">
+        <span className={cn("font-semibold flex-shrink-0 text-[11px] leading-[1.7]", isUser ? "opacity-70" : "text-teal-600 dark:text-teal-400")}>{numberedMatch[1]}.</span>
+        <span>{renderInline(numberedMatch[2], isUser)}</span>
+      </div>
+    );
+  }
+
+  // Bullet list: "- " or "• "
+  const bulletMatch = line.match(/^[-•]\s+(.+)$/);
+  if (bulletMatch) {
+    return (
+      <div key={idx} className="flex gap-2 items-start">
+        <span className={cn("flex-shrink-0 mt-[5px] w-[5px] h-[5px] rounded-full", isUser ? "bg-white/60" : "bg-teal-500 dark:bg-teal-400")} />
+        <span>{renderInline(bulletMatch[1], isUser)}</span>
+      </div>
+    );
+  }
+
+  // Section header: "## " or "### "
+  if (line.startsWith("## ") || line.startsWith("### ")) {
+    const text = line.replace(/^#{2,3}\s+/, "");
+    return <p key={idx} className={cn("font-bold text-[12px] mt-1", isUser ? "opacity-90" : "text-teal-700 dark:text-teal-400")}>{renderInline(text, isUser)}</p>;
+  }
+
+  // Horizontal rule
+  if (line === "---" || line === "────────────────────") {
+    return <hr key={idx} className="border-current opacity-10 my-1" />;
+  }
+
+  return <p key={idx}>{renderInline(line, isUser)}</p>;
+}
+
 // ── Message bubble ─────────────────────────────────────────
 function MessageBubble({ msg }: { msg: ChatMessage }) {
   const isUser = msg.role === "user";
@@ -54,16 +153,14 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
         {isUser ? <RiUser3Line /> : <RiRobot2Line />}
       </div>
       <div className={cn(
-        "max-w-[79%] px-3.5 py-2.5 text-[12.5px] leading-relaxed",
+        "max-w-[79%] px-3.5 py-2.5 text-[12.5px] leading-relaxed flex flex-col gap-[3px]",
         isUser
           ? "rounded-2xl rounded-br-sm bg-teal-600 dark:bg-teal-500 text-white"
           : "rounded-2xl rounded-bl-sm bg-muted/60 border border-border/60 text-foreground"
       )}>
-        {msg.content.split("\n").map((line, i) => (
-          <p key={i} className={line === "" ? "h-2" : ""}>{line}</p>
-        ))}
+        {msg.content.split("\n").map((line, i) => renderLine(line, i, isUser))}
         <p className={cn(
-          "text-[10px] mt-1.5 select-none opacity-60",
+          "text-[10px] mt-1 select-none opacity-60",
           isUser ? "text-right" : ""
         )}>
           {msg.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
@@ -72,6 +169,7 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
     </div>
   );
 }
+
 
 // ── Guest limit wall ───────────────────────────────────────
 function GuestLimitWall({ onLogin }: { onLogin: () => void }) {

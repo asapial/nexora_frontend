@@ -8,12 +8,12 @@ import {
   RiCheckboxCircleLine,
   RiDeleteBinLine,
   RiLoaderLine,
-  RiRefreshLine,
   RiUserLine,
   RiMessageLine,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import RefreshIcon from "@/components/shared/RefreshIcon";
 
 // ─── Types ────────────────────────────────────────────────
 interface Testimonial {
@@ -229,12 +229,7 @@ export default function AdminTestimonialsPage() {
           </div>
           <p className="text-sm text-zinc-500 dark:text-zinc-400">Manage user-submitted testimonials for the homepage.</p>
         </div>
-        <button
-          onClick={() => { fetchSubmitted(); fetchApproved(); }}
-          className="flex items-center gap-1.5 h-9 px-3 rounded-lg text-xs font-semibold border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
-        >
-          <RiRefreshLine /> Refresh
-        </button>
+        <RefreshIcon onClick={() => { fetchSubmitted(); fetchApproved(); }} loading={loading} />
       </div>
 
       {/* Tabs */}

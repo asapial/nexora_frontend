@@ -2,13 +2,14 @@
 
 import { useCallback, useEffect, useState } from "react";
 import {
-  RiSparklingFill, RiRefreshLine, RiSearchLine, RiGroupLine, RiBookOpenLine,
+  RiSparklingFill, RiSearchLine, RiGroupLine, RiBookOpenLine,
   RiCheckLine, RiCloseLine, RiCalendarLine, RiMoneyDollarCircleLine, RiFilterLine,
   RiLoader4Line,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
 import { adminApi } from "../../../../../lib/api";
 import { toast } from "sonner";
+import RefreshIcon from "@/components/shared/RefreshIcon";
 
 const fmtUSD  = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
 const fmtDate = (d: string) => new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
@@ -78,9 +79,7 @@ export default function AdminEnrollmentsPage() {
             <h1 className="text-[1.5rem] font-extrabold tracking-tight text-foreground leading-none">Enrollments</h1>
             <p className="text-[13px] text-muted-foreground mt-1">All course enrollments across the platform</p>
           </div>
-          <button onClick={load} className="w-9 h-9 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all flex-shrink-0">
-            <RiRefreshLine className={cn("text-sm", loading && "animate-spin")} />
-          </button>
+          <RefreshIcon onClick={load} loading={loading} />
         </div>
       </div>
 

@@ -3,13 +3,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   RiSparklingFill, RiCalendarLine, RiGroupLine, RiCheckLine,
-  RiFileTextLine, RiSearchLine, RiRefreshLine, RiDownloadLine,
+  RiFileTextLine, RiSearchLine, RiDownloadLine,
   RiFilterLine, RiLoader4Line,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
 import { teacherDashApi } from "@/lib/api";
 import { toast } from "sonner";
 import { AmbientBg2, AmbientBg6 } from "@/components/backgrounds/AmbientBg";
+import RefreshIcon from "@/components/shared/RefreshIcon";
 
 type Session = {
   id: string;
@@ -111,10 +112,7 @@ export default function TeacherSessionHistoryPage() {
             <p className="text-[13px] text-muted-foreground mt-1">Past sessions with attendance and task submission metrics</p>
           </div>
           <div className="flex gap-2 shrink-0 print:hidden">
-            <button onClick={load}
-              className="w-9 h-9 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all">
-              <RiRefreshLine className={cn("text-sm", loading && "animate-spin")} />
-            </button>
+            <RefreshIcon onClick={load} loading={loading} />
             <button onClick={exportPDF}
               className="h-9 px-4 rounded-xl bg-teal-600 dark:bg-teal-500 hover:bg-teal-700 text-white text-[12.5px] font-bold flex items-center gap-1.5 transition-all">
               <RiDownloadLine /> Export PDF

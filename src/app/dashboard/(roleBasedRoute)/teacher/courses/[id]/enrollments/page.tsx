@@ -4,11 +4,12 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import {
   RiSparklingFill, RiArrowLeftLine, RiSearchLine, RiDownloadLine,
-  RiGroupLine, RiMoneyDollarCircleLine, RiCheckboxCircleLine, RiRefreshLine,
+  RiGroupLine, RiMoneyDollarCircleLine, RiCheckboxCircleLine,
   RiPercentLine,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
 import { courseApi } from "@/lib/api";
+import RefreshIcon from "@/components/shared/RefreshIcon";
 
 import type { CourseEnrollment, PaymentStatus } from "@/types/course.type";
 
@@ -93,9 +94,7 @@ export default function EnrollmentsDetailPage() {
             <p className="text-[13px] text-muted-foreground mt-1">Track every student enrolled in this course.</p>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={fetchData} className="w-9 h-9 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all">
-              <RiRefreshLine className={cn("text-sm", loading && "animate-spin")} />
-            </button>
+            <RefreshIcon onClick={fetchData} loading={loading} />
             <button className="flex items-center gap-2 h-9 px-4 rounded-xl border border-border text-[12.5px] font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all flex-shrink-0">
               <RiDownloadLine className="text-sm" /> Export CSV
             </button>

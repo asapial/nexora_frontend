@@ -3,12 +3,13 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   RiSparklingFill, RiShieldCheckLine, RiDeleteBinLine, RiAlertLine,
-  RiRefreshLine, RiLoader4Line, RiBookOpenLine, RiFileTextLine,
+  RiLoader4Line, RiBookOpenLine, RiFileTextLine,
   RiUserLine, RiCloseLine, RiTimeLine, RiEyeLine,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
 import { adminPlatformApi } from "@/lib/api";
 import { toast } from "sonner";
+import RefreshIcon from "@/components/shared/RefreshIcon";
 
 const fmtDate = (d: string) =>
   new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
@@ -240,10 +241,7 @@ export default function ContentModerationPage() {
           <h1 className="text-[1.5rem] font-extrabold tracking-tight text-foreground leading-none">Content Moderation</h1>
           <p className="text-[13px] text-muted-foreground mt-1">Review published courses and resources, remove items, and warn users</p>
         </div>
-        <button onClick={load}
-          className="w-9 h-9 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all">
-          <RiRefreshLine className={cn("text-sm", loading && "animate-spin")} />
-        </button>
+        <RefreshIcon onClick={load} loading={loading} />
       </div>
 
       {/* Tabs */}

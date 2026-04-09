@@ -4,13 +4,13 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import {
   RiCalendarCheckLine, RiGroupLine, RiSparklingFill,
   RiCheckLine, RiCloseLine, RiSubtractLine, RiSaveLine,
-  RiHistoryLine, RiLoader4Line, RiAlertLine, RiRefreshLine,
+  RiHistoryLine, RiLoader4Line, RiAlertLine,
   RiSettings3Line,
-  RiFileWarningLine, 
-  // RiWarningLine,
+  RiFileWarningLine,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import RefreshIcon from "@/components/shared/RefreshIcon";
 
 // ─── Types ────────────────────────────────────────────────
 type Status = "PRESENT" | "ABSENT" | "EXCUSED" | "UNMARKED";
@@ -275,6 +275,7 @@ export default function AttendanceTrackingPage() {
           <h1 className="text-[1.5rem] font-extrabold tracking-tight text-foreground leading-none">Attendance Tracking</h1>
         </div>
         <div className="flex items-center gap-2">
+          <RefreshIcon onClick={fetchClusters} loading={loadingClusters} />
           <button onClick={() => setShowWarningCfg(s => !s)}
             className={cn("inline-flex items-center gap-2 h-9 px-3 rounded-xl border text-[12.5px] font-semibold transition-all",
               showWarningCfg ? "border-amber-300/60 bg-amber-50/40 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400" : "border-border text-muted-foreground hover:text-foreground hover:bg-muted/50")}>

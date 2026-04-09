@@ -7,12 +7,12 @@ import {
   RiDeleteBinLine, RiSendPlaneLine, RiFileTextLine, RiAlertLine,
   RiCheckLine, RiCloseLine, RiArrowUpLine, RiArrowDownLine,
   RiVideoLine, RiArticleLine, RiFileMarkedLine, RiLoader4Line,
-  RiRefreshLine,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
 import { courseApi } from "../../../../../../../lib/api";
 import { toast } from "sonner";
 import type { CourseMission, MissionContent, MissionContentType } from "../../../../../../../types/course.type";
+import RefreshIcon from "@/components/shared/RefreshIcon";
 
 function AmbientBg() {
   return (
@@ -313,9 +313,7 @@ export default function ManageMissionsPage() {
               <p className="text-[13px] text-muted-foreground mt-1">Build the lesson structure. Each mission can contain videos, text and PDFs.</p>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
-              <button onClick={fetchMissions} className="w-9 h-9 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all">
-                <RiRefreshLine className={cn("text-sm", loading && "animate-spin")} />
-              </button>
+              <RefreshIcon onClick={fetchMissions} loading={loading} />
               <button onClick={() => setShowCreate(true)}
                 className="inline-flex items-center gap-2 h-9 px-5 rounded-xl bg-teal-600 dark:bg-teal-500 hover:bg-teal-700 text-white text-[13.5px] font-bold shadow-md shadow-teal-600/20 transition-all hover:scale-[1.02] active:scale-[0.98]">
                 <RiAddLine /> Add mission
