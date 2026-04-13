@@ -8,13 +8,14 @@ import {
   RiSparklingFill, RiArrowLeftLine, RiSearchLine, RiDownloadLine,
   RiGroupLine, RiMoneyDollarCircleLine, RiCheckboxCircleLine,
   RiAlertLine, RiPriceTag3Line, RiAddLine, RiShieldCheckLine,
-  RiCloseLine, RiSendPlaneLine, RiLoader4Line, RiRefreshLine,
+  RiCloseLine, RiSendPlaneLine, RiLoader4Line,
   RiPercentLine,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
 import { courseApi } from "../../../../../../../lib/api";
 import { toast } from "sonner";
 import type { CourseEnrollment, CoursePriceRequest, PaymentStatus } from "../../../../../../../types/course.type";
+import RefreshIcon from "@/components/shared/RefreshIcon";
 
 function AmbientBg() {
   return (
@@ -151,9 +152,7 @@ export function EnrollmentsDetailPage() {
             <p className="text-[13px] text-muted-foreground mt-1">Track every student enrolled in this course.</p>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={fetchData} className="w-9 h-9 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all">
-              <RiRefreshLine className={cn("text-sm", loading && "animate-spin")} />
-            </button>
+            <RefreshIcon onClick={fetchData} loading={loading} />
             <button className="flex items-center gap-2 h-9 px-4 rounded-xl border border-border text-[12.5px] font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all flex-shrink-0">
               <RiDownloadLine className="text-sm" /> Export CSV
             </button>
@@ -290,9 +289,7 @@ export default function PriceRequestsPage() {
               <p className="text-[13px] text-muted-foreground mt-1">Submit and track price approval requests for this course.</p>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
-              <button onClick={fetchRequests} className="w-9 h-9 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all">
-                <RiRefreshLine className={cn("text-sm", loading && "animate-spin")} />
-              </button>
+              <RefreshIcon onClick={fetchRequests} loading={loading} />
               <button onClick={() => setShowModal(true)} className="inline-flex items-center gap-2 h-9 px-5 rounded-xl bg-teal-600 dark:bg-teal-500 hover:bg-teal-700 text-white text-[13.5px] font-bold shadow-md shadow-teal-600/20 transition-all hover:scale-[1.02] active:scale-[0.98]">
                 <RiAddLine /> New request
               </button>

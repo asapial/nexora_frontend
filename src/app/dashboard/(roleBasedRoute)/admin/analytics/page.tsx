@@ -3,11 +3,12 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   RiBarChartBoxLine, RiGroupLine, RiFlaskLine, RiCalendarCheckLine,
-  RiBookOpenLine, RiSparklingFill, RiFileTextLine, RiRefreshLine,
+  RiBookOpenLine, RiSparklingFill, RiFileTextLine,
   RiMoneyDollarCircleLine,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
 import { adminPlatformApi, adminApi } from "@/lib/api";
+import RefreshIcon from "@/components/shared/RefreshIcon";
 
 function StatCard({ icon, label, value, accent }: {
   icon: React.ReactNode; label: string; value: number | string; accent: string;
@@ -130,10 +131,7 @@ export default function AdminAnalyticsPage() {
             <h1 className="text-[1.5rem] font-extrabold tracking-tight text-foreground leading-none">Platform Analytics</h1>
             <p className="text-[13px] text-muted-foreground mt-1">Live platform metrics, trends, and storage breakdown</p>
           </div>
-          <button onClick={load}
-            className="w-9 h-9 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all">
-            <RiRefreshLine className={cn("text-sm", loading && "animate-spin")} />
-          </button>
+          <RefreshIcon onClick={load} loading={loading} />
         </div>
       </div>
 

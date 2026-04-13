@@ -10,7 +10,7 @@ import { studentApi } from "@/lib/api";
 import { AmbientBg } from "@/components/courses/AmbientBg";
 import { CatalogCard } from "@/components/courses/CatalogCard";
 import { SkeletonCard } from "@/components/courses/SkeletonCard";
-import { AmbientBg6 } from "@/components/backgrounds/AmbientBg";
+import { AmbientBg1, AmbientBg2, AmbientBg3, AmbientBg4, AmbientBg5, AmbientBg6 } from "@/components/backgrounds/AmbientBg";
 
 
 

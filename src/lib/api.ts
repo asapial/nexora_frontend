@@ -25,6 +25,7 @@ export const courseApi = {
   update: (id: string, body: any) => apiFetch<any>(`${T}/courses/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   submit: (id: string) => apiFetch<any>(`${T}/courses/${id}/submit`, { method: "POST" }),
   close: (id: string) => apiFetch<any>(`${T}/courses/${id}/close`, { method: "POST" }),
+  finish: (id: string) => apiFetch<any>(`${T}/courses/${id}/finish`, { method: "POST" }),
   getMissions: (courseId: string) => apiFetch<any[]>(`${T}/courses/${courseId}/missions`),
   createMission: (courseId: string, body: any) => apiFetch<any>(`${T}/courses/${courseId}/missions`, { method: "POST", body: JSON.stringify(body) }),
   updateMission: (cId: string, mId: string, body: any) => apiFetch<any>(`${T}/courses/${cId}/missions/${mId}`, { method: "PATCH", body: JSON.stringify(body) }),
@@ -116,6 +117,64 @@ export const settingsApi = {
   getAccount: () => apiFetch<any>("/api/settings/account"),
   updateAccount: (body: Record<string, unknown>) =>
     apiFetch<any>("/api/settings/account", { method: "PATCH", body: JSON.stringify(body) }),
+  // Password change — uses existing auth route
+  changePassword: (oldPassword: string, newPassword: string) =>
+    apiFetch<any>("/api/auth/changePassword", { method: "POST", body: JSON.stringify({ oldPassword, newPassword }) }),
+  // Sessions
+  getSessions: () => apiFetch<any>("/api/settings/sessions"),
+  revokeSession: (sessionId: string) =>
+    apiFetch<any>(`/api/settings/sessions/${sessionId}/revoke`, { method: "POST" }),
+  revokeAllSessions: () =>
+    apiFetch<any>("/api/settings/sessions/revoke-all", { method: "POST" }),
+  // Danger zone
+  deactivateAccount: () =>
+    apiFetch<any>("/api/settings/deactivate", { method: "POST" }),
+  deleteAccount: (confirmText: string) =>
+    apiFetch<any>("/api/settings/delete-account", { method: "POST", body: JSON.stringify({ confirmText }) }),
+  exportData: () =>
+    apiFetch<any>("/api/settings/export-data", { method: "POST" }),
+  // PDF export — streams binary
+  exportDataPDF: async () => {
+    const res = await fetch("/api/settings/export-data-pdf", { credentials: "include" });
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => null);
+      throw new Error(errJson?.message ?? "PDF export failed");
+    }
+    return res.blob();
+  },
+  // Two-Factor Authentication
+  getTwoFactorStatus: () =>
+    apiFetch<{ twoFactorEnabled: boolean }>("/api/settings/two-factor-status"),
+  enableTwoFactor: async (password: string) => {
+    const res = await apiFetch<any>("/api/settings/two-factor/enable", {
+      method: "POST",
+      body: JSON.stringify({ password }),
+    });
+    return res.data ?? res;
+  },
+  verifyTwoFactor: async (code: string) => {
+    const res = await apiFetch<any>("/api/settings/two-factor/verify-totp", {
+      method: "POST",
+      body: JSON.stringify({ code }),
+    });
+    return res.data ?? res;
+  },
+  disableTwoFactor: async (password: string) => {
+    const res = await apiFetch<any>("/api/settings/two-factor/disable", {
+      method: "POST",
+      body: JSON.stringify({ password }),
+    });
+    return res.data ?? res;
+  },
+  // API Key management
+  getApiKeys: () =>
+    apiFetch<any[]>("/api/settings/api-keys"),
+  generateApiKey: (label: string) =>
+    apiFetch<any>("/api/settings/api-keys", { method: "POST", body: JSON.stringify({ label }) }),
+  deleteApiKey: (keyId: string) =>
+    apiFetch<any>(`/api/settings/api-keys/${keyId}`, { method: "DELETE" }),
+  revokeAllApiKeys: () =>
+    apiFetch<any>("/api/settings/api-keys/revoke-all", { method: "POST" }),
 };
 
 // ─── Stripe / Payment API ─────────────────────────────────
@@ -190,6 +249,8 @@ export const adminPlatformApi = {
   removeCourse:     (id: string) => apiFetch<any>(`${AP}/moderation/courses/${id}`, { method: "DELETE" }),
   removeResource:   (id: string) => apiFetch<any>(`${AP}/moderation/resources/${id}`, { method: "DELETE" }),
   warnUser:         (userId: string, reason: string) => apiFetch<any>(`${AP}/moderation/warn/${userId}`, { method: "POST", body: JSON.stringify({ reason }) }),
+  getWarnings:      (userId: string) => apiFetch<any>(`${AP}/moderation/warnings/${userId}`),
+  removeWarning:    (warningId: string) => apiFetch<any>(`${AP}/moderation/warnings/${warningId}`, { method: "DELETE" }),
   getCertificates:  (p?: any) => apiFetch<any>(`${AP}/certificates${qs(p)}`),
   generateCert:     (enrollmentId: string) => apiFetch<any>(`${AP}/certificates/${enrollmentId}`, { method: "POST" }),
   enroll:           (userId: string, courseId: string) => apiFetch<any>(`${AP}/enroll`, { method: "POST", body: JSON.stringify({ userId, courseId }) }),
@@ -224,11 +285,12 @@ export const adminUsersApi = {
 // ─── Teacher Dashboard Extended APIs ─────────────────────
 const TA = "/api/teacher";
 export const teacherDashApi = {
-  getAnalytics:     () => apiFetch<any>(`${TA}/analytics`),
-  getSessionHistory:(p?: any) => apiFetch<any>(`${TA}/session-history${qs(p)}`),
-  getTemplates:     () => apiFetch<any[]>(`${TA}/task-templates`),
-  createTemplate:   (body: any) => apiFetch<any>(`${TA}/task-templates`, { method: "POST", body: JSON.stringify(body) }),
-  updateTemplate:   (id: string, body: any) => apiFetch<any>(`${TA}/task-templates/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
-  deleteTemplate:   (id: string) => apiFetch<any>(`${TA}/task-templates/${id}`, { method: "DELETE" }),
-  getClusters:      () => apiFetch<any[]>(`/api/cluster`),
+  getAnalytics:       () => apiFetch<any>(`${TA}/analytics`),
+  getSessionHistory:  (p?: any) => apiFetch<any>(`${TA}/session-history${qs(p)}`),
+  getTemplates:       () => apiFetch<any[]>(`${TA}/task-templates`),
+  createTemplate:     (body: any) => apiFetch<any>(`${TA}/task-templates`, { method: "POST", body: JSON.stringify(body) }),
+  updateTemplate:     (id: string, body: any) => apiFetch<any>(`${TA}/task-templates/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  deleteTemplate:     (id: string) => apiFetch<any>(`${TA}/task-templates/${id}`, { method: "DELETE" }),
+  getClusters:        () => apiFetch<any[]>(`/api/cluster`),
+  getClusterMembers:  (clusterId: string) => apiFetch<any[]>(`${TA}/tasks/clusters/${clusterId}/members`),
 };

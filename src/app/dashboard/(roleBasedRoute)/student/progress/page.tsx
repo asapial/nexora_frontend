@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   RiSparklingFill,
   RiBarChartBoxLine,
@@ -12,6 +12,7 @@ import {
   RiFlaskLine,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
+import RefreshIcon from "@/components/shared/RefreshIcon";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Badge {
@@ -96,12 +97,15 @@ export default function ProgressDashboardPage() {
   const [data, setData] = useState<ProgressData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const load = useCallback(() => {
+    setLoading(true);
     fetch("/api/student/progress", { credentials: "include" })
       .then((r) => r.json())
       .then((d) => { if (d.success) setData(d.data); })
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => { load(); }, [load]);
 
   const stats = data
     ? [
@@ -114,19 +118,22 @@ export default function ProgressDashboardPage() {
   return (
     <div className="flex flex-1 flex-col gap-6 p-5 lg:p-7 pt-6 max-w-5xl mx-auto">
       {/* Heading */}
-      <div>
-        <div className="flex items-center gap-1.5 mb-1">
-          <RiSparklingFill className="text-teal-500 dark:text-teal-400 text-sm animate-pulse" />
-          <span className="text-[10.5px] font-bold tracking-[.12em] uppercase text-muted-foreground">
-            My Progress
-          </span>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-1.5 mb-1">
+            <RiSparklingFill className="text-teal-500 dark:text-teal-400 text-sm animate-pulse" />
+            <span className="text-[10.5px] font-bold tracking-[.12em] uppercase text-muted-foreground">
+              My Progress
+            </span>
+          </div>
+          <h1 className="text-[1.55rem] font-extrabold tracking-tight leading-none text-foreground">
+            Progress Dashboard
+          </h1>
+          <p className="text-[13px] text-muted-foreground mt-1">
+            Your academic performance at a glance
+          </p>
         </div>
-        <h1 className="text-[1.55rem] font-extrabold tracking-tight leading-none text-foreground">
-          Progress Dashboard
-        </h1>
-        <p className="text-[13px] text-muted-foreground mt-1">
-          Your academic performance at a glance
-        </p>
+        <RefreshIcon onClick={load} loading={loading} />
       </div>
 
       {/* Stat cards */}

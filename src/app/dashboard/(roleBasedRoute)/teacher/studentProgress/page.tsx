@@ -4,9 +4,10 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import {
   RiGroupLine, RiFlaskLine, RiTrophyLine, RiSparklingFill,
   RiCheckboxCircleLine, RiCalendarCheckLine, RiMedalLine,
-  RiBarChartBoxLine, RiSearchLine, RiRefreshLine, RiLoader4Line,
+  RiBarChartBoxLine, RiSearchLine, RiRefreshLine,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
+import RefreshIcon from "@/components/shared/RefreshIcon";
 
 // ─── Types ────────────────────────────────────────────────
 type MemberSubtype = "EMERGING" | "ACTIVE" | "GRADUATED" | "ALUMNI";
@@ -231,9 +232,7 @@ export default function MemberProgressPage() {
           </div>
           <h1 className="text-[1.5rem] font-extrabold tracking-tight text-foreground leading-none">Member Progress Dashboard</h1>
         </div>
-        <button onClick={fetchProgress} className="inline-flex items-center gap-2 h-9 px-3 rounded-xl border border-border text-[12.5px] font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all">
-          <RiRefreshLine className={cn("text-sm", loading && "animate-spin")} /> Refresh
-        </button>
+        <RefreshIcon onClick={fetchProgress} loading={loading} />
       </div>
 
       {/* Filters */}

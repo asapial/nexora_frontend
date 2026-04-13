@@ -6,6 +6,7 @@ import FooterSection from "@/components/shared/footer";
 import { toast } from "sonner";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import ChatWidget from "@/components/chat/ChatWidget";
 
 export type Role = "ADMIN" | "TEACHER" | "STUDENT";
 
@@ -110,7 +111,12 @@ export default function RootLayout({
         }
     };
 
+      const chatUser = user
+    ? { name: user.name ?? "User", role: user.role as "STUDENT" | "TEACHER" | "ADMIN" }
+    : null;
+
     return (
+        
 
         <ThemeProvider
             attribute="class"
@@ -126,7 +132,7 @@ export default function RootLayout({
                 onChangePassword={handleChangePassword}
                 onVerifyEmail={handleVerifyEmail}
             />
-
+    <ChatWidget user={chatUser} loginPath="/auth/signin" />
             {children}
             <FooterSection></FooterSection>
 

@@ -2,13 +2,14 @@
 
 import { useCallback, useEffect, useState } from "react";
 import {
-  RiSparklingFill, RiFlaskLine, RiRefreshLine, RiAlertLine,
+  RiSparklingFill, RiFlaskLine, RiAlertLine,
   RiTimeLine, RiGroupLine, RiCalendarLine, RiArchiveLine,
   RiCheckLine,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
 import { adminPlatformApi } from "@/lib/api";
 import { toast } from "sonner";
+import RefreshIcon from "@/components/shared/RefreshIcon";
 
 const HEALTH_CFG: Record<string, { label: string; dot: string; cls: string }> = {
   HEALTHY:  { label: "Healthy",  dot: "bg-teal-500",  cls: "text-teal-700 dark:text-teal-400 bg-teal-50/80 dark:bg-teal-950/40 border-teal-200/60" },
@@ -93,10 +94,7 @@ export default function ClusterOversightPage() {
             <h1 className="text-[1.5rem] font-extrabold tracking-tight text-foreground leading-none">Cluster Oversight</h1>
             <p className="text-[13px] text-muted-foreground mt-1">Monitor cluster health, activity, and session frequency</p>
           </div>
-          <button onClick={load}
-            className="w-9 h-9 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all">
-            <RiRefreshLine className={cn("text-sm", loading && "animate-spin")} />
-          </button>
+          <RefreshIcon onClick={load} loading={loading} />
         </div>
       </div>
 

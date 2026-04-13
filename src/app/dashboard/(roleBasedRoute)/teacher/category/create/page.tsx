@@ -6,6 +6,7 @@ import {
   RiCloseLine, RiGlobalLine, RiFlaskLine, RiAlertLine, RiStackLine, RiMoreLine,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
+import RefreshIcon from "@/components/shared/RefreshIcon";
 
 type Scope = "GLOBAL" | "CLUSTER";
 interface Cluster { id: string; name: string }
@@ -215,10 +216,13 @@ export default function ResourceCategoriesPage() {
           </div>
           <h1 className="text-[1.5rem] font-extrabold tracking-tight text-foreground leading-none">Resource Categories</h1>
         </div>
-        <button onClick={() => { setShowCreate(true); setEditTarget(null); }}
-          className="inline-flex items-center gap-2 h-10 px-5 rounded-xl bg-teal-600 dark:bg-teal-500 hover:bg-teal-700 dark:hover:bg-teal-600 text-white text-[13.5px] font-bold shadow-md shadow-teal-600/20 transition-all">
-          <RiAddLine /> New category
-        </button>
+        <div className="flex items-center gap-2">
+          <RefreshIcon onClick={fetchAll} loading={loading} />
+          <button onClick={() => { setShowCreate(true); setEditTarget(null); }}
+            className="inline-flex items-center gap-2 h-10 px-5 rounded-xl bg-teal-600 dark:bg-teal-500 hover:bg-teal-700 dark:hover:bg-teal-600 text-white text-[13.5px] font-bold shadow-md shadow-teal-600/20 transition-all">
+            <RiAddLine /> New category
+          </button>
+        </div>
       </div>
 
       {showCreate && (

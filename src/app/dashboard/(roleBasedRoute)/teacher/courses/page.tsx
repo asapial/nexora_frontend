@@ -5,21 +5,23 @@ import { useRouter } from "next/navigation";
 import {
   RiSparklingFill, RiAddLine, RiSearchLine, RiBookOpenLine,
   RiGroupLine, RiMoneyDollarCircleLine, RiCheckLine,
-  RiAlertLine, RiTimeLine, RiDraftLine, RiPauseCircleLine,
+  RiAlertLine,
   RiArrowRightLine, RiEditLine, RiEyeLine, RiMoreLine,
-  RiFileTextLine, RiStarLine, RiRefreshLine,
+  RiFileTextLine, RiStarLine,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
 import { courseApi } from "../../../../../lib/api";
 import type { Course, CourseStatus } from "../../../../../types/course.type";
+import RefreshIcon from "@/components/shared/RefreshIcon";
 
 // ─── Status Config ────────────────────────────────────────
 const STATUS_CONFIG: Record<CourseStatus, { label: string; badge: string; dot: string }> = {
-  DRAFT:            { label: "Draft",    badge: "text-muted-foreground bg-muted/50 border-border",                                                                         dot: "bg-muted-foreground/50" },
-  PENDING_APPROVAL: { label: "Pending",  badge: "text-amber-600 dark:text-amber-400 bg-amber-50/60 dark:bg-amber-950/30 border-amber-200/60 dark:border-amber-800/50",    dot: "bg-amber-500 animate-pulse" },
-  PUBLISHED:        { label: "Published",badge: "text-teal-600 dark:text-teal-400 bg-teal-50/60 dark:bg-teal-950/30 border-teal-200/60 dark:border-teal-800/50",          dot: "bg-teal-500" },
-  CLOSED:           { label: "Closed",   badge: "text-blue-600 dark:text-blue-400 bg-blue-50/60 dark:bg-blue-950/30 border-blue-200/60 dark:border-blue-800/50",          dot: "bg-blue-500" },
-  REJECTED:         { label: "Rejected", badge: "text-red-600 dark:text-red-400 bg-red-50/40 dark:bg-red-950/20 border-red-200/60 dark:border-red-800/50",                dot: "bg-red-500" },
+  DRAFT:            { label: "Draft",     badge: "text-muted-foreground bg-muted/50 border-border",                                                                       dot: "bg-muted-foreground/50" },
+  PENDING_APPROVAL: { label: "Pending",   badge: "text-amber-600 dark:text-amber-400 bg-amber-50/60 dark:bg-amber-950/30 border-amber-200/60 dark:border-amber-800/50",  dot: "bg-amber-500 animate-pulse" },
+  PUBLISHED:        { label: "Published", badge: "text-teal-600 dark:text-teal-400 bg-teal-50/60 dark:bg-teal-950/30 border-teal-200/60 dark:border-teal-800/50",        dot: "bg-teal-500" },
+  CLOSED:           { label: "Closed",    badge: "text-blue-600 dark:text-blue-400 bg-blue-50/60 dark:bg-blue-950/30 border-blue-200/60 dark:border-blue-800/50",        dot: "bg-blue-500" },
+  REJECTED:         { label: "Rejected",  badge: "text-red-600 dark:text-red-400 bg-red-50/40 dark:bg-red-950/20 border-red-200/60 dark:border-red-800/50",              dot: "bg-red-500" },
+  FINISHED:         { label: "Finished",  badge: "text-purple-600 dark:text-purple-400 bg-purple-50/60 dark:bg-purple-950/30 border-purple-200/60 dark:border-purple-800/50", dot: "bg-purple-500" },
 };
 
 const fmtCurrency = (n: number) =>
@@ -63,10 +65,11 @@ function SkeletonCard() {
 function StatusBadge({ status }: { status: CourseStatus }) {
   const cfg = STATUS_CONFIG[status];
   return (
-    <span className={cn("inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold tracking-wide border", cfg.badge)}>
-      <span className={cn("w-1.5 h-1.5 rounded-full flex-shrink-0", cfg.dot)} />
-      {cfg.label}
-    </span>
+    // <span className={cn("inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold tracking-wide border", cfg.badge)}>
+    //   <span className={cn("w-1.5 h-1.5 rounded-full flex-shrink-0", cfg.dot)} />
+    //   {cfg.label}
+    // </span>
+    <div></div>
   );
 }
 
@@ -267,10 +270,7 @@ export default function MyCoursesPage() {
           <p className="text-[13.5px] text-muted-foreground mt-1">Create, manage and track all your courses in one place.</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={fetchCourses} disabled={loading}
-            className="w-9 h-9 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all disabled:opacity-50" title="Refresh">
-            <RiRefreshLine className={cn("text-sm", loading && "animate-spin")} />
-          </button>
+          <RefreshIcon onClick={fetchCourses} loading={loading} />
           <button onClick={() => router.push("/dashboard/teacher/courses/create")}
             className="inline-flex items-center gap-2 h-9 px-5 rounded-xl bg-teal-600 dark:bg-teal-500 hover:bg-teal-700 dark:hover:bg-teal-600 text-white text-[13.5px] font-bold shadow-md shadow-teal-600/20 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]">
             <RiAddLine /> New course

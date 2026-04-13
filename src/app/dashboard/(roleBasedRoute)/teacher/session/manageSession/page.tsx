@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
     RiCalendarCheckLine, RiTimeLine, RiMapPinLine, RiFileTextLine,
@@ -11,10 +11,11 @@ import {
     RiEyeLine, RiCalendar2Line, RiListCheck2, RiBookOpenLine,
     RiVideoLine, RiStarLine, RiUserLine, RiClockwiseLine,
     RiArrowDownSLine, RiCloseLine, RiDraftLine, RiCheckboxCircleLine,
-    RiRefreshLine, RiBarChartLine, RiThumbUpLine, RiChat3Line,
+    RiBarChartLine, RiThumbUpLine, RiChat3Line,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import RefreshIcon from "@/components/shared/RefreshIcon";
 
 // ─── Types ────────────────────────────────────────────────
 type SessionStatus = "upcoming" | "ongoing" | "completed" | "cancelled";
@@ -1000,26 +1001,25 @@ export default function ManageSessionsPage() {
     const [filterCluster, setFilterCluster] = useState("all");
     const [selectedSession, setSelectedSession] = useState<StudySession | null>(null);
 
-    useEffect(() => {
-        const fetchSessions = async () => {
-            setListLoading(true);
-            try {
-                const res = await fetch(`/api/sessions`, {
-                    method: "GET",
-                    credentials: "include",
-                });
-                const data = await res.json();
-                if (data.success && Array.isArray(data.data)) {
-                    setSessions(data.data as StudySession[]);
-                }
-            } catch (err) {
-                console.error("Failed to fetch sessions:", err);
-            } finally {
-                setListLoading(false);
+    const fetchSessions = useCallback(async () => {
+        setListLoading(true);
+        try {
+            const res = await fetch(`/api/sessions`, {
+                method: "GET",
+                credentials: "include",
+            });
+            const data = await res.json();
+            if (data.success && Array.isArray(data.data)) {
+                setSessions(data.data as StudySession[]);
             }
-        };
-        fetchSessions();
+        } catch (err) {
+            console.error("Failed to fetch sessions:", err);
+        } finally {
+            setListLoading(false);
+        }
     }, []);
+
+    useEffect(() => { fetchSessions(); }, [fetchSessions]);
 
     const clusters = Array.from(new Set(sessions.map(s => s.clusterName))).map(name => ({
         name,
@@ -1188,18 +1188,21 @@ export default function ManageSessionsPage() {
                         View, track, and manage all your sessions across clusters.
                     </p>
                 </div>
-                <button
-                    onClick={() => router.push("/dashboard/teacher/session/create")}
-                    className={cn(
-                        "inline-flex items-center gap-2 h-10 px-5 rounded-xl flex-shrink-0",
-                        "bg-teal-600 dark:bg-teal-500 hover:bg-teal-700 dark:hover:bg-teal-600",
-                        "text-white text-[13.5px] font-bold",
-                        "shadow-md shadow-teal-600/20 transition-all duration-200",
-                        "hover:scale-[1.02] active:scale-[0.98]"
-                    )}
-                >
-                    <RiAddLine /> New session
-                </button>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                    <RefreshIcon onClick={fetchSessions} loading={listLoading} />
+                    <button
+                        onClick={() => router.push("/dashboard/teacher/session/create")}
+                        className={cn(
+                            "inline-flex items-center gap-2 h-10 px-5 rounded-xl",
+                            "bg-teal-600 dark:bg-teal-500 hover:bg-teal-700 dark:hover:bg-teal-600",
+                            "text-white text-[13.5px] font-bold",
+                            "shadow-md shadow-teal-600/20 transition-all duration-200",
+                            "hover:scale-[1.02] active:scale-[0.98]"
+                        )}
+                    >
+                        <RiAddLine /> New session
+                    </button>
+                </div>
             </div>
 
             {/* ── Summary stats ── */}

@@ -17,6 +17,7 @@ import {
   RiLink,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
+import RefreshIcon from "@/components/shared/RefreshIcon";
 
 type Visibility = "PUBLIC" | "CLUSTER" | "PRIVATE";
 
@@ -205,19 +206,22 @@ export default function ResourceAccessPage() {
   return (
     <div className="flex flex-1 flex-col gap-6 p-5 lg:p-7 pt-6 max-w-5xl mx-auto">
       {/* Heading */}
-      <div>
-        <div className="flex items-center gap-1.5 mb-1">
-          <RiSparklingFill className="text-teal-500 dark:text-teal-400 text-sm animate-pulse" />
-          <span className="text-[10.5px] font-bold tracking-[.12em] uppercase text-muted-foreground">
-            Library
-          </span>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-1.5 mb-1">
+            <RiSparklingFill className="text-teal-500 dark:text-teal-400 text-sm animate-pulse" />
+            <span className="text-[10.5px] font-bold tracking-[.12em] uppercase text-muted-foreground">
+              Library
+            </span>
+          </div>
+          <h1 className="text-[1.55rem] font-extrabold tracking-tight leading-none text-foreground">
+            Resources
+          </h1>
+          <p className="text-[13px] text-muted-foreground mt-1">
+            Browse, download, and bookmark learning resources
+          </p>
         </div>
-        <h1 className="text-[1.55rem] font-extrabold tracking-tight leading-none text-foreground">
-          Resources
-        </h1>
-        <p className="text-[13px] text-muted-foreground mt-1">
-          Browse, download, and bookmark learning resources
-        </p>
+        <RefreshIcon onClick={fetchResources} loading={loading} />
       </div>
 
       {/* Search + filters */}

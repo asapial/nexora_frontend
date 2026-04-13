@@ -4,11 +4,12 @@ import { useCallback, useEffect, useState } from "react";
 import {
   RiSparklingFill, RiMailLine, RiEyeLine, RiSendPlaneLine,
   RiLoader4Line, RiCheckLine, RiCodeLine, RiAddLine,
-  RiDeleteBinLine, RiCloseLine, RiRefreshLine,
+  RiDeleteBinLine, RiCloseLine,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
 import { adminPlatformApi } from "@/lib/api";
 import { toast } from "sonner";
+import RefreshIcon from "@/components/shared/RefreshIcon";
 
 type Template = {
   id: string;
@@ -211,9 +212,7 @@ export default function EmailTemplatesPage() {
             className="flex-1 h-8 rounded-xl bg-sky-600 dark:bg-sky-500 hover:bg-sky-700 text-white text-[11.5px] font-bold flex items-center justify-center gap-1.5 transition-all">
             <RiAddLine /> New template
           </button>
-          <button onClick={load} className="w-8 h-8 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:bg-muted/40 transition-all">
-            <RiRefreshLine className={cn("text-sm", loading && "animate-spin")} />
-          </button>
+          <RefreshIcon onClick={load} loading={loading} className="w-8 h-8" />
         </div>
 
         {/* Template list */}

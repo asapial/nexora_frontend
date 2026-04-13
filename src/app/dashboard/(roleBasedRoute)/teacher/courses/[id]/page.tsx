@@ -8,7 +8,7 @@ import {
   RiSendPlaneLine, RiPauseCircleLine, RiStarLine, RiPriceTag3Line,
   RiShieldCheckLine, RiPercentLine, RiArrowRightLine, RiBookOpenLine,
   RiCheckboxCircleLine, RiLock2Line, RiLoader4Line, RiRefreshLine,
-  RiTimeLine, RiThumbUpLine,
+  RiTimeLine, RiThumbUpLine, RiFlagLine, RiTrophyLine,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
 import { courseApi } from "../../../../../../lib/api";
@@ -40,10 +40,11 @@ const COURSE_STATUS_MAP: Record<string, string> = {
   PENDING_APPROVAL: "text-amber-600 dark:text-amber-400 bg-amber-50/60 dark:bg-amber-950/30 border-amber-200/60 dark:border-amber-800/50",
   PUBLISHED:        "text-teal-600 dark:text-teal-400 bg-teal-50/60 dark:bg-teal-950/30 border-teal-200/60 dark:border-teal-800/50",
   CLOSED:           "text-blue-600 dark:text-blue-400 bg-blue-50/60 dark:bg-blue-950/30 border-blue-200/60 dark:border-blue-800/50",
+  FINISHED:         "text-violet-600 dark:text-violet-400 bg-violet-50/60 dark:bg-violet-950/30 border-violet-200/60 dark:border-violet-800/50",
   REJECTED:         "text-red-600 dark:text-red-400 bg-red-50/40 dark:bg-red-950/20 border-red-200/60 dark:border-red-800/50",
 };
 const COURSE_STATUS_LABELS: Record<string, string> = {
-  DRAFT: "Draft", PENDING_APPROVAL: "Pending Approval", PUBLISHED: "Published", CLOSED: "Closed", REJECTED: "Rejected",
+  DRAFT: "Draft", PENDING_APPROVAL: "Pending Approval", PUBLISHED: "Published", CLOSED: "Closed", FINISHED: "Finished", REJECTED: "Rejected",
 };
 
 function MissionBadge({ status }: { status: string }) {
@@ -76,6 +77,7 @@ export default function CourseDetailPage() {
   const [activeTab, setActiveTab] = useState<"overview" | "missions" | "enrollments" | "earnings">("overview");
   const [submitting, setSubmitting] = useState(false);
   const [closing, setClosing] = useState(false);
+  const [finishing, setFinishing] = useState(false);
 
   const fetchAll = useCallback(async () => {
     setLoading(true); setError(null);
@@ -115,6 +117,17 @@ export default function CourseDetailPage() {
     finally { setClosing(false); }
   };
 
+  const handleFinish = async () => {
+    if (!confirm("Mark this course as FINISHED? This means the course is fully completed. Students who completed all missions will be eligible for certificates. No new enrollments will be allowed.")) return;
+    setFinishing(true);
+    try {
+      await courseApi.finish(id);
+      toast.success("Course marked as finished!", { position: "top-right" });
+      fetchAll();
+    } catch (e: any) { toast.error(e.message); }
+    finally { setFinishing(false); }
+  };
+
   if (loading) {
     return (
       <div className="relative flex flex-col gap-6 p-5 lg:p-7 pt-6 max-w-5xl mx-auto w-full">
@@ -145,6 +158,7 @@ export default function CourseDetailPage() {
   const canEdit = course.status === "DRAFT" || course.status === "REJECTED";
   const canSubmit = course.status === "DRAFT" || course.status === "REJECTED";
   const canClose = course.status === "PUBLISHED";
+  const canFinish = course.status === "PUBLISHED" || course.status === "CLOSED";
   const canAddMissions = course.status === "PUBLISHED";
 
   const TABS = [
@@ -201,6 +215,11 @@ export default function CourseDetailPage() {
             {canClose && (
               <button onClick={handleClose} disabled={closing} className="flex items-center gap-1.5 h-9 px-4 rounded-xl border border-red-200/60 dark:border-red-800/50 bg-red-50/40 dark:bg-red-950/20 text-[12.5px] font-bold text-red-600 dark:text-red-400 hover:bg-red-100/60 transition-all disabled:opacity-60">
                 <RiPauseCircleLine className="text-sm" /> {closing ? "Closing…" : "Close course"}
+              </button>
+            )}
+            {canFinish && (
+              <button onClick={handleFinish} disabled={finishing} className="flex items-center gap-1.5 h-9 px-4 rounded-xl border border-violet-200/60 dark:border-violet-800/50 bg-violet-50/40 dark:bg-violet-950/20 text-[12.5px] font-bold text-violet-600 dark:text-violet-400 hover:bg-violet-100/60 transition-all disabled:opacity-60">
+                <RiFlagLine className="text-sm" /> {finishing ? "Finishing…" : "Finish course"}
               </button>
             )}
           </div>
@@ -281,6 +300,16 @@ export default function CourseDetailPage() {
               <div>
                 <p className="text-[13px] font-bold text-blue-700 dark:text-blue-300">Course is closed</p>
                 <p className="text-[12px] text-blue-600/80 dark:text-blue-400/80 mt-0.5">Existing students retain access. No new enrollments or missions can be added.</p>
+              </div>
+            </div>
+          )}
+
+          {course.status === "FINISHED" && (
+            <div className="flex items-start gap-3 px-5 py-4 rounded-2xl bg-violet-50/40 dark:bg-violet-950/20 border border-violet-200/60 dark:border-violet-800/50">
+              <RiTrophyLine className="text-violet-600 dark:text-violet-400 text-base mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-[13px] font-bold text-violet-700 dark:text-violet-300">Course is finished</p>
+                <p className="text-[12px] text-violet-600/80 dark:text-violet-400/80 mt-0.5">No new enrollments allowed. Students who completed all missions are eligible for certificates. An admin can generate certificates from the admin panel.</p>
               </div>
             </div>
           )}
