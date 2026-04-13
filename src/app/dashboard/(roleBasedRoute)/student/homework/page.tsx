@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   RiSparklingFill, RiBookLine, RiCheckboxCircleLine, RiTimeLine,
   RiFlaskLine, RiArrowRightLine, RiSendPlaneLine, RiStarLine,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
+import RefreshIcon from "@/components/shared/RefreshIcon";
 
 type TaskStatus = "PENDING" | "SUBMITTED" | "REVIEWED";
 
@@ -32,15 +33,15 @@ export default function HomeworkPage() {
   const [loading, setLoading]     = useState(true);
   const [doneFilter, setDoneFilter] = useState<DoneFilter>("all");
 
-  const fetchHomework = () => {
+  const fetchHomework = useCallback(() => {
     setLoading(true);
     fetch("/api/student/homework", { credentials: "include" })
       .then(r => r.json())
       .then(d => { if (d.success) setTasks(d.data); })
       .finally(() => setLoading(false));
-  };
+  }, []);
 
-  useEffect(() => { fetchHomework(); }, []);
+  useEffect(() => { fetchHomework(); }, [fetchHomework]);
 
   const filtered = tasks.filter(t => {
     if (doneFilter === "done") return isEffectivelyDone(t);
@@ -54,13 +55,16 @@ export default function HomeworkPage() {
   return (
     <div className="flex flex-1 flex-col gap-6 p-5 lg:p-7 pt-6 max-w-5xl mx-auto">
       {/* Heading */}
-      <div>
-        <div className="flex items-center gap-1.5 mb-1">
-          <RiSparklingFill className="text-teal-500 dark:text-teal-400 text-sm animate-pulse" />
-          <span className="text-[10.5px] font-bold tracking-[.12em] uppercase text-muted-foreground">Study</span>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-1.5 mb-1">
+            <RiSparklingFill className="text-teal-500 dark:text-teal-400 text-sm animate-pulse" />
+            <span className="text-[10.5px] font-bold tracking-[.12em] uppercase text-muted-foreground">Study</span>
+          </div>
+          <h1 className="text-[1.55rem] font-extrabold tracking-tight leading-none text-foreground">Homework</h1>
+          <p className="text-[13px] text-muted-foreground mt-1">All homework across your sessions</p>
         </div>
-        <h1 className="text-[1.55rem] font-extrabold tracking-tight leading-none text-foreground">Homework</h1>
-        <p className="text-[13px] text-muted-foreground mt-1">All homework across your sessions</p>
+        <RefreshIcon onClick={fetchHomework} loading={loading} />
       </div>
 
       {/* Stats + filter bar */}

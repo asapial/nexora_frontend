@@ -3,11 +3,12 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   RiSparklingFill, RiGroupLine, RiFlaskLine, RiCalendarCheckLine,
-  RiBookOpenLine, RiCheckboxCircleLine, RiRefreshLine,
+  RiBookOpenLine, RiCheckboxCircleLine,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
 import { teacherDashApi } from "@/lib/api";
 import { toast } from "sonner";
+import RefreshIcon from "@/components/shared/RefreshIcon";
 
 type Totals = {
   clusters: number;
@@ -173,10 +174,7 @@ export default function TeacherAnalyticsPage() {
             <h1 className="text-[1.5rem] font-extrabold tracking-tight text-foreground leading-none">Analytics Dashboard</h1>
             <p className="text-[13px] text-muted-foreground mt-1">Teaching activity overview with trends and heatmaps</p>
           </div>
-          <button onClick={load}
-            className="w-9 h-9 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all">
-            <RiRefreshLine className={cn("text-sm", loading && "animate-spin")} />
-          </button>
+          <RefreshIcon onClick={load} loading={loading} />
         </div>
       </div>
 

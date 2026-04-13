@@ -6,9 +6,10 @@ import {
   RiSparklingFill, RiFileTextLine, RiCheckLine, RiCloseLine, RiTimeLine,
   RiEditLine, RiDeleteBinLine, RiFlaskLine, RiCalendarCheckLine, RiAlertLine,
   RiSearchLine, RiSendPlaneLine, RiAddLine, RiUserLine, RiArrowRightLine,
-  RiCheckboxCircleLine, RiLoader4Line, RiRefreshLine,
+  RiCheckboxCircleLine, RiLoader4Line,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
+import RefreshIcon from "@/components/shared/RefreshIcon";
 
 type HWStatus = "PENDING" | "SUBMITTED" | "REVIEWED";
 type SessionStatus = "upcoming" | "ongoing" | "completed";
@@ -463,9 +464,7 @@ export default function HomeworkManagementPage() {
             <h1 className="text-[1.5rem] font-extrabold tracking-tight text-foreground leading-none">Homework Management</h1>
             <p className="text-[13px] text-muted-foreground mt-1">Assign tasks per member; view submission status and review</p>
           </div>
-          <button onClick={fetchData} className="w-9 h-9 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all" title="Refresh">
-            <RiRefreshLine className={cn("text-sm", loading && "animate-spin")} />
-          </button>
+          <RefreshIcon onClick={fetchData} loading={loading} />
         </div>
       </div>
 

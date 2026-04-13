@@ -4,13 +4,13 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import {
   RiCalendarCheckLine, RiGroupLine, RiSparklingFill,
   RiCheckLine, RiCloseLine, RiSubtractLine, RiSaveLine,
-  RiHistoryLine, RiLoader4Line, RiAlertLine, RiRefreshLine,
+  RiHistoryLine, RiLoader4Line, RiAlertLine,
   RiSettings3Line,
-  RiFileWarningLine, 
-  // RiWarningLine,
+  RiFileWarningLine,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import RefreshIcon from "@/components/shared/RefreshIcon";
 
 // ─── Types ────────────────────────────────────────────────
 type Status = "PRESENT" | "ABSENT" | "EXCUSED" | "UNMARKED";
@@ -18,7 +18,7 @@ type Status = "PRESENT" | "ABSENT" | "EXCUSED" | "UNMARKED";
 interface ATRecord { memberId: string; status: Status; note: string }
 interface Member { studentProfileId: string; userId: string; name: string; email: string; image: string | null }
 interface Session { id: string; title: string; scheduledAt: string; status: string; clusterId: string; cluster: { id: string; name: string } }
-interface HistEntry { status: Status; StudySession: { title: string; scheduledAt: string } }
+interface HistEntry { status: Status; session: { title: string; scheduledAt: string } }
 
 // ─── Config ───────────────────────────────────────────────
 const STATUS_CONFIG: Record<Status, { label: string; icon: React.ReactNode; activeClass: string; dotClass: string }> = {
@@ -194,13 +194,26 @@ export default function AttendanceTrackingPage() {
 
   // ── Fetch history when showHistory turned on
   useEffect(() => {
-    if (!showHistory || !members.length) return;
+    if (!showHistory || !members.length || !clusterId) return;
     setLoadingHistory(true);
-    Promise.all(members.map(async m => {
-      const res = await fetch(`/api/sessions/students/${m.studentProfileId}/attendance-history`, { credentials: "include" }).catch(() => null);
-      if (!res) return { id: m.studentProfileId, entries: [] as HistEntry[] };
-      const d = await res.json().catch(() => ({ data: [] }));
-      return { id: m.studentProfileId, entries: (d.data ?? []) as HistEntry[] };
+    const validMembers = members.filter(m => m.studentProfileId);
+    if (validMembers.length === 0) {
+      setLoadingHistory(false);
+      return;
+    }
+    Promise.all(validMembers.map(async m => {
+      try {
+        const res = await fetch(`/api/sessions/students/${m.studentProfileId}/attendance-history?clusterId=${clusterId}`, { credentials: "include" });
+        if (!res.ok) {
+          console.warn(`Attendance history failed for ${m.studentProfileId}:`, res.status);
+          return { id: m.studentProfileId, entries: [] as HistEntry[] };
+        }
+        const d = await res.json();
+        return { id: m.studentProfileId, entries: (d.data ?? []) as HistEntry[] };
+      } catch (err) {
+        console.warn(`Attendance history error for ${m.studentProfileId}:`, err);
+        return { id: m.studentProfileId, entries: [] as HistEntry[] };
+      }
     }))
       .then(results => {
         const h: Record<string, HistEntry[]> = {};
@@ -208,7 +221,7 @@ export default function AttendanceTrackingPage() {
         setHistory(h);
       })
       .finally(() => setLoadingHistory(false));
-  }, [showHistory, members]);
+  }, [showHistory, members, clusterId]);
 
   // ── Record helpers
   const sessionRecords = useMemo(() => members.map(m => records[m.studentProfileId] ?? { memberId: m.studentProfileId, status: "UNMARKED" as Status, note: "" }), [members, records]);
@@ -262,6 +275,7 @@ export default function AttendanceTrackingPage() {
           <h1 className="text-[1.5rem] font-extrabold tracking-tight text-foreground leading-none">Attendance Tracking</h1>
         </div>
         <div className="flex items-center gap-2">
+          <RefreshIcon onClick={fetchClusters} loading={loadingClusters} />
           <button onClick={() => setShowWarningCfg(s => !s)}
             className={cn("inline-flex items-center gap-2 h-9 px-3 rounded-xl border text-[12.5px] font-semibold transition-all",
               showWarningCfg ? "border-amber-300/60 bg-amber-50/40 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400" : "border-border text-muted-foreground hover:text-foreground hover:bg-muted/50")}>
@@ -452,7 +466,7 @@ export default function AttendanceTrackingPage() {
                         <div className="flex gap-1">
                           {(history[member.studentProfileId] ?? []).slice(0, 10).map((e, i) => (
                             <div key={i}
-                              title={`${e.StudySession?.title} · ${fmtDate(e.StudySession?.scheduledAt ?? "")} · ${e.status}`}
+                              title={`${e.session?.title} · ${fmtDate(e.session?.scheduledAt ?? "")} · ${e.status}`}
                               className={cn("w-3 h-3 rounded-sm transition-all", STATUS_CONFIG[e.status]?.dotClass ?? "bg-muted-foreground/30")} />
                           ))}
                         </div>

@@ -5,12 +5,13 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   RiSparklingFill, RiBookOpenLine, RiCheckLine, RiAlertLine,
-  RiRefreshLine, RiArrowRightLine,RiTrophyLine,
+  RiArrowRightLine,RiTrophyLine,
   RiCalendarLine, RiTimeLine
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
 import { studentApi, paymentApi } from "../../../../../lib/api";
 import { AmbientBg6 } from "@/components/backgrounds/AmbientBg";
+import RefreshIcon from "@/components/shared/RefreshIcon";
 
 
 const fmtDate = (d: string) => new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
@@ -121,7 +122,7 @@ export default function MyLearningPage() {
           <p className="text-[13.5px] text-muted-foreground mt-1">Continue where you left off. Track your progress.</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={load} disabled={loading} className="w-9 h-9 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all disabled:opacity-50"><RiRefreshLine className={cn("text-sm", loading && "animate-spin")} /></button>
+          <RefreshIcon onClick={load} loading={loading} />
           <button onClick={() => router.push("/courses")} className="flex items-center gap-2 h-9 px-4 rounded-xl bg-teal-600 dark:bg-teal-500 hover:bg-teal-700 text-white text-[13px] font-bold transition-all hover:scale-[1.02] active:scale-[0.98]"><RiBookOpenLine className="text-sm" />Browse courses</button>
         </div>
       </div>

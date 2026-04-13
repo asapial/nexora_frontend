@@ -5,11 +5,12 @@ import { useRouter } from "next/navigation";
 import {
   RiSparklingFill, RiMoneyDollarCircleLine, RiArrowRightLine,
   RiPercentLine, RiBookOpenLine, RiGroupLine, RiSearchLine,
-  RiArrowUpLine, RiArrowDownLine, RiTrophyLine, RiRefreshLine,
+  RiArrowUpLine, RiArrowDownLine, RiTrophyLine,
   RiAlertLine,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
 import { courseApi } from "@/lib/api";
+import RefreshIcon from "@/components/shared/RefreshIcon";
 
 // ─── Ambient ──────────────────────────────────────────────
 function AmbientBg() {
@@ -182,10 +183,7 @@ export default function EarningsDashboardPage() {
           <h1 className="text-[1.5rem] font-extrabold tracking-tight text-foreground leading-none">Earnings Dashboard</h1>
           <p className="text-[13.5px] text-muted-foreground mt-1">Track your revenue across all courses and transactions.</p>
         </div>
-        <button onClick={fetchSummary} disabled={loading}
-          className="w-9 h-9 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all disabled:opacity-50" title="Refresh">
-          <RiRefreshLine className={cn("text-sm", loading && "animate-spin")} />
-        </button>
+        <RefreshIcon onClick={fetchSummary} loading={loading} />
       </div>
 
       {error && (
@@ -244,7 +242,7 @@ export default function EarningsDashboardPage() {
                   enrollments={c._count?.id ?? 0}
                   revenuePercent={Math.round(c.teacherRevenuePercent ?? 70)}
                   max={maxCourseEarning}
-                  onClick={() => router.push(`/teacher/courses/${c.courseId}`)} />
+                  onClick={() => router.push(`/dashboard/teacher/courses/${c.courseId}`)} />
               ))
         }
       </div>

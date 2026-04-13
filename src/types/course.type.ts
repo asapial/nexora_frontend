@@ -1,5 +1,5 @@
 // ─── Enums ────────────────────────────────────────────────
-export type CourseStatus = "DRAFT" | "PENDING_APPROVAL" | "PUBLISHED" | "CLOSED" | "REJECTED";
+export type CourseStatus = "DRAFT" | "PENDING_APPROVAL" | "PUBLISHED" | "CLOSED" | "FINISHED" | "REJECTED";
 export type MissionStatus = "DRAFT" | "PENDING_APPROVAL" | "PUBLISHED" | "REJECTED";
 export type MissionContentType = "VIDEO" | "TEXT" | "PDF";
 export type PriceApprovalStatus = "PENDING" | "APPROVED" | "REJECTED";

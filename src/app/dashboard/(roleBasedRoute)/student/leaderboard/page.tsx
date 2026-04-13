@@ -3,12 +3,13 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   RiTrophyLine, RiMedalLine, RiSparklingFill, RiShieldCheckLine,
-  RiEyeOffLine, RiEyeLine, RiRefreshLine, RiGroupLine,
+  RiEyeOffLine, RiEyeLine, RiGroupLine,
   RiCalendarCheckLine, RiLoader4Line, RiUserLine,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
 import { leaderboardApi } from "@/lib/api";
 import { toast } from "sonner";
+import RefreshIcon from "@/components/shared/RefreshIcon";
 
 type Period = "weekly" | "all-time";
 
@@ -120,12 +121,7 @@ export default function StudentLeaderboardPage() {
           <p className="text-[13px] text-muted-foreground mt-1">Cluster rankings based on task scores and attendance</p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
-          <button
-            onClick={load}
-            className="w-9 h-9 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all"
-          >
-            <RiRefreshLine className={cn("text-sm", loading && "animate-spin")} />
-          </button>
+          <RefreshIcon onClick={load} loading={loading} />
           <button
             onClick={toggleOptIn}
             disabled={optLoading}

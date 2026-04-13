@@ -1,16 +1,18 @@
 "use client";
 
-import { useState, useEffect, KeyboardEvent } from "react";
+import { useState, useEffect, useCallback, KeyboardEvent } from "react";
 import Link from "next/link";
 import {
     RiFlaskLine, RiGroupLine, RiMailLine, RiAddLine, RiCloseLine,
     RiCheckLine, RiMoreLine, RiDeleteBinLine,
     RiArrowRightLine, RiSparklingFill, RiCalendarCheckLine,
-    RiTimeLine, RiRefreshLine, RiAlertLine, RiUserLine,
+    RiTimeLine, RiAlertLine, RiUserLine,
     RiShieldCheckLine, RiEditLine, RiSaveLine, RiLoader4Line,
+    RiRefreshLine,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import RefreshIcon from "@/components/shared/RefreshIcon";
 
 // ─── Types ────────────────────────────────────────────────
 type MemberSubtype = "EMERGING" | "ACTIVE" | "GRADUATED" | "ALUMNI" | "RUNNING";
@@ -758,23 +760,22 @@ export default function ManageClustersPage() {
     // ── Edit state ──────────────────────────────────────────
     const [editTarget, setEditTarget] = useState<Cluster | null>(null);
 
-    useEffect(() => {
-        const fetchClusters = async () => {
-            setListLoading(true);
-            try {
-                const res = await fetch(`/api/cluster`, { method: "GET", credentials: "include" });
-                const data = await res.json();
-                if (data.success && Array.isArray(data.data)) {
-                    setClusters(data.data.map((c: Record<string, unknown>) => mapApiCluster(c)));
-                }
-            } catch (err) {
-                console.error("Failed to fetch clusters:", err);
-            } finally {
-                setListLoading(false);
+    const fetchClusters = useCallback(async () => {
+        setListLoading(true);
+        try {
+            const res = await fetch(`/api/cluster`, { method: "GET", credentials: "include" });
+            const data = await res.json();
+            if (data.success && Array.isArray(data.data)) {
+                setClusters(data.data.map((c: Record<string, unknown>) => mapApiCluster(c)));
             }
-        };
-        fetchClusters();
+        } catch (err) {
+            console.error("Failed to fetch clusters:", err);
+        } finally {
+            setListLoading(false);
+        }
     }, []);
+
+    useEffect(() => { fetchClusters(); }, [fetchClusters]);
 
     const handleManageCluster = async (cluster: Cluster) => {
         try {
@@ -919,15 +920,18 @@ export default function ManageClustersPage() {
                             Manage Clusters
                         </h1>
                     </div>
-                    <Link
-                        href="/dashboard/teacher/cluster/create"
-                        className="inline-flex items-center gap-2 h-10 px-5 rounded-xl
+                    <div className="flex items-center gap-2">
+                        <RefreshIcon onClick={fetchClusters} loading={listLoading} />
+                        <Link
+                            href="/dashboard/teacher/cluster/create"
+                            className="inline-flex items-center gap-2 h-10 px-5 rounded-xl
                        bg-teal-600 dark:bg-teal-500 hover:bg-teal-700 dark:hover:bg-teal-600
                        text-white text-[13.5px] font-bold
                        shadow-md shadow-teal-600/20
                        transition-all duration-200 hover:scale-[1.02]">
-                        <RiAddLine /> New cluster
-                    </Link>
+                            <RiAddLine /> New cluster
+                        </Link>
+                    </div>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  RiSparklingFill, RiSearchLine, RiRefreshLine, RiBookOpenLine, RiGroupLine,
+  RiSparklingFill, RiSearchLine, RiBookOpenLine, RiGroupLine,
   RiStarFill, RiStarLine, RiFileTextLine, RiMoneyDollarCircleLine, RiLoader4Line,
   RiCheckLine, RiCloseLine, RiAlertLine, RiFilterLine, RiDeleteBinLine,
   RiEditLine, RiShieldCheckLine,
@@ -11,6 +11,7 @@ import {
 import { cn } from "@/lib/utils";
 import { adminApi } from "../../../../../lib/api";
 import { toast } from "sonner";
+import RefreshIcon from "@/components/shared/RefreshIcon";
 
 const fmtUSD = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
 
@@ -193,9 +194,7 @@ export default function AdminCoursesPage() {
             <h1 className="text-[1.5rem] font-extrabold tracking-tight text-foreground leading-none">All Courses</h1>
             <p className="text-[13px] text-muted-foreground mt-1">Manage and moderate all platform courses</p>
           </div>
-          <button onClick={load} className="w-9 h-9 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all flex-shrink-0">
-            <RiRefreshLine className={cn("text-sm", loading && "animate-spin")} />
-          </button>
+          <RefreshIcon onClick={load} loading={loading} />
         </div>
       </div>
 

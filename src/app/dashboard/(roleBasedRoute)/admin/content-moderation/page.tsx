@@ -3,12 +3,13 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   RiSparklingFill, RiShieldCheckLine, RiDeleteBinLine, RiAlertLine,
-  RiRefreshLine, RiLoader4Line, RiBookOpenLine, RiFileTextLine,
-  RiUserLine, RiCloseLine, RiTimeLine,
+  RiLoader4Line, RiBookOpenLine, RiFileTextLine,
+  RiUserLine, RiCloseLine, RiTimeLine, RiEyeLine,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
 import { adminPlatformApi } from "@/lib/api";
 import { toast } from "sonner";
+import RefreshIcon from "@/components/shared/RefreshIcon";
 
 const fmtDate = (d: string) =>
   new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
@@ -30,6 +31,14 @@ type Resource = {
   fileType: string;
   createdAt: string;
   uploader?: { id: string; name: string };
+};
+
+type Warning = {
+  id: string;
+  userId: string;
+  title: string;
+  body: string | null;
+  createdAt: string;
 };
 
 function SkeletonRow() {
@@ -90,12 +99,86 @@ function WarnModal({ userId, userName, onClose, onWarn }: {
   );
 }
 
+// ─── Warning viewer ───────────────────────────────────────
+function WarningsPanel({ userId, userName, onClose }: {
+  userId: string;
+  userName: string;
+  onClose: () => void;
+}) {
+  const [warnings, setWarnings] = useState<Warning[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [removingId, setRemovingId] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const r = await adminPlatformApi.getWarnings(userId);
+      setWarnings(Array.isArray(r.data) ? r.data : []);
+    } catch { toast.error("Failed to load warnings"); }
+    finally { setLoading(false); }
+  }, [userId]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const removeWarning = async (warningId: string) => {
+    if (!confirm("Remove this warning?")) return;
+    setRemovingId(warningId);
+    try {
+      await adminPlatformApi.removeWarning(warningId);
+      setWarnings(prev => prev.filter(w => w.id !== warningId));
+      toast.success("Warning removed");
+    } catch { toast.error("Failed to remove warning"); }
+    finally { setRemovingId(null); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+      <div className="rounded-2xl border border-border bg-card shadow-2xl w-full max-w-md p-6 flex flex-col gap-4 max-h-[80vh]">
+        <div className="flex items-center justify-between">
+          <h2 className="text-[15px] font-extrabold text-foreground">Warnings for {userName}</h2>
+          <button onClick={onClose} className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted/60 transition-all">
+            <RiCloseLine />
+          </button>
+        </div>
+        <div className="overflow-y-auto flex flex-col gap-2 flex-1">
+          {loading ? (
+            <div className="py-8 text-center">
+              <RiLoader4Line className="animate-spin text-xl text-muted-foreground mx-auto" />
+            </div>
+          ) : warnings.length === 0 ? (
+            <div className="py-8 text-center">
+              <RiShieldCheckLine className="text-3xl text-muted-foreground/20 mx-auto mb-2" />
+              <p className="text-[13px] text-muted-foreground">No warnings issued to this user</p>
+            </div>
+          ) : warnings.map(w => (
+            <div key={w.id} className="rounded-xl border border-amber-200/60 dark:border-amber-800/40 bg-amber-50/40 dark:bg-amber-950/20 p-3 flex items-start gap-3">
+              <RiAlertLine className="text-amber-500 text-base mt-0.5 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-[12.5px] font-semibold text-amber-700 dark:text-amber-400">{w.body ?? "Warning"}</p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">{fmtDate(w.createdAt)}</p>
+              </div>
+              <button
+                onClick={() => removeWarning(w.id)}
+                disabled={removingId === w.id}
+                className="w-7 h-7 rounded-lg flex items-center justify-center text-rose-500 hover:bg-rose-50/60 dark:hover:bg-rose-950/30 transition-all shrink-0"
+                title="Remove warning">
+                {removingId === w.id ? <RiLoader4Line className="text-sm animate-spin" /> : <RiDeleteBinLine className="text-sm" />}
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ContentModerationPage() {
   const [courses, setCourses]     = useState<Course[]>([]);
   const [resources, setResources] = useState<Resource[]>([]);
   const [loading, setLoading]     = useState(true);
   const [activeTab, setActiveTab] = useState<"courses" | "resources">("courses");
   const [warnTarget, setWarnTarget] = useState<{ userId: string; name: string } | null>(null);
+  const [warningsTarget, setWarningsTarget] = useState<{ userId: string; name: string } | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [actionLog, setActionLog]   = useState<string[]>([]);
 
@@ -158,10 +241,7 @@ export default function ContentModerationPage() {
           <h1 className="text-[1.5rem] font-extrabold tracking-tight text-foreground leading-none">Content Moderation</h1>
           <p className="text-[13px] text-muted-foreground mt-1">Review published courses and resources, remove items, and warn users</p>
         </div>
-        <button onClick={load}
-          className="w-9 h-9 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all">
-          <RiRefreshLine className={cn("text-sm", loading && "animate-spin")} />
-        </button>
+        <RefreshIcon onClick={load} loading={loading} />
       </div>
 
       {/* Tabs */}
@@ -221,12 +301,20 @@ export default function ContentModerationPage() {
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
                   {c.teacher?.user && (
-                    <button
-                      onClick={() => setWarnTarget({ userId: c.teacher!.user!.id, name: c.teacher!.user!.name })}
-                      className="w-7 h-7 rounded-lg flex items-center justify-center text-amber-600 hover:bg-amber-50/60 dark:hover:bg-amber-950/30 transition-all"
-                      title="Warn teacher">
-                      <RiAlertLine className="text-sm" />
-                    </button>
+                    <>
+                      <button
+                        onClick={() => setWarningsTarget({ userId: c.teacher!.user!.id, name: c.teacher!.user!.name })}
+                        className="w-7 h-7 rounded-lg flex items-center justify-center text-sky-600 hover:bg-sky-50/60 dark:hover:bg-sky-950/30 transition-all"
+                        title="View warnings">
+                        <RiEyeLine className="text-sm" />
+                      </button>
+                      <button
+                        onClick={() => setWarnTarget({ userId: c.teacher!.user!.id, name: c.teacher!.user!.name })}
+                        className="w-7 h-7 rounded-lg flex items-center justify-center text-amber-600 hover:bg-amber-50/60 dark:hover:bg-amber-950/30 transition-all"
+                        title="Warn teacher">
+                        <RiAlertLine className="text-sm" />
+                      </button>
+                    </>
                   )}
                   <button
                     onClick={() => removeCourse(c.id, c.title)}
@@ -264,12 +352,20 @@ export default function ContentModerationPage() {
               </div>
               <div className="flex items-center gap-1 shrink-0">
                 {r.uploader && (
-                  <button
-                    onClick={() => setWarnTarget({ userId: r.uploader!.id, name: r.uploader!.name })}
-                    className="w-7 h-7 rounded-lg flex items-center justify-center text-amber-600 hover:bg-amber-50/60 transition-all"
-                    title="Warn uploader">
-                    <RiAlertLine className="text-sm" />
-                  </button>
+                  <>
+                    <button
+                      onClick={() => setWarningsTarget({ userId: r.uploader!.id, name: r.uploader!.name })}
+                      className="w-7 h-7 rounded-lg flex items-center justify-center text-sky-600 hover:bg-sky-50/60 transition-all"
+                      title="View warnings">
+                      <RiEyeLine className="text-sm" />
+                    </button>
+                    <button
+                      onClick={() => setWarnTarget({ userId: r.uploader!.id, name: r.uploader!.name })}
+                      className="w-7 h-7 rounded-lg flex items-center justify-center text-amber-600 hover:bg-amber-50/60 transition-all"
+                      title="Warn uploader">
+                      <RiAlertLine className="text-sm" />
+                    </button>
+                  </>
                 )}
                 <button
                   onClick={() => removeResource(r.id, r.title)}
@@ -303,6 +399,14 @@ export default function ContentModerationPage() {
           userName={warnTarget.name}
           onClose={() => setWarnTarget(null)}
           onWarn={warnUser}
+        />
+      )}
+
+      {warningsTarget && (
+        <WarningsPanel
+          userId={warningsTarget.userId}
+          userName={warningsTarget.name}
+          onClose={() => setWarningsTarget(null)}
         />
       )}
     </div>

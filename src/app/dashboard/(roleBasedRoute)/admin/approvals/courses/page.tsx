@@ -6,11 +6,12 @@ import { useRouter } from "next/navigation";
 import {
   RiSparklingFill, RiCheckLine, RiCloseLine, RiAlertLine,
   RiBookOpenLine, RiFileTextLine, RiTimeLine, RiEyeLine,
-  RiRefreshLine, RiLoader4Line, RiUserLine, RiPriceTag3Line,
+  RiLoader4Line, RiUserLine, RiPriceTag3Line,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
 import { adminApi } from "../../../../../../lib/api";
 import { toast } from "sonner";
+import RefreshIcon from "@/components/shared/RefreshIcon";
 
 const fmtDate = (d: string) => new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 const fmtUSD  = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
@@ -211,10 +212,7 @@ export default function CourseApprovalsPage() {
             <p className="text-[13.5px] text-muted-foreground mt-1">Review and approve or reject courses submitted by teachers.</p>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={load} disabled={loading}
-              className="w-9 h-9 rounded-xl border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all disabled:opacity-50">
-              <RiRefreshLine className={cn("text-sm", loading && "animate-spin")} />
-            </button>
+            <RefreshIcon onClick={load} loading={loading} />
             <div className="flex items-center gap-2 h-9 px-4 rounded-xl bg-amber-100/60 dark:bg-amber-950/30 border border-amber-200/60 dark:border-amber-800/50 text-amber-700 dark:text-amber-400 text-[13px] font-bold">
               <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" /> {courses.length} pending
             </div>
