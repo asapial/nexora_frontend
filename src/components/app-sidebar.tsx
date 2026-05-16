@@ -34,6 +34,7 @@ import {
   RiAwardLine,
   RiMessage2Line,
   RiUserAddLine,
+  RiLayoutLine,
 } from "react-icons/ri";
 
 import { NavDocuments, type NavDocItem } from "@/components/nav-documents";
@@ -302,6 +303,14 @@ const adminNav: NavDocItem[] = [
     icon: <RiUserAddLine />,
     items: [
       { title: "All Applications", url: "/dashboard/admin/teacher-requests" },
+    ],
+  },
+  {
+    title: "Homepage Settings",
+    url: "/dashboard/admin/hero-section",
+    icon: <RiLayoutLine />,
+    items: [
+      { title: "Hero Section", url: "/dashboard/admin/hero-section" },
     ],
   },
 ];
