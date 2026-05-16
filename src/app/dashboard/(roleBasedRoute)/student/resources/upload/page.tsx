@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   RiSparklingFill, RiUploadCloud2Line, RiFileAddLine, RiCloseLine, RiCheckLine,
-  RiRobot2Line,
+  RiRobot2Line, RiLoader4Line
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -150,7 +150,7 @@ function TagInput({ value, onChange }: { value: string[]; onChange: (v: string[]
   );
 }
 
-export default function StudentResourceUploadPage() {
+export default function TeacherResourceUploadPage() {
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
 
@@ -180,8 +180,65 @@ export default function StudentResourceUploadPage() {
   const [success, setSuccess]         = useState(false);
   const [error, setError]             = useState<string | null>(null);
 
+  // Track which suggestion index is selected for array-type fields
   const [selAuthorIdx, setSelAuthorIdx] = useState<number | null>(null);
   const [selTagIdx, setSelTagIdx]       = useState<number | null>(null);
+
+  // ── Cycling status messages while AI is working ───────────────────────────
+  const SUGGEST_STAGES = [
+    // Phase 1 — PDF ingestion
+    "Opening PDF…",
+    "Reading document…",
+    "Extracting raw text…",
+    "Detecting page structure…",
+    "Removing noise & headers…",
+    // Phase 2 — RAG chunking
+    "Splitting into chunks…",
+    "Applying overlap windows…",
+    "Indexing text segments…",
+    "Computing chunk density…",
+    // Phase 3 — Vector retrieval
+    "Scoring relevance…",
+    "Ranking top segments…",
+    "Retrieving best context…",
+    "Building retrieval window…",
+    // Phase 4 — AI inference
+    "Connecting to AI model…",
+    "Sending context to LLM…",
+    "Model is thinking…",
+    "Generating title options…",
+    "Drafting abstracts…",
+    "Identifying authors…",
+    "Detecting publication year…",
+    "Extracting keyword tags…",
+    // Phase 5 — Post-processing
+    "Parsing AI response…",
+    "Validating JSON structure…",
+    "Normalising suggestions…",
+    "Deduplicating results…",
+    // Phase 6 — Encouragement while waiting
+    "Free models take a moment — hang tight…",
+    "Still working, almost done…",
+    "Great things take time…",
+    "Wrapping up…",
+    "Polishing suggestions…",
+    "Almost there…",
+  ];
+  const [stageIdx, setStageIdx]   = useState(0);
+  const stageTimer                = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    if (isSuggesting) {
+      setStageIdx(0);
+      stageTimer.current = setInterval(() => {
+        setStageIdx(i => (i + 1) % SUGGEST_STAGES.length);
+      }, 2000);
+    } else {
+      if (stageTimer.current) clearInterval(stageTimer.current);
+    }
+    return () => { if (stageTimer.current) clearInterval(stageTimer.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSuggesting]);
 
   const set = (k: keyof FormState, v: unknown) => setForm(f => ({ ...f, [k]: v }));
 
@@ -196,12 +253,25 @@ export default function StudentResourceUploadPage() {
       const fd = new FormData();
       fd.append("file", file);
       const res = await fetch("/api/resource/suggest-metadata", { method: "POST", credentials: "include", body: fd });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.message || "Failed to extract metadata");
+      
+      let json;
+      try {
+        json = await res.json();
+      } catch (parseError) {
+        throw new Error("The server encountered an unexpected error. Please try again later.");
+      }
+      
+      if (!res.ok) throw new Error(json?.message || "Failed to extract metadata");
       setSuggestions(json.data as AiSuggestions);
       toast.success("AI generated 4 suggestions for each field — pick the best ones!");
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "AI extraction failed. Make sure the PDF contains readable text.");
+      const errorMessage = err instanceof Error ? err.message : "AI extraction failed. Make sure the PDF contains readable text.";
+      // If the error message happens to be a raw JSON parse error string, clean it up just in case
+      if (errorMessage.includes("is not valid JSON") || errorMessage.includes("Unexpected token")) {
+        setError("The server returned an invalid response. Please try again later.");
+      } else {
+        setError(errorMessage);
+      }
     } finally {
       setIsSuggesting(false);
     }
@@ -234,6 +304,7 @@ export default function StudentResourceUploadPage() {
     finally { setSubmitting(false); }
   };
 
+  // ── Suggestion header label ─────────────────────────────────────────────
   const SuggestionHeader = () => (
     <div className="flex items-center gap-1.5 mb-1">
       <RiRobot2Line className="text-[11px] text-violet-500" />
@@ -284,6 +355,7 @@ export default function StudentResourceUploadPage() {
             <input type="file" accept="application/pdf,image/*,video/*,.doc,.docx" className="hidden" onChange={e => { setFile(e.target.files?.[0] ?? null); setSuggestions(null); setSelAuthorIdx(null); setSelTagIdx(null); }} />
           </label>
 
+          {/* AI Trigger button — only for PDFs */}
           {file && file.type === "application/pdf" && (
             <button
               type="button"
@@ -291,9 +363,13 @@ export default function StudentResourceUploadPage() {
               disabled={isSuggesting}
               className="mt-3 flex items-center justify-center w-full gap-2 px-4 py-2.5 rounded-xl border-2 border-dashed border-violet-300 dark:border-violet-700/60 bg-violet-50 dark:bg-violet-950/20 text-violet-700 dark:text-violet-400 font-semibold text-[13px] hover:bg-violet-100 dark:hover:bg-violet-900/30 transition-all disabled:opacity-50"
             >
-              <RiSparklingFill className={cn("text-base", isSuggesting && "animate-spin")} />
+              {isSuggesting ? (
+                <RiLoader4Line className="text-base animate-spin" />
+              ) : (
+                <RiSparklingFill className="text-base" />
+              )}
               {isSuggesting
-                ? "Analyzing PDF — RAG chunking & vector retrieval in progress…"
+                ? SUGGEST_STAGES[stageIdx]
                 : suggestions
                   ? "✨ Re-analyze PDF with AI"
                   : "✨ Get AI Suggestions  (RAG + Vector Search)"}
@@ -301,19 +377,23 @@ export default function StudentResourceUploadPage() {
           )}
         </div>
 
-        {/* Title */}
+        {/* ── Title ─────────────────────────────────────────────────────── */}
         <div>
           <label className={LABEL}>Title *</label>
           <input type="text" value={form.title} onChange={e => set("title", e.target.value)} placeholder="Resource title" className={FIELD} />
           {suggestions && (
             <div className="mt-3 rounded-xl border border-violet-200/60 dark:border-violet-800/40 bg-violet-50/50 dark:bg-violet-950/10 p-3">
               <SuggestionHeader />
-              <SuggestionPanel options={suggestions.titles} selected={form.title} onSelect={v => set("title", v)} />
+              <SuggestionPanel
+                options={suggestions.titles}
+                selected={form.title}
+                onSelect={v => set("title", v)}
+              />
             </div>
           )}
         </div>
 
-        {/* Category */}
+        {/* ── Category ──────────────────────────────────────────────────── */}
         <div>
           <label className={LABEL}>Category</label>
           <p className="text-[11px] text-muted-foreground/80 mb-1.5">Includes global (admin) categories and any you created under Library.</p>
@@ -323,19 +403,23 @@ export default function StudentResourceUploadPage() {
           </select>
         </div>
 
-        {/* Abstract / Description */}
+        {/* ── Abstract / Description ────────────────────────────────────── */}
         <div>
           <label className={LABEL}>Abstract / Description</label>
           <textarea value={form.description} onChange={e => set("description", e.target.value)} rows={3} placeholder="Brief description or abstract…" className={cn(FIELD, "resize-vertical")} />
           {suggestions && (
             <div className="mt-3 rounded-xl border border-violet-200/60 dark:border-violet-800/40 bg-violet-50/50 dark:bg-violet-950/10 p-3">
               <SuggestionHeader />
-              <SuggestionPanel options={suggestions.descriptions} selected={form.description} onSelect={v => set("description", v)} />
+              <SuggestionPanel
+                options={suggestions.descriptions}
+                selected={form.description}
+                onSelect={v => set("description", v)}
+              />
             </div>
           )}
         </div>
 
-        {/* Authors + Year */}
+        {/* ── Authors + Year ────────────────────────────────────────────── */}
         <div className="grid grid-cols-1 sm:grid-cols-[1fr_140px] gap-4">
           <div>
             <label className={LABEL}>Authors</label>
@@ -406,7 +490,7 @@ export default function StudentResourceUploadPage() {
           </div>
         </div>
 
-        {/* Tags */}
+        {/* ── Tags ──────────────────────────────────────────────────────── */}
         <div>
           <label className={LABEL}>Tags</label>
           <TagInput value={form.tags} onChange={v => set("tags", v)} />
@@ -431,7 +515,7 @@ export default function StudentResourceUploadPage() {
           )}
         </div>
 
-        {/* Visibility */}
+        {/* ── Visibility ────────────────────────────────────────────────── */}
         <div>
           <label className={LABEL}>Visibility</label>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
