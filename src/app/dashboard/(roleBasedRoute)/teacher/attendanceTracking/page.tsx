@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useMemo, useEffect, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   RiCalendarCheckLine, RiGroupLine, RiSparklingFill,
   RiCheckLine, RiCloseLine, RiSubtractLine, RiSaveLine,
   RiHistoryLine, RiLoader4Line, RiAlertLine,
-  RiSettings3Line,
-  RiFileWarningLine,
+  RiSettings3Line, RiFileWarningLine, RiTimeLine, RiMapPinLine,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -82,8 +82,58 @@ function RateBar({ records }: { records: ATRecord[] }) {
   );
 }
 
-// ─── Cluster selector with real data ──────────────────────
+// ─── History dot with tooltip ────────────────────────────────
+function HistoryDot({ entry }: { entry: HistEntry }) {
+  const [hover, setHover] = useState(false);
+  const cfg = STATUS_CONFIG[entry.status] ?? STATUS_CONFIG.UNMARKED;
+  const fmtDate = (d: string) => { try { return new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }); } catch { return d; } };
+  const fmtTime = (d: string) => { try { return new Date(d).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }); } catch { return ""; } };
+  return (
+    <div className={cn("relative", hover && "z-50")} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
+      <div className={cn(
+        "w-4 h-4 rounded-full border-2 border-background cursor-pointer transition-transform hover:scale-125",
+        cfg.dotClass
+      )} />
+      {hover && (
+        <div className={cn(
+          "absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50",
+          "w-52 rounded-xl border border-border bg-card shadow-xl shadow-black/10 dark:shadow-black/40",
+          "px-3 py-2.5 flex flex-col gap-1 pointer-events-none"
+        )}>
+          {/* Arrow */}
+          <div className="absolute top-full left-1/2 -translate-x-1/2 w-2 h-2 bg-card border-r border-b border-border rotate-45 -mt-1" />
+          <div className="flex items-center gap-1.5 mb-0.5">
+            <span className={cn("w-2 h-2 rounded-full flex-shrink-0", cfg.dotClass)} />
+            <span className={cn("text-[11px] font-bold uppercase tracking-wide",
+              entry.status === "PRESENT" ? "text-teal-600 dark:text-teal-400"
+              : entry.status === "ABSENT" ? "text-red-500 dark:text-red-400"
+              : entry.status === "EXCUSED" ? "text-amber-600 dark:text-amber-400"
+              : "text-muted-foreground")}>
+              {cfg.label}
+            </span>
+          </div>
+          <p className="text-[12px] font-semibold text-foreground leading-snug line-clamp-2">
+            {entry.session?.title ?? "Session"}
+          </p>
+          <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+            <RiCalendarCheckLine className="text-teal-500 dark:text-teal-400 flex-shrink-0" />
+            {fmtDate(entry.session?.scheduledAt ?? "")}
+          </div>
+          <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+            <RiTimeLine className="text-teal-500 dark:text-teal-400 flex-shrink-0" />
+            {fmtTime(entry.session?.scheduledAt ?? "")}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Cluster selector with real data ──────────────────────────
 export default function AttendanceTrackingPage() {
+  const searchParams = useSearchParams();
+  const urlSessionId = searchParams.get("sessionId") ?? "";
+
   // ── cluster/session selection
   const [clusters,  setClusters]  = useState<{id:string;name:string}[]>([]);
   const [clusterId, setClusterId] = useState("");
@@ -138,19 +188,25 @@ export default function AttendanceTrackingPage() {
 
   useEffect(() => { fetchClusters(); }, [fetchClusters]);
 
-  // ── Fetch sessions when cluster changes
+  // ── Fetch sessions when cluster changes (only completed ones)
   useEffect(() => {
     if (!clusterId) return;
     setLoadingSessions(true); setSessions([]); setSessionId(""); setMembers([]); setRecords({});
     fetch(`/api/sessions?clusterId=${clusterId}`, { credentials: "include" })
       .then(r => r.json())
       .then(d => {
-        const list = (d.data ?? d) as Session[];
+        const list = ((d.data ?? d) as Session[]).filter(s => s.status === "completed");
         setSessions(list);
-        if (list.length > 0) setSessionId(list[0].id);
+        // Auto-select from URL param if present, else first in list
+        if (urlSessionId && list.some(s => s.id === urlSessionId)) {
+          setSessionId(urlSessionId);
+        } else if (list.length > 0) {
+          setSessionId(list[0].id);
+        }
       })
       .catch(() => toast.error("Failed to load sessions"))
       .finally(() => setLoadingSessions(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clusterId]);
 
   // ── Fetch members + existing attendance when session changes
@@ -162,10 +218,16 @@ export default function AttendanceTrackingPage() {
       .then(d => {
         const list = (d.data ?? []) as Member[];
         setMembers(list);
-        // init all as UNMARKED
-        const init: Record<string, ATRecord> = {};
-        list.forEach(m => { init[m.studentProfileId] = { memberId: m.studentProfileId, status: "UNMARKED", note: "" }; });
-        setRecords(init);
+        // init all as UNMARKED, preserving any already loaded attendance
+        setRecords(prev => {
+          const next = { ...prev };
+          list.forEach(m => {
+            if (!next[m.studentProfileId]) {
+              next[m.studentProfileId] = { memberId: m.studentProfileId, status: "UNMARKED", note: "" };
+            }
+          });
+          return next;
+        });
       })
       .catch(() => toast.error("Failed to load members"))
       .finally(() => setLoadingMembers(false));
@@ -180,9 +242,7 @@ export default function AttendanceTrackingPage() {
           setRecords(prev => {
             const next = { ...prev };
             recList.forEach(r => {
-              if (next[r.studentId]) {
-                next[r.studentId] = { memberId: r.studentId, status: r.status as Status, note: r.note ?? "" };
-              }
+              next[r.studentId] = { memberId: r.studentId, status: r.status as Status, note: r.note ?? "" };
             });
             return next;
           });
@@ -347,6 +407,10 @@ export default function AttendanceTrackingPage() {
             <label className="text-[13px] font-semibold text-foreground/80">Session</label>
             {loadingSessions ? (
               <div className="h-10 rounded-xl bg-muted animate-pulse" />
+            ) : sessions.length === 0 ? (
+              <div className="h-10 rounded-xl bg-muted/30 border border-border flex items-center px-4">
+                <span className="text-[13px] text-muted-foreground/60">No completed sessions yet</span>
+              </div>
             ) : (
               <select value={activeSession?.id ?? ""} onChange={e => setSessionId(e.target.value)}
                 className="w-full h-10 px-4 rounded-xl text-[13.5px] bg-muted/40 border border-border text-foreground appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-teal-400/20 focus:border-teal-400/70 transition-all">
@@ -355,14 +419,19 @@ export default function AttendanceTrackingPage() {
             )}
           </div>
         </div>
+        {/* Completed-only note */}
+        <p className="text-[11.5px] text-muted-foreground/60 flex items-center gap-1">
+          <RiCalendarCheckLine className="text-teal-500 dark:text-teal-400" />
+          Only completed sessions are shown. Complete a session from Manage Sessions to mark attendance.
+        </p>
         {activeSession && !loadingMembers && !loadingExisting && <RateBar records={sessionRecords} />}
       </div>
 
       {/* Members table */}
       {activeSession && (
-        <div className="rounded-2xl border border-border bg-card overflow-hidden">
+        <div className="rounded-2xl border border-border bg-card">
           {/* Table header */}
-          <div className="flex items-center justify-between px-5 py-3.5 border-b border-border bg-muted/20">
+          <div className="flex items-center justify-between px-5 py-3.5 border-b border-border bg-muted/20 rounded-t-2xl">
             <div className="flex items-center gap-2">
               <RiGroupLine className="text-muted-foreground/60 text-base" />
               <span className="text-[13px] font-bold text-foreground">{members.length} members</span>
@@ -463,11 +532,9 @@ export default function AttendanceTrackingPage() {
                       <span className="text-[11.5px] text-muted-foreground/40">No history</span>
                     ) : (
                       <div className="flex items-center gap-2">
-                        <div className="flex gap-1">
-                          {(history[member.studentProfileId] ?? []).slice(0, 10).map((e, i) => (
-                            <div key={i}
-                              title={`${e.session?.title} · ${fmtDate(e.session?.scheduledAt ?? "")} · ${e.status}`}
-                              className={cn("w-3 h-3 rounded-sm transition-all", STATUS_CONFIG[e.status]?.dotClass ?? "bg-muted-foreground/30")} />
+                        <div className="flex gap-1.5 flex-wrap">
+                          {(history[member.studentProfileId] ?? []).slice(0, 12).map((e, i) => (
+                            <HistoryDot key={i} entry={e} />
                           ))}
                         </div>
                         {(() => {
@@ -489,7 +556,7 @@ export default function AttendanceTrackingPage() {
           })}
 
           {/* Save footer */}
-          <div className="flex items-center justify-between px-5 py-4 border-t border-border bg-muted/20">
+          <div className="flex items-center justify-between px-5 py-4 border-t border-border bg-muted/20 rounded-b-2xl">
             <p className="text-[12.5px] text-muted-foreground">
               {markedCount}/{members.length} marked
             </p>

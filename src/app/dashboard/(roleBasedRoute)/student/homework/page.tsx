@@ -27,6 +27,54 @@ function isEffectivelyDone(t: HomeworkTask) {
   return t.status === "SUBMITTED" || t.status === "REVIEWED";
 }
 
+function CountdownTimer({ deadline, done }: { deadline: string; done: boolean }) {
+  const [timeLeft, setTimeLeft] = useState("");
+  const [isOverdue, setIsOverdue] = useState(false);
+
+  useEffect(() => {
+    if (done) return;
+    const update = () => {
+      const diff = new Date(deadline).getTime() - Date.now();
+      if (diff <= 0) {
+        setIsOverdue(true);
+        setTimeLeft("");
+      } else {
+        setIsOverdue(false);
+        const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
+        const m = Math.floor((diff / 1000 / 60) % 60);
+        const s = Math.floor((diff / 1000) % 60);
+        setTimeLeft(`${d}d ${h}h ${m}m ${s}s`);
+      }
+    };
+    update();
+    const interval = setInterval(update, 1000);
+    return () => clearInterval(interval);
+  }, [deadline, done]);
+
+  if (done) {
+    return (
+      <span className="flex items-center gap-0.5">
+        <RiTimeLine className="text-xs" /> {new Date(deadline).toLocaleDateString()}
+      </span>
+    );
+  }
+
+  if (isOverdue) {
+    return (
+      <span className="text-[10.5px] font-semibold text-red-500 bg-red-50 dark:bg-red-950/30 px-1.5 py-0.5 rounded border border-red-200 dark:border-red-800/50 flex items-center gap-1">
+        <RiTimeLine className="text-xs" /> Closed
+      </span>
+    );
+  }
+
+  return (
+    <span className="text-[10.5px] font-mono font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 px-1.5 py-0.5 rounded border border-amber-200 dark:border-amber-800/50 flex items-center gap-1">
+      <RiTimeLine className="text-xs" /> {timeLeft}
+    </span>
+  );
+}
+
 export default function HomeworkPage() {
   const router = useRouter();
   const [tasks, setTasks]         = useState<HomeworkTask[]>([]);
@@ -136,11 +184,7 @@ export default function HomeworkPage() {
                         onClick={() => router.push(`/dashboard/student/sessions/${t.StudySession.id}`)}>
                         {t.StudySession.title} <RiArrowRightLine className="text-xs" />
                       </span>
-                      {t.deadline && (
-                        <span className={cn("flex items-center gap-0.5", overdue ? "text-red-500" : "")}>
-                          <RiTimeLine className="text-xs" />{new Date(t.deadline).toLocaleDateString()}{overdue && " (overdue)"}
-                        </span>
-                      )}
+                      {t.deadline && <CountdownTimer deadline={t.deadline} done={done} />}
                     </div>
                     {/* Score shown if reviewed */}
                     {t.status === "REVIEWED" && t.finalScore != null && (

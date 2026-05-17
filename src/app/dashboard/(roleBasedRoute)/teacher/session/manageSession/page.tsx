@@ -11,7 +11,7 @@ import {
     RiEyeLine, RiCalendar2Line, RiListCheck2, RiBookOpenLine,
     RiVideoLine, RiStarLine, RiUserLine, RiClockwiseLine,
     RiArrowDownSLine, RiCloseLine, RiDraftLine, RiCheckboxCircleLine,
-    RiBarChartLine, RiThumbUpLine, RiChat3Line,
+    RiBarChartLine, RiThumbUpLine, RiChat3Line, RiLoader4Line,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -174,13 +174,15 @@ function ActionMenu({ session, onEdit, onDelete, onCancel }: {
                     <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
                     <div className="absolute right-0 top-9 z-20 w-48 rounded-xl border border-border
                           bg-card shadow-lg shadow-black/10 dark:shadow-black/30 overflow-hidden">
-                        <button
-                            onClick={() => { setOpen(false); onEdit(); }}
-                            className="w-full flex items-center gap-2.5 px-4 py-2.5
-                         text-[13px] font-medium text-foreground hover:bg-muted/50 transition-colors"
-                        >
-                            <RiEditLine className="text-sm text-muted-foreground" /> Edit session
-                        </button>
+                        {session.status !== "completed" && session.status !== "cancelled" && (
+                            <button
+                                onClick={() => { setOpen(false); onEdit(); }}
+                                className="w-full flex items-center gap-2.5 px-4 py-2.5
+                             text-[13px] font-medium text-foreground hover:bg-muted/50 transition-colors"
+                            >
+                                <RiEditLine className="text-sm text-muted-foreground" /> Edit session
+                            </button>
+                        )}
                         {session.status === "upcoming" && (
                             <button
                                 onClick={() => { setOpen(false); onCancel(); }}
@@ -451,18 +453,30 @@ function SessionDrawer({
     session,
     onClose,
     onUpdateSession,
-    onAgendaAdd,    // ✅ dedicated callback — does NOT fire PATCH
-    onAgendaDelete, // ✅ dedicated callback — does NOT fire PATCH
+    onAgendaAdd,
+    onAgendaDelete,
+    onComplete,
 }: {
     session: StudySession;
     onClose: () => void;
     onUpdateSession: (id: string, updates: Partial<StudySession>) => void;
     onAgendaAdd: (sessionId: string, item: AgendaItem) => void;
     onAgendaDelete: (sessionId: string, agendaId: string) => void;
+    onComplete: (id: string) => Promise<void>;
 }) {
     const [activeTab, setActiveTab] = useState<"overview" | "agenda" | "tasks" | "feedback">("overview");
     const [showEditModal, setShowEditModal] = useState(false);
     const [showAddAgenda, setShowAddAgenda] = useState(false);
+    const [completing, setCompleting] = useState(false);
+
+    const handleComplete = async () => {
+        setCompleting(true);
+        try {
+            await onComplete(session.id);
+        } finally {
+            setCompleting(false);
+        }
+    };
 
     const tabs = [
         { id: "overview", label: "Overview", icon: <RiEyeLine /> },
@@ -820,23 +834,42 @@ function SessionDrawer({
                     </div>
 
                     {/* Drawer footer */}
-                    <div className="px-6 py-4 border-t border-border flex items-center gap-3 flex-shrink-0">
+                    <div className="px-6 py-4 border-t border-border flex items-center gap-2 flex-shrink-0">
                         <button
                             onClick={onClose}
-                            className="flex-1 h-10 rounded-xl border border-border
-                       text-[13.5px] font-semibold text-muted-foreground
-                       hover:text-foreground hover:bg-muted/50 transition-all"
+                            className="h-10 px-4 rounded-xl border border-border
+                       text-[13px] font-semibold text-muted-foreground
+                       hover:text-foreground hover:bg-muted/50 transition-all flex-shrink-0"
                         >
                             Close
                         </button>
-                        <button
-                            onClick={() => setShowEditModal(true)}
-                            className="flex-1 h-10 rounded-xl flex items-center justify-center gap-2
-                       bg-teal-600 dark:bg-teal-500 hover:bg-teal-700 dark:hover:bg-teal-600
-                       text-white text-[13.5px] font-bold transition-all"
-                        >
-                            <RiEditLine className="text-sm" /> Edit session
-                        </button>
+                        {session.status !== "completed" && session.status !== "cancelled" && (
+                            <button
+                                onClick={() => setShowEditModal(true)}
+                                className="flex-1 h-10 rounded-xl flex items-center justify-center gap-2
+                           border border-border text-foreground text-[13px] font-semibold
+                           hover:bg-muted/50 transition-all"
+                            >
+                                <RiEditLine className="text-sm" /> Edit
+                            </button>
+                        )}
+                        {session.status !== "completed" && session.status !== "cancelled" && (
+                            <button
+                                onClick={handleComplete}
+                                disabled={completing}
+                                className={cn(
+                                    "flex-1 h-10 rounded-xl flex items-center justify-center gap-2",
+                                    "bg-emerald-600 dark:bg-emerald-500 hover:bg-emerald-700 dark:hover:bg-emerald-600",
+                                    "text-white text-[13px] font-bold transition-all",
+                                    "disabled:opacity-60 disabled:cursor-not-allowed"
+                                )}
+                            >
+                                {completing
+                                    ? <><RiLoader4Line className="text-sm animate-spin" /> Completing…</>
+                                    : <><RiCheckboxCircleLine className="text-sm" /> Complete session</>
+                                }
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>
@@ -1053,6 +1086,31 @@ export default function ManageSessionsPage() {
     })();
     const totalMembers = sessions.reduce((acc, s) => acc + s.memberCount, 0);
 
+
+    const handleComplete = async (id: string) => {
+        try {
+            const completedAt = new Date().toISOString();
+            const res = await fetch(`/api/sessions/${id}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ status: "completed" }),
+                credentials: "include",
+            });
+            const data = await res.json();
+            if (data.success) {
+                toast.success("Session marked as completed! Redirecting to attendance…", { position: "top-right" });
+                setSessions(prev => prev.map(s => s.id === id ? { ...s, status: "completed" as SessionStatus } : s));
+                setSelectedSession(null);
+                setTimeout(() => {
+                    router.push(`/dashboard/teacher/attendanceTracking?sessionId=${id}&completedAt=${encodeURIComponent(completedAt)}`);
+                }, 800);
+            } else {
+                toast.error(data.message ?? "Failed to complete session");
+            }
+        } catch {
+            toast.error("Network error — please try again");
+        }
+    };
 
     const handleUpdateSession = async (id: string, updates: Partial<StudySession>) => {
         try {
@@ -1361,8 +1419,9 @@ export default function ManageSessionsPage() {
                     session={selectedSession}
                     onClose={() => setSelectedSession(null)}
                     onUpdateSession={handleUpdateSession}
-                    onAgendaAdd={handleAgendaAdd}       // ✅
-                    onAgendaDelete={handleAgendaDelete} // ✅
+                    onAgendaAdd={handleAgendaAdd}
+                    onAgendaDelete={handleAgendaDelete}
+                    onComplete={handleComplete}
                 />
             )}
         </div>

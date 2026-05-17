@@ -599,6 +599,16 @@ function ClusterCard({
             <div className="px-5 py-3 border-t border-border flex items-center justify-between">
                 <span className="text-[11px] font-mono text-muted-foreground/50">/{cluster.slug}</span>
                 <div className="flex items-center gap-3">
+                    {/* Quick delete button */}
+                    <button
+                        onClick={() => onDelete(cluster.id)}
+                        title="Delete cluster"
+                        className="flex items-center gap-1 text-[12px] font-semibold
+                         text-red-500/70 dark:text-red-400/70
+                         hover:text-red-600 dark:hover:text-red-400 transition-colors">
+                        <RiDeleteBinLine className="text-xs" /> Delete
+                    </button>
+                    <span className="text-muted-foreground/30 text-xs">·</span>
                     {/* Quick edit button in footer */}
                     <button
                         onClick={() => onEdit(cluster)}
