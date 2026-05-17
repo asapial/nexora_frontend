@@ -6,6 +6,7 @@ import {
   RiSparklingFill, RiArrowLeftLine, RiAddLine, RiCloseLine,
   RiImageAddLine, RiBookOpenLine, RiPriceTag3Line,
   RiAlertLine, RiCheckLine, RiUploadLine, RiLoader4Line,
+  RiMagicLine, RiArrowRightLine, RiRefreshLine,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
 import { courseApi } from "@/lib/api";
@@ -105,12 +106,81 @@ export default function CreateCoursePage() {
   const [success, setSuccess] = useState(false);
   const [createdId, setCreatedId] = useState<string | null>(null);
 
+  // ── AI suggestion state ──────────────────────────────────────────────────
+  const [aiLoading, setAiLoading]           = useState(false);
+  const [aiError, setAiError]               = useState<string | null>(null);
+  const [aiErrorDetails, setAiErrorDetails] = useState<string[]>([]);
+  const [aiSuggestion, setAiSuggestion]     = useState<{
+    titles: string[]; descriptions: string[]; tagSets: string[][];
+  } | null>(null);
+  // Which option (0-3) is selected per field
+  const [selTitle, setSelTitle]   = useState(0);
+  const [selDesc,  setSelDesc]    = useState(0);
+  const [selTags,  setSelTags]    = useState(0);
+  // Keep last dataUrl so the teacher can retry without re-uploading
+  const [lastDataUrl, setLastDataUrl] = useState<string | null>(null);
+
+  /** Shrink image to max 512px and re-encode as JPEG 0.65 to cut vision token cost ~10-15×. */
+  const compressImage = (dataUrl: string): Promise<string> =>
+    new Promise(resolve => {
+      const img = new Image();
+      img.onload = () => {
+        const MAX = 512;
+        const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+        const canvas = document.createElement("canvas");
+        canvas.width  = Math.round(img.width  * scale);
+        canvas.height = Math.round(img.height * scale);
+        canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/jpeg", 0.65));
+      };
+      img.src = dataUrl;
+    });
+
+  const fetchAiSuggestion = async (dataUrl: string) => {
+    setAiLoading(true);
+    setAiSuggestion(null);
+    setAiError(null);
+    setAiErrorDetails([]);
+    setSelTitle(0); setSelDesc(0); setSelTags(0);
+    try {
+      const compressed = await compressImage(dataUrl);
+      const res = await fetch("/api/ai/course-suggest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageBase64: compressed }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setAiError(data?.error ?? `AI service error (${res.status})`);
+        setAiErrorDetails(Array.isArray(data?.details) ? data.details : []);
+        return;
+      }
+      const titles  = Array.isArray(data.titles)  ? data.titles  : [];
+      const descs   = Array.isArray(data.descriptions) ? data.descriptions : [];
+      const tagSets = Array.isArray(data.tagSets)  ? data.tagSets  : [];
+      if (titles.length || descs.length || tagSets.length) {
+        setAiSuggestion({ titles, descriptions: descs, tagSets });
+      } else {
+        setAiError("AI returned no usable suggestions. Try a clearer thumbnail.");
+      }
+    } catch (err: any) {
+      setAiError(err.message ?? "Network error calling AI service.");
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
   const handleThumbnail = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setThumbnailFile(file);
       const reader = new FileReader();
-      reader.onload = ev => setThumbnailPreview(ev.target?.result as string);
+      reader.onload = ev => {
+        const dataUrl = ev.target?.result as string;
+        setThumbnailPreview(dataUrl);
+        setLastDataUrl(dataUrl);
+        fetchAiSuggestion(dataUrl);
+      };
       reader.readAsDataURL(file);
     }
   };
@@ -221,6 +291,186 @@ export default function CreateCoursePage() {
 
         {/* Details */}
         <Section icon={<RiBookOpenLine />} title="Course Details" description="Basic information about your course.">
+          {/* ── AI Suggestion Panel ─────────────────────────────────── */}
+          {(aiLoading || aiSuggestion || aiError) && (
+            <div className={`rounded-xl border flex flex-col gap-0 overflow-hidden transition-all ${
+              aiError
+                ? "border-red-200/60 dark:border-red-800/40"
+                : "border-teal-300/60 dark:border-teal-700/50"
+            }`}>
+
+              {/* Panel header */}
+              <div className={`flex items-center gap-2 px-4 py-3 ${
+                aiError ? "bg-red-50/60 dark:bg-red-950/25" : "bg-teal-50/70 dark:bg-teal-950/30"
+              }`}>
+                {aiLoading
+                  ? <RiLoader4Line className="animate-spin text-teal-500 text-sm flex-shrink-0" />
+                  : aiError
+                    ? <RiAlertLine className="text-red-500 text-sm flex-shrink-0" />
+                    : <RiMagicLine className="text-teal-500 text-sm flex-shrink-0" />}
+                <p className={`text-[12.5px] font-bold ${
+                  aiError ? "text-red-600 dark:text-red-400" : "text-teal-700 dark:text-teal-300"
+                }`}>
+                  {aiLoading ? "Analysing your thumbnail…" : aiError ? "AI Suggestion Failed" : "AI Suggestions — pick one per field"}
+                </p>
+                <div className="ml-auto flex items-center gap-1.5">
+                  {aiError && lastDataUrl && (
+                    <button type="button" onClick={() => fetchAiSuggestion(lastDataUrl)}
+                      className="flex items-center gap-1 h-6 px-2.5 rounded-lg text-[11px] font-semibold bg-teal-600 text-white hover:bg-teal-700 transition-colors">
+                      <RiRefreshLine className="text-xs" /> Retry
+                    </button>
+                  )}
+                  {(aiSuggestion || aiError) && (
+                    <button type="button" onClick={() => { setAiSuggestion(null); setAiError(null); }}
+                      className="text-muted-foreground hover:text-foreground transition-colors">
+                      <RiCloseLine className="text-sm" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Error body */}
+              {aiError && (
+                <div className="px-4 py-3 flex flex-col gap-1.5 border-t border-red-200/40 dark:border-red-800/30">
+                  <p className="text-[12px] text-red-600 dark:text-red-400 leading-relaxed">{aiError}</p>
+                  {aiErrorDetails.length > 0 && (
+                    <details>
+                      <summary className="text-[11px] text-red-500/70 cursor-pointer select-none hover:text-red-500 transition-colors">Show model errors ({aiErrorDetails.length})</summary>
+                      <ul className="mt-1.5 flex flex-col gap-1">
+                        {aiErrorDetails.map((d, i) => (
+                          <li key={i} className="text-[10.5px] font-mono text-red-500/60 break-all leading-relaxed">{d}</li>
+                        ))}
+                      </ul>
+                    </details>
+                  )}
+                </div>
+              )}
+
+              {/* 4-option select panels */}
+              {aiSuggestion && (
+                <div className="flex flex-col divide-y divide-border">
+
+                  {/* ── Titles ── */}
+                  {aiSuggestion.titles.length > 0 && (
+                    <div className="px-4 py-3.5 flex flex-col gap-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-[10.5px] font-bold uppercase tracking-wider text-teal-600/70 dark:text-teal-400/60">Title</p>
+                        <button type="button"
+                          onClick={() => { setTitle(aiSuggestion.titles[selTitle]); setErrors(p => ({...p, title: ""})); }}
+                          className="flex items-center gap-1 h-6 px-2.5 rounded-lg text-[11px] font-semibold bg-teal-600 text-white hover:bg-teal-700 transition-colors">
+                          Apply <RiArrowRightLine className="text-xs" />
+                        </button>
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        {aiSuggestion.titles.map((t, i) => (
+                          <button key={i} type="button" onClick={() => setSelTitle(i)}
+                            className={cn(
+                              "flex items-start gap-2.5 w-full text-left px-3 py-2.5 rounded-lg border text-[12.5px] font-medium transition-all",
+                              selTitle === i
+                                ? "border-teal-400/70 bg-teal-50/80 dark:bg-teal-950/40 text-foreground ring-1 ring-teal-400/30"
+                                : "border-border bg-muted/20 text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+                            )}>
+                            <span className={cn(
+                              "flex-shrink-0 w-4 h-4 mt-0.5 rounded-full border-2 flex items-center justify-center",
+                              selTitle === i ? "border-teal-500 bg-teal-500" : "border-border"
+                            )}>
+                              {selTitle === i && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
+                            </span>
+                            <span>{t}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ── Descriptions ── */}
+                  {aiSuggestion.descriptions.length > 0 && (
+                    <div className="px-4 py-3.5 flex flex-col gap-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-[10.5px] font-bold uppercase tracking-wider text-teal-600/70 dark:text-teal-400/60">Description</p>
+                        <button type="button"
+                          onClick={() => setDescription(aiSuggestion.descriptions[selDesc])}
+                          className="flex items-center gap-1 h-6 px-2.5 rounded-lg text-[11px] font-semibold bg-teal-600 text-white hover:bg-teal-700 transition-colors">
+                          Apply <RiArrowRightLine className="text-xs" />
+                        </button>
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        {aiSuggestion.descriptions.map((d, i) => (
+                          <button key={i} type="button" onClick={() => setSelDesc(i)}
+                            className={cn(
+                              "flex items-start gap-2.5 w-full text-left px-3 py-2.5 rounded-lg border text-[12px] leading-relaxed transition-all",
+                              selDesc === i
+                                ? "border-teal-400/70 bg-teal-50/80 dark:bg-teal-950/40 text-foreground ring-1 ring-teal-400/30"
+                                : "border-border bg-muted/20 text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+                            )}>
+                            <span className={cn(
+                              "flex-shrink-0 w-4 h-4 mt-0.5 rounded-full border-2 flex items-center justify-center",
+                              selDesc === i ? "border-teal-500 bg-teal-500" : "border-border"
+                            )}>
+                              {selDesc === i && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
+                            </span>
+                            <span className="line-clamp-3">{d}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ── Tag Sets ── */}
+                  {aiSuggestion.tagSets.length > 0 && (
+                    <div className="px-4 py-3.5 flex flex-col gap-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-[10.5px] font-bold uppercase tracking-wider text-teal-600/70 dark:text-teal-400/60">Tags</p>
+                        <button type="button"
+                          onClick={() => setTags(prev => [...new Set([...prev, ...aiSuggestion.tagSets[selTags]])].slice(0, 12))}
+                          className="flex items-center gap-1 h-6 px-2.5 rounded-lg text-[11px] font-semibold bg-teal-600 text-white hover:bg-teal-700 transition-colors">
+                          Apply <RiArrowRightLine className="text-xs" />
+                        </button>
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        {aiSuggestion.tagSets.map((set, i) => (
+                          <button key={i} type="button" onClick={() => setSelTags(i)}
+                            className={cn(
+                              "flex items-start gap-2.5 w-full text-left px-3 py-2.5 rounded-lg border transition-all",
+                              selTags === i
+                                ? "border-teal-400/70 bg-teal-50/80 dark:bg-teal-950/40 ring-1 ring-teal-400/30"
+                                : "border-border bg-muted/20 hover:bg-muted/40"
+                            )}>
+                            <span className={cn(
+                              "flex-shrink-0 w-4 h-4 mt-0.5 rounded-full border-2 flex items-center justify-center",
+                              selTags === i ? "border-teal-500 bg-teal-500" : "border-border"
+                            )}>
+                              {selTags === i && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
+                            </span>
+                            <div className="flex flex-wrap gap-1">
+                              {set.map(tag => (
+                                <span key={tag} className="px-1.5 py-0.5 rounded-md bg-teal-100/60 dark:bg-teal-900/40 border border-teal-200/60 dark:border-teal-700/50 text-[10.5px] font-medium text-teal-700 dark:text-teal-300">{tag}</span>
+                              ))}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Apply all selected */}
+                  <div className="px-4 py-3 bg-teal-50/30 dark:bg-teal-950/20">
+                    <button type="button"
+                      onClick={() => {
+                        if (aiSuggestion.titles.length)       { setTitle(aiSuggestion.titles[selTitle]); setErrors(p => ({...p, title: ""})); }
+                        if (aiSuggestion.descriptions.length) setDescription(aiSuggestion.descriptions[selDesc]);
+                        if (aiSuggestion.tagSets.length)      setTags(prev => [...new Set([...prev, ...aiSuggestion.tagSets[selTags]])].slice(0, 12));
+                        setAiSuggestion(null);
+                      }}
+                      className="w-full h-9 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-[12.5px] font-bold transition-colors flex items-center justify-center gap-2">
+                      <RiMagicLine /> Apply selected to all fields
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="flex flex-col gap-1.5">
             <label className="text-[12.5px] font-bold text-muted-foreground">Course title <span className="text-red-500">*</span></label>
             <input value={title} onChange={e => { setTitle(e.target.value); setErrors(p => ({ ...p, title: "" })); }}
