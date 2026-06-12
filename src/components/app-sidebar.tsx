@@ -87,6 +87,12 @@ const teacherNav: NavDocItem[] = [
     ],
   },
   {
+    title: "ExamShield",
+    url: "/dashboard/teacher/exams",
+    icon: <RiShieldCheckLine />,
+    items: [{ title: "Exams & Proctoring", url: "/dashboard/teacher/exams" }],
+  },
+  {
     title: "Courses",
     url: "/dashboard/teacher/courses",
     icon: <RiBookOpenLine />,
@@ -184,6 +190,12 @@ const studentNav: NavDocItem[] = [
       { title: "My Homework", url: "/dashboard/student/homework" },
     ],
   },
+  {
+    title: "ExamShield",
+    url: "/dashboard/student/exams",
+    icon: <RiShieldCheckLine />,
+    items: [{ title: "My Exams", url: "/dashboard/student/exams" }],
+  },
   // {
   //   title: "Sessions",
   //   url: "/dashboard/student/sessions",
@@ -258,6 +270,7 @@ const adminNav: NavDocItem[] = [
       { title: "Course Approvals", url: "/dashboard/admin/approvals/courses" },
       { title: "Mission Approvals", url: "/dashboard/admin/approvals/missions" },
       { title: "Price Requests", url: "/dashboard/admin/approvals/price-requests" },
+      { title: "Exam Approvals", url: "/dashboard/admin/exams" },
     ],
   },
   {

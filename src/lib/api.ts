@@ -113,6 +113,24 @@ export const studentApi = {
     }>("/api/payments/history"),
 };
 
+export const examApi = {
+  teacherList: () => apiFetch<any[]>("/api/exams/teacher"),
+  teacherDetail: (id: string) => apiFetch<any>(`/api/exams/teacher/${id}`),
+  create: (body: any) => apiFetch<any>("/api/exams/teacher", { method: "POST", body: JSON.stringify(body) }),
+  update: (id: string, body: any) => apiFetch<any>(`/api/exams/teacher/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  setQuestions: (id: string, questions: any[]) => apiFetch<any>(`/api/exams/teacher/${id}/questions`, { method: "PUT", body: JSON.stringify({ questions }) }),
+  gradeAttempt: (id: string, attemptId: string, grades: any[]) => apiFetch<any>(`/api/exams/teacher/${id}/attempts/${attemptId}/grade`, { method: "PATCH", body: JSON.stringify({ grades }) }),
+  pending: () => apiFetch<any[]>("/api/exams/admin/pending"),
+  analytics: () => apiFetch<any[]>("/api/exams/admin/analytics"),
+  approve: (id: string) => apiFetch<any>(`/api/exams/admin/${id}/approve`, { method: "POST" }),
+  reject: (id: string, reason: string) => apiFetch<any>(`/api/exams/admin/${id}/reject`, { method: "POST", body: JSON.stringify({ reason }) }),
+  studentList: () => apiFetch<any[]>("/api/exams/student"),
+  start: (id: string) => apiFetch<any>(`/api/exams/student/${id}/start`, { method: "POST" }),
+  submit: (id: string, answers: any[], autoSubmit = false) => apiFetch<any>(`/api/exams/student/${id}/submit`, { method: "POST", body: JSON.stringify({ answers, autoSubmit }) }),
+  violation: (id: string, body: any) => apiFetch<any>(`/api/exams/student/${id}/violations`, { method: "POST", body: JSON.stringify(body) }),
+  result: (id: string) => apiFetch<any>(`/api/exams/student/${id}/result`),
+};
+
 export const settingsApi = {
   getAccount: () => apiFetch<any>("/api/settings/account"),
   updateAccount: (body: Record<string, unknown>) =>
