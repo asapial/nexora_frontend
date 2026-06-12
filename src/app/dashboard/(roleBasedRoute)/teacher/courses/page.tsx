@@ -15,13 +15,13 @@ import type { Course, CourseStatus } from "../../../../../types/course.type";
 import RefreshIcon from "@/components/shared/RefreshIcon";
 
 // ─── Status Config ────────────────────────────────────────
-const STATUS_CONFIG: Record<CourseStatus, { label: string; badge: string; dot: string }> = {
-  DRAFT:            { label: "Draft",     badge: "text-muted-foreground bg-muted/50 border-border",                                                                       dot: "bg-muted-foreground/50" },
-  PENDING_APPROVAL: { label: "Pending",   badge: "text-amber-600 dark:text-amber-400 bg-amber-50/60 dark:bg-amber-950/30 border-amber-200/60 dark:border-amber-800/50",  dot: "bg-amber-500 animate-pulse" },
-  PUBLISHED:        { label: "Published", badge: "text-teal-600 dark:text-teal-400 bg-teal-50/60 dark:bg-teal-950/30 border-teal-200/60 dark:border-teal-800/50",        dot: "bg-teal-500" },
-  CLOSED:           { label: "Closed",    badge: "text-blue-600 dark:text-blue-400 bg-blue-50/60 dark:bg-blue-950/30 border-blue-200/60 dark:border-blue-800/50",        dot: "bg-blue-500" },
-  REJECTED:         { label: "Rejected",  badge: "text-red-600 dark:text-red-400 bg-red-50/40 dark:bg-red-950/20 border-red-200/60 dark:border-red-800/50",              dot: "bg-red-500" },
-  FINISHED:         { label: "Finished",  badge: "text-purple-600 dark:text-purple-400 bg-purple-50/60 dark:bg-purple-950/30 border-purple-200/60 dark:border-purple-800/50", dot: "bg-purple-500" },
+const STATUS_CONFIG: Record<CourseStatus, { label: string; badge: string; dot: string; }> = {
+  DRAFT: { label: "Draft", badge: "text-muted-foreground bg-muted/50 border-border", dot: "bg-muted-foreground/50" },
+  PENDING_APPROVAL: { label: "Pending", badge: "text-amber-600 dark:text-amber-400 bg-amber-50/60 dark:bg-amber-950/30 border-amber-200/60 dark:border-amber-800/50", dot: "bg-amber-500 animate-pulse" },
+  PUBLISHED: { label: "Published", badge: "text-teal-600 dark:text-teal-400 bg-teal-50/60 dark:bg-teal-950/30 border-teal-200/60 dark:border-teal-800/50", dot: "bg-teal-500" },
+  CLOSED: { label: "Closed", badge: "text-blue-600 dark:text-blue-400 bg-blue-50/60 dark:bg-blue-950/30 border-blue-200/60 dark:border-blue-800/50", dot: "bg-blue-500" },
+  REJECTED: { label: "Rejected", badge: "text-red-600 dark:text-red-400 bg-red-50/40 dark:bg-red-950/20 border-red-200/60 dark:border-red-800/50", dot: "bg-red-500" },
+  FINISHED: { label: "Finished", badge: "text-purple-600 dark:text-purple-400 bg-purple-50/60 dark:bg-purple-950/30 border-purple-200/60 dark:border-purple-800/50", dot: "bg-purple-500" },
 };
 
 const fmtCurrency = (n: number) =>
@@ -62,7 +62,7 @@ function SkeletonCard() {
 }
 
 // ─── Status Badge ─────────────────────────────────────────
-function StatusBadge({ status }: { status: CourseStatus }) {
+function StatusBadge({ status }: { status: CourseStatus; }) {
   const cfg = STATUS_CONFIG[status];
   return (
     // <span className={cn("inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold tracking-wide border", cfg.badge)}>
@@ -79,9 +79,9 @@ function SummaryCard({ icon, label, value, accent, loading }: {
   accent: "teal" | "amber" | "blue"; loading?: boolean;
 }) {
   const clr = {
-    teal:  "bg-teal-100/70 dark:bg-teal-950/50 border-teal-200/60 dark:border-teal-800/50 text-teal-600 dark:text-teal-400",
+    teal: "bg-teal-100/70 dark:bg-teal-950/50 border-teal-200/60 dark:border-teal-800/50 text-teal-600 dark:text-teal-400",
     amber: "bg-amber-100/70 dark:bg-amber-950/50 border-amber-200/60 dark:border-amber-800/50 text-amber-600 dark:text-amber-400",
-    blue:  "bg-blue-100/70 dark:bg-blue-950/50 border-blue-200/60 dark:border-blue-800/50 text-blue-600 dark:text-blue-400",
+    blue: "bg-blue-100/70 dark:bg-blue-950/50 border-blue-200/60 dark:border-blue-800/50 text-blue-600 dark:text-blue-400",
   };
   return (
     <div className="relative overflow-hidden rounded-2xl border border-border bg-card/90 backdrop-blur-sm px-5 py-4 flex items-center gap-4 hover:border-teal-200/50 dark:hover:border-teal-800/40 transition-colors duration-200">
@@ -241,7 +241,7 @@ export default function MyCoursesPage() {
     } catch { alert("Failed to delete."); }
   };
 
-  const TABS: { key: CourseStatus | "ALL"; label: string }[] = [
+  const TABS: { key: CourseStatus | "ALL"; label: string; }[] = [
     { key: "ALL", label: "All" }, { key: "DRAFT", label: "Draft" },
     { key: "PENDING_APPROVAL", label: "Pending" }, { key: "PUBLISHED", label: "Published" },
     { key: "CLOSED", label: "Closed" }, { key: "REJECTED", label: "Rejected" },

@@ -134,12 +134,12 @@ function DashboardHeader() {
 // ─────────────────────────────────────────
 // LAYOUT
 // ─────────────────────────────────────────
-export default function Layout({ children }: { children: React.ReactNode }) {
+export default function Layout({ children }: { children: React.ReactNode; }) {
   const bgIndex = useAmbientBg();
   const AmbientComponent = ambientComponents[bgIndex];
 
   // Fetch session user for ChatWidget
-  const [chatUser, setChatUser] = useState<{ name: string; role: "STUDENT" | "TEACHER" | "ADMIN" } | null>(null);
+  const [chatUser, setChatUser] = useState<{ name: string; role: "STUDENT" | "TEACHER" | "ADMIN"; } | null>(null);
   useEffect(() => {
     fetch("/api/auth/me", { credentials: "include" })
       .then(r => r.json())
@@ -149,7 +149,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           if (u?.name && u?.role) setChatUser({ name: u.name, role: u.role });
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   return (

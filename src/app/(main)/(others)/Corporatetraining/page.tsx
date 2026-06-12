@@ -20,32 +20,32 @@ function useReveal(t = 0.1) {
   return { ref, v };
 }
 
-function TealText({ children }: { children: React.ReactNode }) {
+function TealText({ children }: { children: React.ReactNode; }) {
   return (
-    <span style={{ background:"linear-gradient(135deg,#0d9488 0%,#14b8a6 50%,#5eead4 100%)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text" }}>
+    <span style={{ background: "linear-gradient(135deg,#0d9488 0%,#14b8a6 50%,#5eead4 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
       {children}
     </span>
   );
 }
 
 const FEATURES = [
-  { icon: <RiLineChartLine />,    title: "Real-Time Analytics",         body: "Track submission rates, attendance, and score trends across all training clusters. CSV export for leadership." },
-  { icon: <RiGraduationCapLine />,title: "Verifiable Certificates",     body: "Branded PDFs with unique verification URLs. Employees share them on LinkedIn and HR records." },
-  { icon: <RiShieldCheckLine />,  title: "Consistent Grading Rubrics",  body: "Multi-criteria rubrics applied uniformly across all trainers and departments, every time." },
-  { icon: <RiGroupLine />,        title: "Multi-Team Clusters",          body: "Separate clusters per department or programme, each with its own health score and analytics." },
-  { icon: <RiFileTextLine />,     title: "Compliance Quiz Gating",       body: "Gate SOP and document downloads behind comprehension quizzes for trackable compliance." },
+  { icon: <RiLineChartLine />, title: "Real-Time Analytics", body: "Track submission rates, attendance, and score trends across all training clusters. CSV export for leadership." },
+  { icon: <RiGraduationCapLine />, title: "Verifiable Certificates", body: "Branded PDFs with unique verification URLs. Employees share them on LinkedIn and HR records." },
+  { icon: <RiShieldCheckLine />, title: "Consistent Grading Rubrics", body: "Multi-criteria rubrics applied uniformly across all trainers and departments, every time." },
+  { icon: <RiGroupLine />, title: "Multi-Team Clusters", body: "Separate clusters per department or programme, each with its own health score and analytics." },
+  { icon: <RiFileTextLine />, title: "Compliance Quiz Gating", body: "Gate SOP and document downloads behind comprehension quizzes for trackable compliance." },
   { icon: <RiNotificationLine />, title: "Automated Deadline Reminders", body: "Email and in-app reminders 24h and 1h before submission deadlines. No manual chasing." },
-  { icon: <RiWebhookLine />,      title: "Webhook & API Integration",    body: "Connect to HRIS, Slack, or Teams via HMAC-signed webhooks. API documentation included." },
-  { icon: <RiBarChartBoxLine />,  title: "Bulk Member Management",       body: "Move, promote, or graduate employees in bulk. Filter by batch or join date." },
+  { icon: <RiWebhookLine />, title: "Webhook & API Integration", body: "Connect to HRIS, Slack, or Teams via HMAC-signed webhooks. API documentation included." },
+  { icon: <RiBarChartBoxLine />, title: "Bulk Member Management", body: "Move, promote, or graduate employees in bulk. Filter by batch or join date." },
 ];
 
 const BEFORE_AFTER = [
-  ["Training admin per week",     "8+ hours of manual work",      "Under 3 hours — fully automated"],
-  ["Completion tracking",         "Spreadsheet, always outdated", "Live dashboard, updates in real-time"],
-  ["Certificate turnaround",      "2–3 days per batch",           "Instant, completely self-serve"],
-  ["Compliance audit prep",       "Days of manual export",        "One-click export, always ready"],
-  ["At-risk learner visibility",  "Quarterly review — too late",  "Automatically alerted within 7 days"],
-  ["Cross-dept consistency",      "Varies by trainer or team",    "Enforced via shared rubrics platform-wide"],
+  ["Training admin per week", "8+ hours of manual work", "Under 3 hours — fully automated"],
+  ["Completion tracking", "Spreadsheet, always outdated", "Live dashboard, updates in real-time"],
+  ["Certificate turnaround", "2–3 days per batch", "Instant, completely self-serve"],
+  ["Compliance audit prep", "Days of manual export", "One-click export, always ready"],
+  ["At-risk learner visibility", "Quarterly review — too late", "Automatically alerted within 7 days"],
+  ["Cross-dept consistency", "Varies by trainer or team", "Enforced via shared rubrics platform-wide"],
 ];
 
 export default function CorporateTrainingPage() {
@@ -129,7 +129,7 @@ export default function CorporateTrainingPage() {
       ══════════════════════════════════════════ */}
       <div className="border-y border-border bg-muted/40">
         <div className="max-w-5xl mx-auto px-6 grid grid-cols-2 lg:grid-cols-4 divide-x divide-border">
-          {[["68%","Admin time saved"],["4.8★","Learner satisfaction"],["100%","Verifiable certs"],["2 wks","Avg setup time"]].map(([v, l], i) => (
+          {[["68%", "Admin time saved"], ["4.8★", "Learner satisfaction"], ["100%", "Verifiable certs"], ["2 wks", "Avg setup time"]].map(([v, l], i) => (
             <div key={i} className="flex flex-col items-center py-10 px-4 text-center">
               <p className="text-[2.2rem] font-black text-teal-600 dark:text-teal-400 tabular-nums leading-none mb-1.5">{v}</p>
               <p className="text-[11.5px] font-semibold text-muted-foreground">{l}</p>
@@ -247,10 +247,10 @@ export default function CorporateTrainingPage() {
           <div className="relative">
             <div className="hidden lg:block absolute top-[34px] left-[60px] right-[60px] h-px border-t-2 border-dashed border-border" />
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-              {[["01","Define programme","Create clusters per team with batch tags. Use department naming conventions."],
-                ["02","Upload materials","Add SOPs, decks, compliance docs. Attach quizzes for mandatory comprehension."],
-                ["03","Run first session","Publish agenda. Tasks auto-assign. Attendance tracked. Notifications automatic."],
-                ["04","Report to leadership","Export reports: completion rates, scores, certificates. Prove ROI with data."],
+              {[["01", "Define programme", "Create clusters per team with batch tags. Use department naming conventions."],
+              ["02", "Upload materials", "Add SOPs, decks, compliance docs. Attach quizzes for mandatory comprehension."],
+              ["03", "Run first session", "Publish agenda. Tasks auto-assign. Attendance tracked. Notifications automatic."],
+              ["04", "Report to leadership", "Export reports: completion rates, scores, certificates. Prove ROI with data."],
               ].map(([num, title, desc], i) => (
                 <div key={num}
                   className={cn("transition-[opacity,transform] duration-500", r3.v ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10")}
@@ -278,7 +278,7 @@ export default function CorporateTrainingPage() {
             r4.v ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10")}>
 
           <div>
-            <div className="flex gap-1 mb-5">{[1,2,3,4,5].map(n => <span key={n} className="text-teal-500 text-lg">★</span>)}</div>
+            <div className="flex gap-1 mb-5">{[1, 2, 3, 4, 5].map(n => <span key={n} className="text-teal-500 text-lg">★</span>)}</div>
             <span className="block text-[56px] leading-none font-serif text-teal-300/30 dark:text-teal-700/30 mb-1 select-none">"</span>
             <p className="text-[clamp(1rem,1.8vw,1.25rem)] font-medium text-foreground/80 leading-[1.8] italic mb-8">
               We run compliance training for 200 employees across 8 departments. Nexora replaced

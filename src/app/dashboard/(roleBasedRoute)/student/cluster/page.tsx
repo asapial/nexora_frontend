@@ -27,10 +27,10 @@ interface Cluster {
   healthScore: number;
   healthStatus: HealthStatus;
   isActive: boolean;
-  teacher: { name: string; email: string } | null;
+  teacher: { name: string; email: string; } | null;
   memberCount: number;
   sessionCount: number;
-  upcomingSession: { id: string; title: string; scheduledAt: string } | null;
+  upcomingSession: { id: string; title: string; scheduledAt: string; } | null;
   joinedAt: string;
   subtype: string;
 }
@@ -85,7 +85,7 @@ function ClusterSkeleton() {
 }
 
 // ─── ClusterCard ──────────────────────────────────────────────────────────────
-function ClusterCard({ c }: { c: Cluster }) {
+function ClusterCard({ c }: { c: Cluster; }) {
   const badgeCls = HEALTH_BADGE[c.healthStatus] ?? HEALTH_BADGE.INACTIVE;
   const statusLabel =
     c.healthStatus === "AT_RISK"
@@ -228,20 +228,20 @@ export default function StudentClusterPage() {
         {loading
           ? Array.from({ length: 6 }).map((_, i) => <ClusterSkeleton key={i} />)
           : clusters.length === 0 && !error
-          ? (
-            <div className="col-span-full flex flex-col items-center justify-center py-20 text-center">
-              <div className="w-16 h-16 rounded-2xl bg-teal-100/60 dark:bg-teal-950/40 border border-teal-200/60 dark:border-teal-800/40 text-teal-500 flex items-center justify-center text-3xl mb-4">
-                <RiFlaskLine />
+            ? (
+              <div className="col-span-full flex flex-col items-center justify-center py-20 text-center">
+                <div className="w-16 h-16 rounded-2xl bg-teal-100/60 dark:bg-teal-950/40 border border-teal-200/60 dark:border-teal-800/40 text-teal-500 flex items-center justify-center text-3xl mb-4">
+                  <RiFlaskLine />
+                </div>
+                <p className="text-[14px] font-semibold text-foreground mb-1">
+                  No clusters yet
+                </p>
+                <p className="text-[12.5px] text-muted-foreground">
+                  You haven&apos;t been added to any cluster yet. Contact your teacher.
+                </p>
               </div>
-              <p className="text-[14px] font-semibold text-foreground mb-1">
-                No clusters yet
-              </p>
-              <p className="text-[12.5px] text-muted-foreground">
-                You haven&apos;t been added to any cluster yet. Contact your teacher.
-              </p>
-            </div>
-          )
-          : clusters.map((c) => <ClusterCard key={c.id} c={c} />)}
+            )
+            : clusters.map((c) => <ClusterCard key={c.id} c={c} />)}
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useRouter} from "next/navigation";
+import { useRouter } from "next/navigation";
 import {
   RiSparklingFill, RiSearchLine, RiBookOpenLine, RiStarLine, RiAlertLine, RiCloseLine,
 } from "react-icons/ri";
@@ -51,7 +51,7 @@ export default function CourseCatalogPage() {
 
   return (
     <div className="relative flex flex-col gap-6 p-5 lg:pt-20 pt-6 max-w-7xl mx-auto w-full min-h-screen">
-       <AmbientBg6 />
+      <AmbientBg6 />
 
       {/* Hero */}
       <div className="text-center pt-8 pb-2">

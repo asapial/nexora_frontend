@@ -11,10 +11,10 @@ import { adminPlatformApi } from "@/lib/api";
 import { toast } from "sonner";
 import RefreshIcon from "@/components/shared/RefreshIcon";
 
-const HEALTH_CFG: Record<string, { label: string; dot: string; cls: string }> = {
-  HEALTHY:  { label: "Healthy",  dot: "bg-teal-500",  cls: "text-teal-700 dark:text-teal-400 bg-teal-50/80 dark:bg-teal-950/40 border-teal-200/60" },
-  AT_RISK:  { label: "At Risk",  dot: "bg-amber-500", cls: "text-amber-700 dark:text-amber-400 bg-amber-50/80 dark:bg-amber-950/40 border-amber-200/60" },
-  INACTIVE: { label: "Inactive", dot: "bg-rose-500",  cls: "text-rose-700 dark:text-rose-400 bg-rose-50/80 dark:bg-rose-950/40 border-rose-200/60" },
+const HEALTH_CFG: Record<string, { label: string; dot: string; cls: string; }> = {
+  HEALTHY: { label: "Healthy", dot: "bg-teal-500", cls: "text-teal-700 dark:text-teal-400 bg-teal-50/80 dark:bg-teal-950/40 border-teal-200/60" },
+  AT_RISK: { label: "At Risk", dot: "bg-amber-500", cls: "text-amber-700 dark:text-amber-400 bg-amber-50/80 dark:bg-amber-950/40 border-amber-200/60" },
+  INACTIVE: { label: "Inactive", dot: "bg-rose-500", cls: "text-rose-700 dark:text-rose-400 bg-rose-50/80 dark:bg-rose-950/40 border-rose-200/60" },
 };
 
 type Cluster = {
@@ -22,9 +22,9 @@ type Cluster = {
   name: string;
   healthStatus?: string;
   healthScore?: number;
-  _count: { members: number; sessions: number };
-  teacher?: { user: { name: string } };
-  lastSession?: { scheduledAt: string; status: string } | null;
+  _count: { members: number; sessions: number; };
+  teacher?: { user: { name: string; }; };
+  lastSession?: { scheduledAt: string; status: string; } | null;
 };
 
 const fmtDate = (d: string) =>
@@ -38,7 +38,7 @@ function SkeletonRow() {
   );
 }
 
-function HealthScore({ score }: { score?: number }) {
+function HealthScore({ score }: { score?: number; }) {
   const v = score ?? 0;
   const color = v >= 70 ? "bg-teal-500" : v >= 40 ? "bg-amber-500" : "bg-rose-500";
   return (
@@ -75,9 +75,9 @@ export default function ClusterOversightPage() {
   );
 
   const stats = {
-    total:    clusters.length,
-    healthy:  clusters.filter(c => c.healthStatus === "HEALTHY").length,
-    atRisk:   clusters.filter(c => c.healthStatus === "AT_RISK").length,
+    total: clusters.length,
+    healthy: clusters.filter(c => c.healthStatus === "HEALTHY").length,
+    atRisk: clusters.filter(c => c.healthStatus === "AT_RISK").length,
     inactive: clusters.filter(c => c.healthStatus === "INACTIVE").length,
   };
 
@@ -101,10 +101,10 @@ export default function ClusterOversightPage() {
       {/* Stat cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: "Total Clusters", val: stats.total,    col: "text-sky-600 dark:text-sky-400 bg-sky-100/60 dark:bg-sky-950/40 border-sky-200/60", icon: <RiFlaskLine /> },
-          { label: "Healthy",        val: stats.healthy,  col: "text-teal-600 dark:text-teal-400 bg-teal-100/60 dark:bg-teal-950/40 border-teal-200/60", icon: <RiCheckLine /> },
-          { label: "At Risk",        val: stats.atRisk,   col: "text-amber-600 dark:text-amber-400 bg-amber-100/60 dark:bg-amber-950/40 border-amber-200/60", icon: <RiAlertLine /> },
-          { label: "Inactive",       val: stats.inactive, col: "text-rose-600 dark:text-rose-400 bg-rose-100/60 dark:bg-rose-950/40 border-rose-200/60", icon: <RiArchiveLine /> },
+          { label: "Total Clusters", val: stats.total, col: "text-sky-600 dark:text-sky-400 bg-sky-100/60 dark:bg-sky-950/40 border-sky-200/60", icon: <RiFlaskLine /> },
+          { label: "Healthy", val: stats.healthy, col: "text-teal-600 dark:text-teal-400 bg-teal-100/60 dark:bg-teal-950/40 border-teal-200/60", icon: <RiCheckLine /> },
+          { label: "At Risk", val: stats.atRisk, col: "text-amber-600 dark:text-amber-400 bg-amber-100/60 dark:bg-amber-950/40 border-amber-200/60", icon: <RiAlertLine /> },
+          { label: "Inactive", val: stats.inactive, col: "text-rose-600 dark:text-rose-400 bg-rose-100/60 dark:bg-rose-950/40 border-rose-200/60", icon: <RiArchiveLine /> },
         ].map(s => (
           <div key={s.label} className="rounded-2xl border border-border bg-card p-4">
             <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center text-sm border mb-2.5", s.col)}>{s.icon}</div>
@@ -147,48 +147,48 @@ export default function ClusterOversightPage() {
         {loading
           ? Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} />)
           : filtered.length === 0
-          ? (
-            <div className="py-16 text-center">
-              <RiFlaskLine className="text-4xl text-muted-foreground/20 mx-auto mb-3" />
-              <p className="text-[13.5px] font-medium text-muted-foreground">No clusters found</p>
-            </div>
-          )
-          : filtered.map(c => {
-            const hcfg = HEALTH_CFG[c.healthStatus ?? "HEALTHY"] ?? HEALTH_CFG.HEALTHY;
-            return (
-              <div key={c.id} className="grid grid-cols-[1fr_140px_80px_80px_100px_80px] gap-4 px-5 py-4 border-b border-border/60 last:border-0 hover:bg-muted/10 transition-colors items-center">
-                <div className="min-w-0">
-                  <p className="text-[13px] font-semibold text-foreground truncate">{c.name}</p>
-                </div>
-                <p className="text-[12.5px] text-muted-foreground truncate">{c.teacher?.user?.name ?? "—"}</p>
-                <div className="flex items-center gap-1">
-                  <RiGroupLine className="text-muted-foreground text-xs" />
-                  <p className="text-[13px] font-semibold tabular-nums text-foreground">{c._count.members}</p>
-                </div>
-                <div className="flex items-center gap-1">
-                  <RiCalendarLine className="text-muted-foreground text-xs" />
-                  <p className="text-[13px] font-semibold tabular-nums text-foreground">{c._count.sessions}</p>
-                </div>
-                <div className="flex flex-col gap-1">
-                  <span className={cn("text-[10px] font-bold tracking-wide uppercase px-1.5 py-0.5 rounded-full border w-fit flex items-center gap-1", hcfg.cls)}>
-                    <span className={cn("w-1.5 h-1.5 rounded-full", hcfg.dot)} />
-                    {hcfg.label}
-                  </span>
-                  <HealthScore score={c.healthScore} />
-                </div>
-                <div className="min-w-0">
-                  {c.lastSession ? (
-                    <div className="flex items-center gap-1">
-                      <RiTimeLine className="text-muted-foreground text-xs shrink-0" />
-                      <p className="text-[11px] text-muted-foreground truncate">{fmtDate(c.lastSession.scheduledAt)}</p>
-                    </div>
-                  ) : (
-                    <p className="text-[11px] text-muted-foreground/40">Never</p>
-                  )}
-                </div>
+            ? (
+              <div className="py-16 text-center">
+                <RiFlaskLine className="text-4xl text-muted-foreground/20 mx-auto mb-3" />
+                <p className="text-[13.5px] font-medium text-muted-foreground">No clusters found</p>
               </div>
-            );
-          })}
+            )
+            : filtered.map(c => {
+              const hcfg = HEALTH_CFG[c.healthStatus ?? "HEALTHY"] ?? HEALTH_CFG.HEALTHY;
+              return (
+                <div key={c.id} className="grid grid-cols-[1fr_140px_80px_80px_100px_80px] gap-4 px-5 py-4 border-b border-border/60 last:border-0 hover:bg-muted/10 transition-colors items-center">
+                  <div className="min-w-0">
+                    <p className="text-[13px] font-semibold text-foreground truncate">{c.name}</p>
+                  </div>
+                  <p className="text-[12.5px] text-muted-foreground truncate">{c.teacher?.user?.name ?? "—"}</p>
+                  <div className="flex items-center gap-1">
+                    <RiGroupLine className="text-muted-foreground text-xs" />
+                    <p className="text-[13px] font-semibold tabular-nums text-foreground">{c._count.members}</p>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <RiCalendarLine className="text-muted-foreground text-xs" />
+                    <p className="text-[13px] font-semibold tabular-nums text-foreground">{c._count.sessions}</p>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className={cn("text-[10px] font-bold tracking-wide uppercase px-1.5 py-0.5 rounded-full border w-fit flex items-center gap-1", hcfg.cls)}>
+                      <span className={cn("w-1.5 h-1.5 rounded-full", hcfg.dot)} />
+                      {hcfg.label}
+                    </span>
+                    <HealthScore score={c.healthScore} />
+                  </div>
+                  <div className="min-w-0">
+                    {c.lastSession ? (
+                      <div className="flex items-center gap-1">
+                        <RiTimeLine className="text-muted-foreground text-xs shrink-0" />
+                        <p className="text-[11px] text-muted-foreground truncate">{fmtDate(c.lastSession.scheduledAt)}</p>
+                      </div>
+                    ) : (
+                      <p className="text-[11px] text-muted-foreground/40">Never</p>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
       </div>
 
       {!loading && (

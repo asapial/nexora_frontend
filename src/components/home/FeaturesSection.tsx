@@ -197,7 +197,7 @@ function FeatureCardItem({
           : "cursor-grab hover:cursor-grab",
         // Overlay (the ghost following cursor)
         isOverlay &&
-          "opacity-100 scale-[1.03] shadow-2xl ring-2 ring-teal-500/30 cursor-grabbing rotate-[1deg]",
+        "opacity-100 scale-[1.03] shadow-2xl ring-2 ring-teal-500/30 cursor-grabbing rotate-[1deg]",
         // Hover lift
         !sortableDragging && !isDragging && !isOverlay && "hover:-translate-y-1"
       )}
@@ -289,14 +289,14 @@ function FeatureCardItem({
             "--glow": card.accentColor.includes("teal")
               ? "rgba(20,184,166,0.07)"
               : card.accentColor.includes("violet")
-              ? "rgba(139,92,246,0.07)"
-              : card.accentColor.includes("amber")
-              ? "rgba(245,158,11,0.07)"
-              : card.accentColor.includes("emerald")
-              ? "rgba(16,185,129,0.07)"
-              : card.accentColor.includes("sky")
-              ? "rgba(14,165,233,0.07)"
-              : "rgba(244,63,94,0.07)",
+                ? "rgba(139,92,246,0.07)"
+                : card.accentColor.includes("amber")
+                  ? "rgba(245,158,11,0.07)"
+                  : card.accentColor.includes("emerald")
+                    ? "rgba(16,185,129,0.07)"
+                    : card.accentColor.includes("sky")
+                      ? "rgba(14,165,233,0.07)"
+                      : "rgba(244,63,94,0.07)",
           } as React.CSSProperties
         }
       />

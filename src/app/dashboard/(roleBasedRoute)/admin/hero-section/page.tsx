@@ -45,7 +45,7 @@ interface EditState {
   order: number;
 }
 
-function TeacherAvatar({ src, name }: { src: string | null; name: string }) {
+function TeacherAvatar({ src, name }: { src: string | null; name: string; }) {
   const [err, setErr] = useState(false);
   const initials = name
     .split(" ")

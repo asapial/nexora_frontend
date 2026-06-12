@@ -1,7 +1,7 @@
 import {
- RiBookOpenLine, RiGroupLine,
-  RiStarFill,  RiArrowRightLine,
-  RiFileTextLine, 
+  RiBookOpenLine, RiGroupLine,
+  RiStarFill, RiArrowRightLine,
+  RiFileTextLine,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
 
@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 const fmtUSD = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
 
 
-export function CatalogCard({ course, onClick }: { course: any; onClick: () => void }) {
+export function CatalogCard({ course, onClick }: { course: any; onClick: () => void; }) {
   return (
     <div onClick={onClick} className={cn(
       "group relative rounded-2xl border border-border bg-card/90 backdrop-blur-sm overflow-hidden cursor-pointer",
@@ -23,9 +23,9 @@ export function CatalogCard({ course, onClick }: { course: any; onClick: () => v
         {course.thumbnailUrl
           ? <img src={course.thumbnailUrl} alt={course.title} className="w-full h-full object-cover opacity-75 group-hover:opacity-90 group-hover:scale-[1.03] transition-all duration-500 ease-out" />
           : <div className="w-full h-full flex items-center justify-center relative">
-              <div className="absolute inset-0 opacity-[0.07]" style={{ backgroundImage: "linear-gradient(rgba(20,184,166,1) 1px,transparent 1px),linear-gradient(90deg,rgba(20,184,166,1) 1px,transparent 1px)", backgroundSize: "20px 20px" }} />
-              <RiBookOpenLine className="text-5xl text-teal-700/20 relative z-10" />
-            </div>
+            <div className="absolute inset-0 opacity-[0.07]" style={{ backgroundImage: "linear-gradient(rgba(20,184,166,1) 1px,transparent 1px),linear-gradient(90deg,rgba(20,184,166,1) 1px,transparent 1px)", backgroundSize: "20px 20px" }} />
+            <RiBookOpenLine className="text-5xl text-teal-700/20 relative z-10" />
+          </div>
         }
         <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
         <div className="absolute top-3 left-3 flex gap-1.5 flex-wrap">

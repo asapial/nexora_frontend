@@ -413,15 +413,15 @@ export default function SignInPage() {
                 </button>
               }
             />
-                      {/* Server Error Banner */}
-          {serverError && (
-            <div className="flex items-start gap-2.5 px-3.5 py-3 rounded-xl border border-red-200 dark:border-red-800/50 bg-red-50/80 dark:bg-red-950/20 mb-2">
-              <RiAlertLine className="text-red-500 text-base mt-0.5 shrink-0" />
-              <div>
-                <p className="text-[13px] font-semibold text-red-700 dark:text-red-400 leading-snug">{serverError}</p>
+            {/* Server Error Banner */}
+            {serverError && (
+              <div className="flex items-start gap-2.5 px-3.5 py-3 rounded-xl border border-red-200 dark:border-red-800/50 bg-red-50/80 dark:bg-red-950/20 mb-2">
+                <RiAlertLine className="text-red-500 text-base mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-[13px] font-semibold text-red-700 dark:text-red-400 leading-snug">{serverError}</p>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
             {/* Forgot password */}
             <div className="flex justify-end -mt-1">

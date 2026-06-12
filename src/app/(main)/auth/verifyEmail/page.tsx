@@ -144,7 +144,7 @@ export default function VerifyEmailPage({
     setIsLoading(true);
     try {
 
-      console.log(code)
+      console.log(code);
 
       const res = await fetch("/api/auth/verify-email", {
         method: "POST",
@@ -157,7 +157,7 @@ export default function VerifyEmailPage({
 
         }),
         credentials: "include"
-      })
+      });
 
       const data = await res.json();
       console.log(data);
@@ -190,7 +190,7 @@ export default function VerifyEmailPage({
           email: email,
         }),
         credentials: "include"
-      })
+      });
       const data = await res.json();
 
       if (data.success) {
@@ -201,9 +201,9 @@ export default function VerifyEmailPage({
         inputRefs.current[0]?.focus();
       }
 
-      if(!data.success){
-        if(data.message==="This email is already verified. No need to resend a verification code."){
-          setError("This email is already verified. No need to resend a verification code.")
+      if (!data.success) {
+        if (data.message === "This email is already verified. No need to resend a verification code.") {
+          setError("This email is already verified. No need to resend a verification code.");
         }
       }
 

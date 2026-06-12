@@ -20,7 +20,7 @@ type Totals = {
   submissionRate: number;
 };
 
-type MonthPoint = { month: string; rate?: number; count?: number };
+type MonthPoint = { month: string; rate?: number; count?: number; };
 type HourMap = Record<number, number>;
 
 function StatCard({
@@ -72,7 +72,7 @@ function BarChart({ data, dataKey, label, color }: {
   );
 }
 
-function HeatmapChart({ hourMap }: { hourMap: HourMap }) {
+function HeatmapChart({ hourMap }: { hourMap: HourMap; }) {
   const max = Math.max(...Object.values(hourMap), 1);
   const hours = Array.from({ length: 24 }, (_, i) => i);
   return (
@@ -154,11 +154,11 @@ export default function TeacherAnalyticsPage() {
   useEffect(() => { load(); }, [load]);
 
   const stats = totals ? [
-    { icon: <RiFlaskLine />,         label: "Clusters",     value: totals.clusters,    accent: "text-violet-600 dark:text-violet-400 bg-violet-100/70 dark:bg-violet-950/50 border-violet-200/60 dark:border-violet-800/50" },
-    { icon: <RiGroupLine />,         label: "Members",      value: totals.members,     accent: "text-teal-600 dark:text-teal-400 bg-teal-100/70 dark:bg-teal-950/50 border-teal-200/60 dark:border-teal-800/50" },
-    { icon: <RiBookOpenLine />,      label: "Resources",    value: totals.resources,   accent: "text-sky-600 dark:text-sky-400 bg-sky-100/70 dark:bg-sky-950/50 border-sky-200/60 dark:border-sky-800/50" },
-    { icon: <RiCalendarCheckLine />, label: "Sessions",     value: totals.sessions,    accent: "text-amber-600 dark:text-amber-400 bg-amber-100/70 dark:bg-amber-950/50 border-amber-200/60 dark:border-amber-800/50" },
-    { icon: <RiCheckboxCircleLine />,label: "Submission %", value: `${totals.submissionRate}%`, accent: "text-teal-600 dark:text-teal-400 bg-teal-100/70 dark:bg-teal-950/50 border-teal-200/60 dark:border-teal-800/50" },
+    { icon: <RiFlaskLine />, label: "Clusters", value: totals.clusters, accent: "text-violet-600 dark:text-violet-400 bg-violet-100/70 dark:bg-violet-950/50 border-violet-200/60 dark:border-violet-800/50" },
+    { icon: <RiGroupLine />, label: "Members", value: totals.members, accent: "text-teal-600 dark:text-teal-400 bg-teal-100/70 dark:bg-teal-950/50 border-teal-200/60 dark:border-teal-800/50" },
+    { icon: <RiBookOpenLine />, label: "Resources", value: totals.resources, accent: "text-sky-600 dark:text-sky-400 bg-sky-100/70 dark:bg-sky-950/50 border-sky-200/60 dark:border-sky-800/50" },
+    { icon: <RiCalendarCheckLine />, label: "Sessions", value: totals.sessions, accent: "text-amber-600 dark:text-amber-400 bg-amber-100/70 dark:bg-amber-950/50 border-amber-200/60 dark:border-amber-800/50" },
+    { icon: <RiCheckboxCircleLine />, label: "Submission %", value: `${totals.submissionRate}%`, accent: "text-teal-600 dark:text-teal-400 bg-teal-100/70 dark:bg-teal-950/50 border-teal-200/60 dark:border-teal-800/50" },
   ] : [];
 
   return (
@@ -183,8 +183,8 @@ export default function TeacherAnalyticsPage() {
         {loading
           ? Array.from({ length: 5 }).map((_, i) => <SkeletonCard key={i} />)
           : stats.map(s => (
-              <StatCard key={s.label} icon={s.icon} label={s.label} value={s.value} accent={s.accent} />
-            ))}
+            <StatCard key={s.label} icon={s.icon} label={s.label} value={s.value} accent={s.accent} />
+          ))}
       </div>
 
       {/* Charts row */}

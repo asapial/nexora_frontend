@@ -24,10 +24,10 @@ interface AiSuggestions {
   tagSets: string[][];
 }
 
-const VISIBILITY_OPTIONS: { value: Visibility; label: string; desc: string; cls: string }[] = [
-  { value: "PUBLIC",  label: "Public",  desc: "Visible to everyone",       cls: "border-teal-400/60 bg-teal-50 dark:bg-teal-950/20 text-teal-700 dark:text-teal-400" },
-  { value: "CLUSTER", label: "Cluster", desc: "Cluster members only",      cls: "border-amber-400/60 bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400" },
-  { value: "PRIVATE", label: "Private", desc: "Only you",                   cls: "border-border bg-muted/30 text-muted-foreground" },
+const VISIBILITY_OPTIONS: { value: Visibility; label: string; desc: string; cls: string; }[] = [
+  { value: "PUBLIC", label: "Public", desc: "Visible to everyone", cls: "border-teal-400/60 bg-teal-50 dark:bg-teal-950/20 text-teal-700 dark:text-teal-400" },
+  { value: "CLUSTER", label: "Cluster", desc: "Cluster members only", cls: "border-amber-400/60 bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400" },
+  { value: "PRIVATE", label: "Private", desc: "Only you", cls: "border-border bg-muted/30 text-muted-foreground" },
 ];
 
 const LABEL = "text-[12px] font-semibold text-muted-foreground mb-1.5 block";
@@ -127,7 +127,7 @@ function ArraySuggestionPanel({
   );
 }
 
-function TagInput({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) {
+function TagInput({ value, onChange }: { value: string[]; onChange: (v: string[]) => void; }) {
   const [input, setInput] = useState("");
   const add = () => { const t = input.trim().toLowerCase(); if (t && !value.includes(t)) onChange([...value, t]); setInput(""); };
   return (
@@ -151,7 +151,7 @@ function TagInput({ value, onChange }: { value: string[]; onChange: (v: string[]
 }
 
 export default function TeacherResourceUploadPage() {
-  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+  const [categories, setCategories] = useState<{ id: string; name: string; }[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
 
   useEffect(() => {
@@ -161,7 +161,7 @@ export default function TeacherResourceUploadPage() {
         const res = await fetch("/api/resource/categories", { credentials: "include" });
         const json = await res.json();
         if (!cancelled && json.success && Array.isArray(json.data)) {
-          setCategories(json.data.map((c: { id: string; name: string }) => ({ id: c.id, name: c.name })));
+          setCategories(json.data.map((c: { id: string; name: string; }) => ({ id: c.id, name: c.name })));
         }
       } catch { /* ignore */ }
       finally { if (!cancelled) setCategoriesLoading(false); }
@@ -172,17 +172,17 @@ export default function TeacherResourceUploadPage() {
   const [form, setForm] = useState<FormState>({
     title: "", description: "", authors: [], year: "", tags: [], visibility: "PUBLIC", categoryId: "",
   });
-  const [file, setFile]               = useState<File | null>(null);
-  const [dragging, setDragging]       = useState(false);
-  const [submitting, setSubmitting]   = useState(false);
+  const [file, setFile] = useState<File | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [isSuggesting, setIsSuggesting] = useState(false);
   const [suggestions, setSuggestions] = useState<AiSuggestions | null>(null);
-  const [success, setSuccess]         = useState(false);
-  const [error, setError]             = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Track which suggestion index is selected for array-type fields
   const [selAuthorIdx, setSelAuthorIdx] = useState<number | null>(null);
-  const [selTagIdx, setSelTagIdx]       = useState<number | null>(null);
+  const [selTagIdx, setSelTagIdx] = useState<number | null>(null);
 
   // ── Cycling status messages while AI is working ───────────────────────────
   const SUGGEST_STAGES = [
@@ -224,8 +224,8 @@ export default function TeacherResourceUploadPage() {
     "Polishing suggestions…",
     "Almost there…",
   ];
-  const [stageIdx, setStageIdx]   = useState(0);
-  const stageTimer                = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [stageIdx, setStageIdx] = useState(0);
+  const stageTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     if (isSuggesting) {
@@ -237,7 +237,7 @@ export default function TeacherResourceUploadPage() {
       if (stageTimer.current) clearInterval(stageTimer.current);
     }
     return () => { if (stageTimer.current) clearInterval(stageTimer.current); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSuggesting]);
 
   const set = (k: keyof FormState, v: unknown) => setForm(f => ({ ...f, [k]: v }));
@@ -253,14 +253,14 @@ export default function TeacherResourceUploadPage() {
       const fd = new FormData();
       fd.append("file", file);
       const res = await fetch("/api/resource/suggest-metadata", { method: "POST", credentials: "include", body: fd });
-      
+
       let json;
       try {
         json = await res.json();
       } catch (parseError) {
         throw new Error("The server encountered an unexpected error. Please try again later.");
       }
-      
+
       if (!res.ok) throw new Error(json?.message || "Failed to extract metadata");
       setSuggestions(json.data as AiSuggestions);
       toast.success("AI generated 4 suggestions for each field — pick the best ones!");
@@ -280,7 +280,7 @@ export default function TeacherResourceUploadPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.title.trim()) { setError("Title is required."); return; }
-    if (!file)              { setError("Please attach a file."); return; }
+    if (!file) { setError("Please attach a file."); return; }
     setSubmitting(true); setError(null);
     try {
       const fd = new FormData();

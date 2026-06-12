@@ -172,7 +172,7 @@ function useReveal(threshold = 0.15) {
 }
 
 // ─── Single Step Row ──────────────────────────────────────
-function StepRow({ step, index }: { step: Step; index: number }) {
+function StepRow({ step, index }: { step: Step; index: number; }) {
   const isLeft = index % 2 === 0; // even → card on left, odd → card on right
   const { ref, visible } = useReveal(0.2);
 
@@ -346,7 +346,7 @@ function StepRow({ step, index }: { step: Step; index: number }) {
 }
 
 // ─── Spine between steps (desktop only) ──────────────────
-function SpineSegment({ index }: { index: number }) {
+function SpineSegment({ index }: { index: number; }) {
   // Colour fades from one step's accent to the next
   return (
     <div className="hidden lg:flex justify-center py-0 relative z-0">

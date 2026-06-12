@@ -64,8 +64,8 @@ export interface UseCaseConfig {
   // CTA
   ctaHeadline: string;
   ctaSubtext: string;
-  ctaPrimary: { text: string; href: string };
-  ctaSecondary: { text: string; href: string };
+  ctaPrimary: { text: string; href: string; };
+  ctaSecondary: { text: string; href: string; };
 }
 
 // ─── Scroll-reveal hook ───────────────────────────────────
@@ -86,7 +86,7 @@ export function useReveal(threshold = 0.12) {
 }
 
 // ─── Gradient headline span ───────────────────────────────
-export function TealSpan({ children }: { children: React.ReactNode }) {
+export function TealSpan({ children }: { children: React.ReactNode; }) {
   return (
     <span style={{
       background: "linear-gradient(135deg,#0d9488 0%,#14b8a6 50%,#5eead4 100%)",
@@ -100,7 +100,7 @@ export function TealSpan({ children }: { children: React.ReactNode }) {
 }
 
 // ─── Section eyebrow label ────────────────────────────────
-export function SectionLabel({ children }: { children: React.ReactNode }) {
+export function SectionLabel({ children }: { children: React.ReactNode; }) {
   return (
     <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-semibold border bg-teal-50 dark:bg-teal-950/40 text-teal-700 dark:text-teal-400 border-teal-200/60 dark:border-teal-800/60 mb-5">
       <RiSparklingFill className="animate-pulse text-base" />
@@ -110,14 +110,14 @@ export function SectionLabel({ children }: { children: React.ReactNode }) {
 }
 
 // ─── UseCasePage Layout ───────────────────────────────────
-export default function UseCasePage({ config }: { config: UseCaseConfig }) {
-  const hero      = useReveal(0.1);
-  const stats     = useReveal(0.1);
-  const problems  = useReveal(0.1);
-  const features  = useReveal(0.08);
-  const workflow  = useReveal(0.08);
-  const quote     = useReveal(0.15);
-  const cta       = useReveal(0.15);
+export default function UseCasePage({ config }: { config: UseCaseConfig; }) {
+  const hero = useReveal(0.1);
+  const stats = useReveal(0.1);
+  const problems = useReveal(0.1);
+  const features = useReveal(0.08);
+  const workflow = useReveal(0.08);
+  const quote = useReveal(0.15);
+  const cta = useReveal(0.15);
 
   return (
     <main className="bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 overflow-x-hidden">
@@ -438,13 +438,13 @@ export default function UseCasePage({ config }: { config: UseCaseConfig }) {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_60%_at_50%_50%,rgba(20,184,166,0.1),transparent)] pointer-events-none" />
         {/* Corner arcs */}
         <svg className="absolute top-0 left-0 pointer-events-none opacity-[0.06]" width="180" height="180" viewBox="0 0 180 180" fill="none">
-          <circle cx="0" cy="0" r="140" stroke="#14b8a6" strokeWidth=".7"/>
-          <circle cx="0" cy="0" r="90" stroke="#14b8a6" strokeWidth=".7"/>
-          <circle cx="0" cy="0" r="45" stroke="#14b8a6" strokeWidth=".7"/>
+          <circle cx="0" cy="0" r="140" stroke="#14b8a6" strokeWidth=".7" />
+          <circle cx="0" cy="0" r="90" stroke="#14b8a6" strokeWidth=".7" />
+          <circle cx="0" cy="0" r="45" stroke="#14b8a6" strokeWidth=".7" />
         </svg>
         <svg className="absolute bottom-0 right-0 pointer-events-none opacity-[0.06] rotate-180" width="180" height="180" viewBox="0 0 180 180" fill="none">
-          <circle cx="0" cy="0" r="140" stroke="#14b8a6" strokeWidth=".7"/>
-          <circle cx="0" cy="0" r="90" stroke="#14b8a6" strokeWidth=".7"/>
+          <circle cx="0" cy="0" r="140" stroke="#14b8a6" strokeWidth=".7" />
+          <circle cx="0" cy="0" r="90" stroke="#14b8a6" strokeWidth=".7" />
         </svg>
 
         <div className="relative z-10 max-w-2xl mx-auto px-4 text-center">

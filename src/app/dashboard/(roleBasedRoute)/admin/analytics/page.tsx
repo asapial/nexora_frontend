@@ -81,11 +81,11 @@ function BarChart({ data, getLabel, getValue, color, title }: {
 }
 
 export default function AdminAnalyticsPage() {
-  const [totals, setTotals]       = useState<any>(null);
-  const [signupTrend, setSignup]  = useState<any[]>([]);
-  const [storage, setStorage]     = useState<any[]>([]);
-  const [revenue, setRevenue]     = useState<any>(null);
-  const [loading, setLoading]     = useState(true);
+  const [totals, setTotals] = useState<any>(null);
+  const [signupTrend, setSignup] = useState<any[]>([]);
+  const [storage, setStorage] = useState<any[]>([]);
+  const [revenue, setRevenue] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -109,13 +109,13 @@ export default function AdminAnalyticsPage() {
   useEffect(() => { load(); }, [load]);
 
   const STAT_CARDS = totals ? [
-    { label: "Total Users",   value: totals.totalUsers,       icon: <RiGroupLine />,         accent: "text-teal-600 dark:text-teal-400 bg-teal-100/70 dark:bg-teal-950/50 border-teal-200/60 dark:border-teal-800/50" },
-    { label: "Teachers",      value: totals.teacherCount,     icon: <RiBarChartBoxLine />,   accent: "text-violet-600 dark:text-violet-400 bg-violet-100/70 dark:bg-violet-950/50 border-violet-200/60 dark:border-violet-800/50" },
-    { label: "Students",      value: totals.studentCount,     icon: <RiFlaskLine />,          accent: "text-sky-600 dark:text-sky-400 bg-sky-100/70 dark:bg-sky-950/50 border-sky-200/60 dark:border-sky-800/50" },
-    { label: "Clusters",      value: totals.totalClusters,    icon: <RiCalendarCheckLine />, accent: "text-amber-600 dark:text-amber-400 bg-amber-100/70 dark:bg-amber-950/50 border-amber-200/60 dark:border-amber-800/50" },
-    { label: "Sessions",      value: totals.totalSessions,    icon: <RiBookOpenLine />,       accent: "text-teal-600 dark:text-teal-400 bg-teal-100/70 dark:bg-teal-950/50 border-teal-200/60 dark:border-teal-800/50" },
-    { label: "Resources",     value: totals.totalResources,   icon: <RiFileTextLine />,       accent: "text-violet-600 dark:text-violet-400 bg-violet-100/70 dark:bg-violet-950/50 border-violet-200/60 dark:border-violet-800/50" },
-    { label: "Enrollments",   value: totals.totalEnrollments, icon: <RiGroupLine />,         accent: "text-sky-600 dark:text-sky-400 bg-sky-100/70 dark:bg-sky-950/50 border-sky-200/60 dark:border-sky-800/50" },
+    { label: "Total Users", value: totals.totalUsers, icon: <RiGroupLine />, accent: "text-teal-600 dark:text-teal-400 bg-teal-100/70 dark:bg-teal-950/50 border-teal-200/60 dark:border-teal-800/50" },
+    { label: "Teachers", value: totals.teacherCount, icon: <RiBarChartBoxLine />, accent: "text-violet-600 dark:text-violet-400 bg-violet-100/70 dark:bg-violet-950/50 border-violet-200/60 dark:border-violet-800/50" },
+    { label: "Students", value: totals.studentCount, icon: <RiFlaskLine />, accent: "text-sky-600 dark:text-sky-400 bg-sky-100/70 dark:bg-sky-950/50 border-sky-200/60 dark:border-sky-800/50" },
+    { label: "Clusters", value: totals.totalClusters, icon: <RiCalendarCheckLine />, accent: "text-amber-600 dark:text-amber-400 bg-amber-100/70 dark:bg-amber-950/50 border-amber-200/60 dark:border-amber-800/50" },
+    { label: "Sessions", value: totals.totalSessions, icon: <RiBookOpenLine />, accent: "text-teal-600 dark:text-teal-400 bg-teal-100/70 dark:bg-teal-950/50 border-teal-200/60 dark:border-teal-800/50" },
+    { label: "Resources", value: totals.totalResources, icon: <RiFileTextLine />, accent: "text-violet-600 dark:text-violet-400 bg-violet-100/70 dark:bg-violet-950/50 border-violet-200/60 dark:border-violet-800/50" },
+    { label: "Enrollments", value: totals.totalEnrollments, icon: <RiGroupLine />, accent: "text-sky-600 dark:text-sky-400 bg-sky-100/70 dark:bg-sky-950/50 border-sky-200/60 dark:border-sky-800/50" },
     { label: "Revenue (USD)", value: `$${(revenue?.grossRevenue ?? 0).toFixed(2)}`, icon: <RiMoneyDollarCircleLine />, accent: "text-teal-600 dark:text-teal-400 bg-teal-100/70 dark:bg-teal-950/50 border-teal-200/60 dark:border-teal-800/50" },
   ] : [];
 
@@ -140,8 +140,8 @@ export default function AdminAnalyticsPage() {
         {loading
           ? Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)
           : STAT_CARDS.map(s => (
-              <StatCard key={s.label} icon={s.icon} label={s.label} value={s.value} accent={s.accent} />
-            ))}
+            <StatCard key={s.label} icon={s.icon} label={s.label} value={s.value} accent={s.accent} />
+          ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">

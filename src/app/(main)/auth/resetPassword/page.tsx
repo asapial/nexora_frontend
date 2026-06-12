@@ -21,11 +21,11 @@ import { toast } from "sonner";
 const OTP_LENGTH = 6;
 
 // ─── Password strength ────────────────────────────────────
-function PasswordStrength({ password }: { password: string }) {
+function PasswordStrength({ password }: { password: string; }) {
   const rules = [
-    { label: "8+ characters",    pass: password.length >= 8 },
+    { label: "8+ characters", pass: password.length >= 8 },
     { label: "Uppercase letter", pass: /[A-Z]/.test(password) },
-    { label: "Number",           pass: /\d/.test(password)   },
+    { label: "Number", pass: /\d/.test(password) },
   ];
   const score = rules.filter((r) => r.pass).length;
   const color = score <= 1 ? "bg-red-400" : score === 2 ? "bg-amber-400" : "bg-teal-500";
@@ -33,7 +33,7 @@ function PasswordStrength({ password }: { password: string }) {
   return (
     <div className="mt-2 flex flex-col gap-1.5">
       <div className="flex gap-1">
-        {[1,2,3].map((i) => (
+        {[1, 2, 3].map((i) => (
           <div key={i} className={cn("flex-1 h-1 rounded-full transition-all duration-300", i <= score ? color : "bg-zinc-200 dark:bg-zinc-700")} />
         ))}
       </div>
@@ -77,15 +77,15 @@ function OtpBox({
         hasError
           ? "border-red-400 dark:border-red-500/70 text-red-600 dark:text-red-400"
           : value
-          ? "border-teal-400 dark:border-teal-500 text-teal-700 dark:text-teal-300 focus:ring-2 focus:ring-teal-400/20"
-          : "border-zinc-200 dark:border-zinc-700/60 text-zinc-900 dark:text-zinc-50 focus:border-teal-400 dark:focus:border-teal-500 focus:ring-2 focus:ring-teal-400/20"
+            ? "border-teal-400 dark:border-teal-500 text-teal-700 dark:text-teal-300 focus:ring-2 focus:ring-teal-400/20"
+            : "border-zinc-200 dark:border-zinc-700/60 text-zinc-900 dark:text-zinc-50 focus:border-teal-400 dark:focus:border-teal-500 focus:ring-2 focus:ring-teal-400/20"
       )}
     />
   );
 }
 
 // ─── Step indicator ───────────────────────────────────────
-function StepDots({ step }: { step: 1 | 2 }) {
+function StepDots({ step }: { step: 1 | 2; }) {
   return (
     <div className="flex items-center gap-2 mb-6 justify-center">
       {[1, 2].map((s) => (
@@ -96,8 +96,8 @@ function StepDots({ step }: { step: 1 | 2 }) {
             s === step
               ? "w-6 h-2 rounded-full bg-teal-500 dark:bg-teal-400"
               : s < step
-              ? "w-2 h-2 rounded-full bg-teal-400/60 dark:bg-teal-600/60"
-              : "w-2 h-2 rounded-full bg-zinc-200 dark:bg-zinc-700"
+                ? "w-2 h-2 rounded-full bg-teal-400/60 dark:bg-teal-600/60"
+                : "w-2 h-2 rounded-full bg-zinc-200 dark:bg-zinc-700"
           )}
         />
       ))}
@@ -128,7 +128,7 @@ export default function ResetPasswordPage() {
   const [success, setSuccess] = useState(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const searchParams = useSearchParams();
-const email = searchParams.get("email") || "";
+  const email = searchParams.get("email") || "";
 
   const startCooldown = () => {
     setResendCooldown(60);
@@ -165,39 +165,39 @@ const email = searchParams.get("email") || "";
   };
 
 
-const handleVerifyOtp = async (e: React.FormEvent) => {
+  const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     const code = digits.join("");
     if (code.length < OTP_LENGTH) { setOtpError("Enter the full 6-digit code"); return; }
 
     setIsLoading(true);
     try {
-        const res = await fetch("/api/auth/verifyResetOtp", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email, otp: code }),
-            credentials: "include",
-        });
+      const res = await fetch("/api/auth/verifyResetOtp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, otp: code }),
+        credentials: "include",
+      });
 
-        const data = await res.json();
+      const data = await res.json();
 
-        if (!data.success) {
-            throw new Error(data.message || "Invalid or expired code");
-        }
+      if (!data.success) {
+        throw new Error(data.message || "Invalid or expired code");
+      }
 
-        setStep(2); 
+      setStep(2);
 
     } catch (err: any) {
-        setOtpError(err.message || "Invalid or expired code. Try again or resend.");
-        setDigits(Array(OTP_LENGTH).fill(""));
-        inputRefs.current[0]?.focus();
+      setOtpError(err.message || "Invalid or expired code. Try again or resend.");
+      setDigits(Array(OTP_LENGTH).fill(""));
+      inputRefs.current[0]?.focus();
     } finally {
-        setIsLoading(false);
+      setIsLoading(false);
     }
-};
+  };
 
 
-const handleResetPassword = async (e: React.FormEvent) => {
+  const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     let valid = true;
     if (!newPassword) { setPassError("New password is required"); valid = false; }
@@ -208,67 +208,67 @@ const handleResetPassword = async (e: React.FormEvent) => {
 
     setIsLoading(true);
     try {
-        const code = digits.join("");
+      const code = digits.join("");
 
-        const res = await fetch("/api/auth/resetPassword", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email, otp: code, newPassword }),
-            credentials: "include",
-        });
+      const res = await fetch("/api/auth/resetPassword", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, otp: code, newPassword }),
+        credentials: "include",
+      });
 
-        const data = await res.json();
+      const data = await res.json();
 
-        if (!data.success) {
-            throw new Error(data.message || "Reset failed. Please start over.");
-        }
+      if (!data.success) {
+        throw new Error(data.message || "Reset failed. Please start over.");
+      }
 
-    toast.success("Password has been reset successfully.", { position: "top-right" });
-        setSuccess(true);
-        setTimeout(() => router.push("/auth/signin"), 1000);
+      toast.success("Password has been reset successfully.", { position: "top-right" });
+      setSuccess(true);
+      setTimeout(() => router.push("/auth/signin"), 1000);
 
     } catch (err: any) {
-        setPassError(err.message || "Reset failed. Please start over.");
+      setPassError(err.message || "Reset failed. Please start over.");
     } finally {
-        setIsLoading(false);
+      setIsLoading(false);
     }
-};
+  };
 
 
-const handleResend = async () => {
+  const handleResend = async () => {
     if (resendCooldown > 0) return;
     setIsResending(true);
     try {
-        const res = await fetch("/api/auth/forgetPassword", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email }),
-            credentials: "include",
-        });
+      const res = await fetch("/api/auth/forgetPassword", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+        credentials: "include",
+      });
 
-        const data = await res.json();
+      const data = await res.json();
 
-        if (!data.success) throw new Error(data.message);
-        if(data.success){
-          toast.success("OTP has been sent for reset.", { position: "top-right" });
-          setDigits(Array(OTP_LENGTH).fill(""));
-          setOtpError("");
-          startCooldown();
-          inputRefs.current[0]?.focus();
+      if (!data.success) throw new Error(data.message);
+      if (data.success) {
+        toast.success("OTP has been sent for reset.", { position: "top-right" });
+        setDigits(Array(OTP_LENGTH).fill(""));
+        setOtpError("");
+        startCooldown();
+        inputRefs.current[0]?.focus();
 
-        }
+      }
 
 
     } catch (err: any) {
-        setOtpError(err.message || "Failed to resend. Try again.");
+      setOtpError(err.message || "Failed to resend. Try again.");
     } finally {
-        setIsResending(false);
+      setIsResending(false);
     }
-};
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-950 px-4 py-12">
-    <AmbientBg6></AmbientBg6>
+      <AmbientBg6></AmbientBg6>
 
       <div className="relative z-10 w-full max-w-[440px]">
         <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200/80 dark:border-zinc-800/80 shadow-xl shadow-zinc-900/5 dark:shadow-zinc-900/30 overflow-hidden">

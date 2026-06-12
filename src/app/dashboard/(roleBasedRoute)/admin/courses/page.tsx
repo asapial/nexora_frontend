@@ -18,21 +18,21 @@ const fmtUSD = (n: number) => new Intl.NumberFormat("en-US", { style: "currency"
 type CourseStatus = "DRAFT" | "PENDING_APPROVAL" | "PUBLISHED" | "CLOSED" | "REJECTED";
 
 const STATUS_MAP: Record<CourseStatus, string> = {
-  DRAFT:            "text-muted-foreground bg-muted/40 border-border",
+  DRAFT: "text-muted-foreground bg-muted/40 border-border",
   PENDING_APPROVAL: "text-amber-600 dark:text-amber-400 bg-amber-50/60 dark:bg-amber-950/30 border-amber-200/60",
-  PUBLISHED:        "text-teal-600 dark:text-teal-400 bg-teal-50/60 dark:bg-teal-950/30 border-teal-200/60",
-  CLOSED:           "text-blue-600 dark:text-blue-400 bg-blue-50/60 dark:bg-blue-950/30 border-blue-200/60",
-  REJECTED:         "text-red-600 dark:text-red-400 bg-red-50/40 dark:bg-red-950/20 border-red-200/60",
+  PUBLISHED: "text-teal-600 dark:text-teal-400 bg-teal-50/60 dark:bg-teal-950/30 border-teal-200/60",
+  CLOSED: "text-blue-600 dark:text-blue-400 bg-blue-50/60 dark:bg-blue-950/30 border-blue-200/60",
+  REJECTED: "text-red-600 dark:text-red-400 bg-red-50/40 dark:bg-red-950/20 border-red-200/60",
 };
 const STATUS_LABELS: Record<string, string> = {
   DRAFT: "Draft", PENDING_APPROVAL: "Pending", PUBLISHED: "Published", CLOSED: "Closed", REJECTED: "Rejected",
 };
 
 // ─── Revenue Percent Edit Inline ─────────────────────────────
-function RevenueInput({ courseId, current, onUpdated }: { courseId: string; current: number; onUpdated: () => void }) {
+function RevenueInput({ courseId, current, onUpdated }: { courseId: string; current: number; onUpdated: () => void; }) {
   const [editing, setEditing] = useState(false);
-  const [val, setVal]         = useState(String(current));
-  const [saving, setSaving]   = useState(false);
+  const [val, setVal] = useState(String(current));
+  const [saving, setSaving] = useState(false);
 
   const save = async () => {
     const n = parseFloat(val);
@@ -63,11 +63,11 @@ function RevenueInput({ courseId, current, onUpdated }: { courseId: string; curr
 }
 
 // ─── Course Row Card ──────────────────────────────────────────
-function CourseRow({ course, onRefresh }: { course: any; onRefresh: () => void }) {
+function CourseRow({ course, onRefresh }: { course: any; onRefresh: () => void; }) {
   const router = useRouter();
-  const [toggling, setToggling]   = useState(false);
+  const [toggling, setToggling] = useState(false);
   const [approving, setApproving] = useState(false);
-  const [deleting, setDeleting]   = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const toggleFeatured = async () => {
     setToggling(true);
@@ -154,10 +154,10 @@ function CourseRow({ course, onRefresh }: { course: any; onRefresh: () => void }
 
 // ─── Main Page ────────────────────────────────────────────────
 export default function AdminCoursesPage() {
-  const [courses,    setCourses]    = useState<any[]>([]);
-  const [loading,    setLoading]    = useState(true);
-  const [search,     setSearch]     = useState("");
-  const [filterSt,   setFilterSt]   = useState("all");
+  const [courses, setCourses] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [filterSt, setFilterSt] = useState("all");
   const [filterFeat, setFilterFeat] = useState(false);
 
   const load = useCallback(async () => {
@@ -178,7 +178,7 @@ export default function AdminCoursesPage() {
     !search.trim() || c.title?.toLowerCase().includes(search.toLowerCase()) || c.teacher?.user?.name?.toLowerCase().includes(search.toLowerCase())
   );
 
-  const pendingCount   = courses.filter(c => c.status === "PENDING_APPROVAL").length;
+  const pendingCount = courses.filter(c => c.status === "PENDING_APPROVAL").length;
   const publishedCount = courses.filter(c => c.status === "PUBLISHED").length;
 
   return (
@@ -201,10 +201,10 @@ export default function AdminCoursesPage() {
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { icon: <RiBookOpenLine />, l: "Total",     v: courses.length,    cls: "text-teal-600 dark:text-teal-400 bg-teal-100/60 dark:bg-teal-950/40 border-teal-200/60 dark:border-teal-800/40" },
-          { icon: <RiAlertLine />,   l: "Pending",   v: pendingCount,      cls: "text-amber-600 dark:text-amber-400 bg-amber-100/60 dark:bg-amber-950/40 border-amber-200/60 dark:border-amber-800/40" },
-          { icon: <RiCheckLine />,   l: "Published", v: publishedCount,    cls: "text-sky-600 dark:text-sky-400 bg-sky-100/60 dark:bg-sky-950/40 border-sky-200/60 dark:border-sky-800/40" },
-          { icon: <RiStarFill />,    l: "Featured",  v: courses.filter(c => c.isFeatured).length, cls: "text-violet-600 dark:text-violet-400 bg-violet-100/60 dark:bg-violet-950/40 border-violet-200/60 dark:border-violet-800/40" },
+          { icon: <RiBookOpenLine />, l: "Total", v: courses.length, cls: "text-teal-600 dark:text-teal-400 bg-teal-100/60 dark:bg-teal-950/40 border-teal-200/60 dark:border-teal-800/40" },
+          { icon: <RiAlertLine />, l: "Pending", v: pendingCount, cls: "text-amber-600 dark:text-amber-400 bg-amber-100/60 dark:bg-amber-950/40 border-amber-200/60 dark:border-amber-800/40" },
+          { icon: <RiCheckLine />, l: "Published", v: publishedCount, cls: "text-sky-600 dark:text-sky-400 bg-sky-100/60 dark:bg-sky-950/40 border-sky-200/60 dark:border-sky-800/40" },
+          { icon: <RiStarFill />, l: "Featured", v: courses.filter(c => c.isFeatured).length, cls: "text-violet-600 dark:text-violet-400 bg-violet-100/60 dark:bg-violet-950/40 border-violet-200/60 dark:border-violet-800/40" },
         ].map(s => (
           <div key={s.l} className="rounded-2xl border border-border bg-card p-4">
             <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center text-sm border mb-2.5", s.cls)}>{s.icon}</div>

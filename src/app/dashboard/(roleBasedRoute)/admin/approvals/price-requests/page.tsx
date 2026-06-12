@@ -24,7 +24,7 @@ function AmbientBg() {
   );
 }
 
-function RejectModal({ label, onClose, onReject }: { label: string; onClose: () => void; onReject: (n: string) => Promise<void> }) {
+function RejectModal({ label, onClose, onReject }: { label: string; onClose: () => void; onReject: (n: string) => Promise<void>; }) {
   const [note, setNote] = useState(""); const [busy, setBusy] = useState(false); const [err, setErr] = useState("");
   return (
     <>
@@ -49,7 +49,7 @@ function RejectModal({ label, onClose, onReject }: { label: string; onClose: () 
   );
 }
 
-function ApproveModal({ req, onClose, onApprove }: { req: any; onClose: () => void; onApprove: (price: number) => Promise<void> }) {
+function ApproveModal({ req, onClose, onApprove }: { req: any; onClose: () => void; onApprove: (price: number) => Promise<void>; }) {
   const [price, setPrice] = useState(String(req.requestedPrice));
   const [busy, setBusy] = useState(false); const [err, setErr] = useState("");
   return (

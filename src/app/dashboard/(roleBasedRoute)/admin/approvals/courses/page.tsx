@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import RefreshIcon from "@/components/shared/RefreshIcon";
 
 const fmtDate = (d: string) => new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
-const fmtUSD  = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
+const fmtUSD = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
 
 // ─── Ambient BG ───────────────────────────────────────────
 function AmbientBg() {

@@ -21,7 +21,7 @@ interface FeaturedCourse {
   isFree: boolean;
   isFeatured: boolean;
   status: string;
-  _count: { enrollments: number; missions: number };
+  _count: { enrollments: number; missions: number; };
   createdAt: string;
 }
 
@@ -259,7 +259,7 @@ function CourseCard({
 }
 
 // ─── Section header ───────────────────────────────────────
-function SectionHeader({ count }: { count: number }) {
+function SectionHeader({ count }: { count: number; }) {
   return (
     <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
       <div>
@@ -386,13 +386,13 @@ export default function FeaturedCoursesSection() {
           {loading
             ? [0, 1, 2, 3, 4, 5].map(i => <CourseSkeleton key={i} />)
             : courses.map((course, i) => (
-                <CourseCard
-                  key={course.id}
-                  course={course}
-                  index={i}
-                  visible={visible}
-                />
-              ))
+              <CourseCard
+                key={course.id}
+                course={course}
+                index={i}
+                visible={visible}
+              />
+            ))
           }
         </div>
 

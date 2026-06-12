@@ -22,7 +22,7 @@ export interface Testimonial {
   avatar?: string;
   quote: string;
   rating: number;
-  user?: { id: string; name: string; email: string; image?: string | null };
+  user?: { id: string; name: string; email: string; image?: string | null; };
   cardBg?: string;
 }
 
@@ -50,7 +50,7 @@ function getInitials(name: string): string {
 }
 
 // ─── Star display ──────────────────────────────────────────
-function StarRow({ rating, interactive = false, onRate }: { rating: number; interactive?: boolean; onRate?: (r: number) => void }) {
+function StarRow({ rating, interactive = false, onRate }: { rating: number; interactive?: boolean; onRate?: (r: number) => void; }) {
   return (
     <div className="flex items-center gap-0.5 mb-4">
       {[1, 2, 3, 4, 5].map((s) =>
@@ -73,7 +73,7 @@ function StarRow({ rating, interactive = false, onRate }: { rating: number; inte
 }
 
 // ─── Individual testimonial card ───────────────────────────
-function TestimonialCard({ item, idx }: { item: Testimonial; idx: number }) {
+function TestimonialCard({ item, idx }: { item: Testimonial; idx: number; }) {
   const cardBg = CARD_BG_VARIANTS[idx % CARD_BG_VARIANTS.length];
   const avatarUrl = item.user?.image || item.avatar;
   const authorName = item.name || item.user?.name || "Anonymous";
@@ -116,7 +116,7 @@ function TestimonialCard({ item, idx }: { item: Testimonial; idx: number }) {
 }
 
 // ─── Submit Modal ──────────────────────────────────────────
-function AddTestimonialModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
+function AddTestimonialModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void; }) {
   const [form, setForm] = useState({ name: "", role: "", quote: "", rating: 5 });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -245,7 +245,7 @@ function SkeletonCard() {
       <div className="h-3 w-full bg-zinc-100 dark:bg-zinc-800 rounded" />
       <div className="h-3 w-5/6 bg-zinc-100 dark:bg-zinc-800 rounded" />
       <div className="h-3 w-4/6 bg-zinc-100 dark:bg-zinc-800 rounded" />
-      <div className="flex gap-0.5 mt-2">{[1,2,3,4,5].map(i => <div key={i} className="h-3 w-3 bg-zinc-200 dark:bg-zinc-800 rounded" />)}</div>
+      <div className="flex gap-0.5 mt-2">{[1, 2, 3, 4, 5].map(i => <div key={i} className="h-3 w-3 bg-zinc-200 dark:bg-zinc-800 rounded" />)}</div>
       <div className="flex gap-3 mt-2">
         <div className="w-9 h-9 rounded-full bg-zinc-200 dark:bg-zinc-800" />
         <div className="space-y-1.5">
@@ -330,8 +330,8 @@ export default function TestimonialsSection() {
             {loading
               ? Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)
               : testimonials.map((item, idx) => (
-                  <TestimonialCard key={item.id} item={item} idx={idx} />
-                ))}
+                <TestimonialCard key={item.id} item={item} idx={idx} />
+              ))}
 
             {/* Add testimonial — only shown when user is logged in */}
             {!loading && isLoggedIn && !alreadySubmitted && (

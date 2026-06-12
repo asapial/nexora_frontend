@@ -10,13 +10,13 @@ import { cn } from "@/lib/utils";
 import { annotationApi } from "@/lib/api";
 import { toast } from "sonner";
 
-type Resource = { id: string; title: string; fileType: string; fileUrl: string; description?: string };
-type Annotation = { id: string; highlight?: string; note?: string; page?: number; isShared: boolean; userId: string; createdAt: string; user?: { name: string; image?: string } };
+type Resource = { id: string; title: string; fileType: string; fileUrl: string; description?: string; };
+type Annotation = { id: string; highlight?: string; note?: string; page?: number; isShared: boolean; userId: string; createdAt: string; user?: { name: string; image?: string; }; };
 
 const FILE_TYPE_COLOR: Record<string, string> = {
-  PDF:   "text-rose-600 dark:text-rose-400 bg-rose-50/70 dark:bg-rose-950/30 border-rose-200/50 dark:border-rose-800/40",
+  PDF: "text-rose-600 dark:text-rose-400 bg-rose-50/70 dark:bg-rose-950/30 border-rose-200/50 dark:border-rose-800/40",
   VIDEO: "text-violet-600 dark:text-violet-400 bg-violet-50/70 dark:bg-violet-950/30 border-violet-200/50 dark:border-violet-800/40",
-  LINK:  "text-sky-600 dark:text-sky-400 bg-sky-50/70 dark:bg-sky-950/30 border-sky-200/50 dark:border-sky-800/40",
+  LINK: "text-sky-600 dark:text-sky-400 bg-sky-50/70 dark:bg-sky-950/30 border-sky-200/50 dark:border-sky-800/40",
   IMAGE: "text-teal-600 dark:text-teal-400 bg-teal-50/70 dark:bg-teal-950/30 border-teal-200/50 dark:border-teal-800/40",
 };
 
@@ -196,33 +196,33 @@ export default function ResourceAnnotationPage() {
           {loadingRes
             ? Array.from({ length: 6 }).map((_, i) => <SkeletonResource key={i} />)
             : filtered.length === 0
-            ? (
-              <div className="py-10 text-center px-4">
-                <RiBookOpenLine className="text-3xl text-muted-foreground/20 mx-auto mb-2" />
-                <p className="text-[12px] text-muted-foreground">No resources found</p>
-              </div>
-            )
-            : filtered.map(r => {
-              const cls = FILE_TYPE_COLOR[r.fileType] ?? FILE_TYPE_COLOR.PDF;
-              return (
-                <button
-                  key={r.id}
-                  onClick={() => selectResource(r)}
-                  className={cn(
-                    "w-full p-3 flex items-center gap-2.5 text-left hover:bg-muted/30 transition-colors border-b border-border/40",
-                    selected?.id === r.id && "bg-rose-50/40 dark:bg-rose-950/10"
-                  )}
-                >
-                  <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold border shrink-0", cls)}>
-                    {r.fileType.slice(0, 3)}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-[12.5px] font-semibold text-foreground truncate">{r.title}</p>
-                    <p className="text-[10.5px] text-muted-foreground">{r.fileType}</p>
-                  </div>
-                </button>
-              );
-            })}
+              ? (
+                <div className="py-10 text-center px-4">
+                  <RiBookOpenLine className="text-3xl text-muted-foreground/20 mx-auto mb-2" />
+                  <p className="text-[12px] text-muted-foreground">No resources found</p>
+                </div>
+              )
+              : filtered.map(r => {
+                const cls = FILE_TYPE_COLOR[r.fileType] ?? FILE_TYPE_COLOR.PDF;
+                return (
+                  <button
+                    key={r.id}
+                    onClick={() => selectResource(r)}
+                    className={cn(
+                      "w-full p-3 flex items-center gap-2.5 text-left hover:bg-muted/30 transition-colors border-b border-border/40",
+                      selected?.id === r.id && "bg-rose-50/40 dark:bg-rose-950/10"
+                    )}
+                  >
+                    <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold border shrink-0", cls)}>
+                      {r.fileType.slice(0, 3)}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[12.5px] font-semibold text-foreground truncate">{r.title}</p>
+                      <p className="text-[10.5px] text-muted-foreground">{r.fileType}</p>
+                    </div>
+                  </button>
+                );
+              })}
         </div>
       </div>
 
@@ -303,33 +303,33 @@ export default function ResourceAnnotationPage() {
           <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-2">
             {loadingAnn
               ? Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i} className="rounded-xl border border-border bg-card p-3.5 animate-pulse space-y-2">
-                    <div className="h-3 bg-muted rounded" />
-                    <div className="h-8 bg-muted rounded" />
-                  </div>
-                ))
-              : activeTab === "mine"
-              ? annotations.length === 0
-                ? (
-                  <div className="py-8 text-center">
-                    <RiStickyNoteLine className="text-3xl text-muted-foreground/20 mx-auto mb-2" />
-                    <p className="text-[12px] text-muted-foreground">No annotations yet</p>
-                    <p className="text-[11px] text-muted-foreground/60 mt-0.5">Click "Add note" to start</p>
-                  </div>
-                )
-                : annotations.map(a => (
-                  <AnnotationItem key={a.id} ann={a} onDelete={deleteAnnotation} onToggleShare={toggleShare} />
-                ))
-              : sharedAnnotations.length === 0
-              ? (
-                <div className="py-8 text-center">
-                  <RiShareLine className="text-3xl text-muted-foreground/20 mx-auto mb-2" />
-                  <p className="text-[12px] text-muted-foreground">No shared annotations</p>
+                <div key={i} className="rounded-xl border border-border bg-card p-3.5 animate-pulse space-y-2">
+                  <div className="h-3 bg-muted rounded" />
+                  <div className="h-8 bg-muted rounded" />
                 </div>
-              )
-              : sharedAnnotations.map(a => (
-                <AnnotationItem key={a.id} ann={a} onDelete={() => {}} onToggleShare={() => {}} />
               ))
+              : activeTab === "mine"
+                ? annotations.length === 0
+                  ? (
+                    <div className="py-8 text-center">
+                      <RiStickyNoteLine className="text-3xl text-muted-foreground/20 mx-auto mb-2" />
+                      <p className="text-[12px] text-muted-foreground">No annotations yet</p>
+                      <p className="text-[11px] text-muted-foreground/60 mt-0.5">Click "Add note" to start</p>
+                    </div>
+                  )
+                  : annotations.map(a => (
+                    <AnnotationItem key={a.id} ann={a} onDelete={deleteAnnotation} onToggleShare={toggleShare} />
+                  ))
+                : sharedAnnotations.length === 0
+                  ? (
+                    <div className="py-8 text-center">
+                      <RiShareLine className="text-3xl text-muted-foreground/20 mx-auto mb-2" />
+                      <p className="text-[12px] text-muted-foreground">No shared annotations</p>
+                    </div>
+                  )
+                  : sharedAnnotations.map(a => (
+                    <AnnotationItem key={a.id} ann={a} onDelete={() => { }} onToggleShare={() => { }} />
+                  ))
             }
           </div>
         </div>

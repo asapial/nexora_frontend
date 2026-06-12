@@ -18,15 +18,15 @@ function useDraggable(widgetW: number, widgetH: number) {
   const getDefault = useCallback(() => {
     if (typeof window === "undefined") return { x: 24, y: 24 };
     return {
-      x: window.innerWidth  - widgetW - 24,
+      x: window.innerWidth - widgetW - 24,
       y: window.innerHeight - widgetH - 24,
     };
   }, [widgetW, widgetH]);
 
-  const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
+  const [pos, setPos] = useState<{ x: number; y: number; } | null>(null);
   const dragging = useRef(false);
   const startMouse = useRef({ x: 0, y: 0 });
-  const startPos   = useRef({ x: 0, y: 0 });
+  const startPos = useRef({ x: 0, y: 0 });
   const hasDragged = useRef(false);
 
   // Initialise once on mount (client only)
@@ -34,7 +34,7 @@ function useDraggable(widgetW: number, widgetH: number) {
 
   // Clamp so widget stays fully within viewport
   const clamp = useCallback((x: number, y: number) => {
-    const maxX = Math.max(0, window.innerWidth  - widgetW);
+    const maxX = Math.max(0, window.innerWidth - widgetW);
     const maxY = Math.max(0, window.innerHeight - widgetH);
     return { x: Math.min(Math.max(0, x), maxX), y: Math.min(Math.max(0, y), maxY) };
   }, [widgetW, widgetH]);
@@ -49,10 +49,10 @@ function useDraggable(widgetW: number, widgetH: number) {
   const onMouseDown = useCallback((e: React.MouseEvent) => {
     // Only drag on left-button; ignore clicks on interactive children
     if (e.button !== 0) return;
-    dragging.current   = true;
+    dragging.current = true;
     hasDragged.current = false;
     startMouse.current = { x: e.clientX, y: e.clientY };
-    startPos.current   = pos ?? getDefault();
+    startPos.current = pos ?? getDefault();
     e.preventDefault();
 
     const onMove = (ev: MouseEvent) => {
@@ -65,18 +65,18 @@ function useDraggable(widgetW: number, widgetH: number) {
     const onUp = () => {
       dragging.current = false;
       window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup",   onUp);
+      window.removeEventListener("mouseup", onUp);
     };
     window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup",   onUp);
+    window.addEventListener("mouseup", onUp);
   }, [pos, getDefault, clamp]);
 
   const onTouchStart = useCallback((e: React.TouchEvent) => {
-    dragging.current   = true;
+    dragging.current = true;
     hasDragged.current = false;
     const t = e.touches[0];
     startMouse.current = { x: t.clientX, y: t.clientY };
-    startPos.current   = pos ?? getDefault();
+    startPos.current = pos ?? getDefault();
 
     const onMove = (ev: TouchEvent) => {
       if (!dragging.current) return;
@@ -90,10 +90,10 @@ function useDraggable(widgetW: number, widgetH: number) {
     const onEnd = () => {
       dragging.current = false;
       window.removeEventListener("touchmove", onMove);
-      window.removeEventListener("touchend",  onEnd);
+      window.removeEventListener("touchend", onEnd);
     };
     window.addEventListener("touchmove", onMove, { passive: false });
-    window.addEventListener("touchend",  onEnd);
+    window.addEventListener("touchend", onEnd);
   }, [pos, getDefault, clamp]);
 
   return { pos, onMouseDown, onTouchStart, wasDragged: () => hasDragged.current };
@@ -104,8 +104,8 @@ type PanelState = "closed" | "minimized" | "open";
 const QUICK_CHIPS: Record<string, string[]> = {
   STUDENT: ["My courses", "Pending tasks?", "Who is my teacher?", "Next session?"],
   TEACHER: ["List my clusters", "How many students?", "My resources", "Upcoming sessions"],
-  ADMIN:   ["Total users", "Active courses", "How many teachers?", "Recent activity"],
-  GUEST:   ["How do I register?", "How do I login?", "Try the demo", "Is Nexora free?", "What is a cluster?", "How to apply as teacher?"],
+  ADMIN: ["Total users", "Active courses", "How many teachers?", "Recent activity"],
+  GUEST: ["How do I register?", "How do I login?", "Try the demo", "Is Nexora free?", "What is a cluster?", "How to apply as teacher?"],
 };
 
 // ── Typing dots ───────────────────────────────────────────────────────────────
@@ -120,7 +120,7 @@ function TypingIndicator() {
       <div className="px-4 py-3 rounded-2xl rounded-bl-sm bg-muted/60 border border-border/50 flex items-center gap-1.5">
         {[0, 1, 2].map(i => (
           <span key={i} className="w-[5px] h-[5px] rounded-full bg-teal-500 dark:bg-teal-400"
-                style={{ animation: `ncBounce 1.2s ease-in-out ${i * 0.2}s infinite` }} />
+            style={{ animation: `ncBounce 1.2s ease-in-out ${i * 0.2}s infinite` }} />
         ))}
       </div>
     </div>
@@ -140,13 +140,13 @@ function renderInline(text: string, isUser = false): React.ReactNode[] {
       const href = match[4]; const label = match[3];
       parts.push(
         <a key={key++} href={href} target="_blank" rel="noopener noreferrer"
-           onClick={e => e.stopPropagation()}
-           className={cn("inline-flex items-center gap-1 px-2 py-[2px] rounded-full text-[11px] font-semibold no-underline transition-all hover:scale-[1.04]",
-             isUser ? "bg-white/20 hover:bg-white/30 text-white border border-white/30"
-                    : "bg-teal-50 dark:bg-teal-950/60 border border-teal-200/60 dark:border-teal-700/60 text-teal-700 dark:text-teal-300")}>
+          onClick={e => e.stopPropagation()}
+          className={cn("inline-flex items-center gap-1 px-2 py-[2px] rounded-full text-[11px] font-semibold no-underline transition-all hover:scale-[1.04]",
+            isUser ? "bg-white/20 hover:bg-white/30 text-white border border-white/30"
+              : "bg-teal-50 dark:bg-teal-950/60 border border-teal-200/60 dark:border-teal-700/60 text-teal-700 dark:text-teal-300")}>
           {label}
           <svg className="w-2.5 h-2.5 opacity-70" fill="none" viewBox="0 0 10 10" stroke="currentColor" strokeWidth={2}>
-            <path d="M2 8L8 2M8 2H4M8 2v4" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M2 8L8 2M8 2H4M8 2v4" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </a>
       );
@@ -182,18 +182,18 @@ function renderLine(line: string, idx: number, isUser: boolean): React.ReactNode
 }
 
 // ── Message bubble ────────────────────────────────────────────────────────────
-function MessageBubble({ msg }: { msg: ChatMessage }) {
+function MessageBubble({ msg }: { msg: ChatMessage; }) {
   const isUser = msg.role === "user";
   return (
     <div className={cn("flex items-end gap-2", isUser && "flex-row-reverse")}>
       <div className={cn("w-7 h-7 rounded-[10px] flex-shrink-0 flex items-center justify-center text-xs",
         isUser ? "bg-teal-100 dark:bg-teal-900/40 border border-teal-200/60 dark:border-teal-700/40 text-teal-600 dark:text-teal-400"
-               : "bg-teal-100 dark:bg-teal-900/40 border border-teal-200/60 dark:border-teal-700/40 text-teal-600 dark:text-teal-400")}>
+          : "bg-teal-100 dark:bg-teal-900/40 border border-teal-200/60 dark:border-teal-700/40 text-teal-600 dark:text-teal-400")}>
         {isUser ? <RiUser3Line /> : <RiRobot2Line />}
       </div>
       <div className={cn("max-w-[79%] px-3.5 py-2.5 text-[12.5px] leading-relaxed flex flex-col gap-[3px] shadow-sm",
         isUser ? "rounded-2xl rounded-br-sm bg-gradient-to-br from-teal-600 to-teal-500 text-white shadow-teal-500/20"
-               : "rounded-2xl rounded-bl-sm bg-white dark:bg-muted/60 border border-border/60 text-foreground shadow-black/[0.04]")}>
+          : "rounded-2xl rounded-bl-sm bg-white dark:bg-muted/60 border border-border/60 text-foreground shadow-black/[0.04]")}>
         {msg.content.split("\n").map((line, i) => renderLine(line, i, isUser))}
         <p className={cn("text-[10px] mt-1 select-none opacity-50", isUser ? "text-right" : "")}>
           {msg.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
@@ -204,7 +204,7 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
 }
 
 // ── Guest limit wall ──────────────────────────────────────────────────────────
-function GuestLimitWall({ onLogin }: { onLogin: () => void }) {
+function GuestLimitWall({ onLogin }: { onLogin: () => void; }) {
   return (
     <div className="mx-0.5 my-1 rounded-2xl border border-amber-200/50 dark:border-amber-800/40
                     bg-amber-50/60 dark:bg-amber-950/20 px-4 py-4 flex flex-col items-center gap-3 text-center">
@@ -218,7 +218,7 @@ function GuestLimitWall({ onLogin }: { onLogin: () => void }) {
         <p className="text-[11.5px] text-muted-foreground leading-relaxed">Log in to unlock unlimited chat with your personal Nexora data.</p>
       </div>
       <button onClick={onLogin}
-              className="inline-flex items-center gap-2 h-8 px-5 rounded-full bg-teal-600 hover:bg-teal-700 text-white text-[12px] font-medium transition-all hover:scale-[1.03]">
+        className="inline-flex items-center gap-2 h-8 px-5 rounded-full bg-teal-600 hover:bg-teal-700 text-white text-[12px] font-medium transition-all hover:scale-[1.03]">
         <RiLoginBoxLine className="text-sm" /> Log in to continue
       </button>
     </div>
@@ -274,18 +274,18 @@ function PanelHeader({
         )}
         {messageCount > 0 && onClear && (
           <button onClick={onClear} onMouseDown={e => e.stopPropagation()} title="Clear chat"
-                  className="w-7 h-7 rounded-lg flex items-center justify-center ml-1
+            className="w-7 h-7 rounded-lg flex items-center justify-center ml-1
                              text-white/50 hover:text-white hover:bg-white/10 transition-colors">
             <RiDeleteBinLine className="text-sm" />
           </button>
         )}
         <button onClick={onMinimize} onMouseDown={e => e.stopPropagation()} title="Minimize"
-                className="w-7 h-7 rounded-lg flex items-center justify-center
+          className="w-7 h-7 rounded-lg flex items-center justify-center
                            text-white/60 hover:text-white hover:bg-white/10 transition-colors">
           <RiArrowDownSLine className="text-base" />
         </button>
         <button onClick={onClose} onMouseDown={e => e.stopPropagation()} title="Close"
-                className="w-7 h-7 rounded-lg flex items-center justify-center
+          className="w-7 h-7 rounded-lg flex items-center justify-center
                            text-white/60 hover:text-white hover:bg-white/10 transition-colors">
           <RiCloseLine className="text-base" />
         </button>
@@ -327,16 +327,16 @@ function InputBar({
     <div className="px-3 py-3 border-t border-border/60 bg-background/95 flex-shrink-0">
       <div className="flex items-center gap-2">
         <input ref={inputRef} type="text" value={value}
-               onChange={e => onChange(e.target.value)}
-               onKeyDown={e => e.key === "Enter" && !e.shiftKey && onSend()}
-               placeholder="Ask anything…" disabled={loading || disabled}
-               className={cn("flex-1 h-[38px] px-4 rounded-full text-[12.5px]",
-                 "bg-muted/50 border border-border/60",
-                 "focus:border-teal-400/50 focus:ring-[3px] focus:ring-teal-400/10 focus:outline-none",
-                 "text-foreground placeholder:text-muted-foreground/50 transition-all",
-                 "disabled:opacity-50 disabled:cursor-not-allowed")} />
+          onChange={e => onChange(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && !e.shiftKey && onSend()}
+          placeholder="Ask anything…" disabled={loading || disabled}
+          className={cn("flex-1 h-[38px] px-4 rounded-full text-[12.5px]",
+            "bg-muted/50 border border-border/60",
+            "focus:border-teal-400/50 focus:ring-[3px] focus:ring-teal-400/10 focus:outline-none",
+            "text-foreground placeholder:text-muted-foreground/50 transition-all",
+            "disabled:opacity-50 disabled:cursor-not-allowed")} />
         <button onClick={onSend} disabled={!value.trim() || loading || disabled}
-                className="w-[38px] h-[38px] rounded-full flex items-center justify-center flex-shrink-0
+          className="w-[38px] h-[38px] rounded-full flex items-center justify-center flex-shrink-0
                            bg-gradient-to-br from-teal-600 to-teal-500 text-white
                            transition-all hover:scale-105 active:scale-95
                            disabled:opacity-35 disabled:cursor-not-allowed disabled:hover:scale-100
@@ -357,7 +357,7 @@ function InputBar({
 
 // ── Root widget ───────────────────────────────────────────────────────────────
 interface ChatWidgetProps {
-  user?: { name: string; role: "STUDENT" | "TEACHER" | "ADMIN" } | null;
+  user?: { name: string; role: "STUDENT" | "TEACHER" | "ADMIN"; } | null;
   loginPath?: string;
 }
 
@@ -378,8 +378,8 @@ function AuthPanelDraggable({
   return (
     <>
       <PanelHeader role={role} messageCount={messages.length}
-                   onMinimize={onMinimize} onClose={onClose} onClear={clearMessages}
-                   onMouseDown={onMouseDown} onTouchStart={onTouchStart} />
+        onMinimize={onMinimize} onClose={onClose} onClear={clearMessages}
+        onMouseDown={onMouseDown} onTouchStart={onTouchStart} />
       <MessageArea messages={messages} loading={loading} error={error}>
         {messages.length === 0 && (
           <div className="flex flex-col items-center text-center gap-3 pt-3">
@@ -395,13 +395,13 @@ function AuthPanelDraggable({
                 Ask me anything about your{" "}
                 {role === "STUDENT" ? "courses, tasks & sessions"
                   : role === "TEACHER" ? "clusters, students, resources & courses"
-                  : "platform stats & users"}.
+                    : "platform stats & users"}.
               </p>
             </div>
             <div className="flex flex-wrap gap-1.5 justify-center mt-1">
               {chips.map(chip => (
                 <button key={chip} onClick={() => sendMessage(chip)}
-                        className="px-3 py-[6px] rounded-full text-[11.5px] font-medium
+                  className="px-3 py-[6px] rounded-full text-[11.5px] font-medium
                                    border border-border/60 bg-muted/40 text-muted-foreground
                                    hover:border-teal-300/80 dark:hover:border-teal-600/60
                                    hover:text-teal-600 dark:hover:text-teal-400
@@ -433,7 +433,7 @@ function GuestPanelDraggable({
   return (
     <>
       <PanelHeader messageCount={messages.length} onMinimize={onMinimize} onClose={onClose}
-                   onMouseDown={onMouseDown} onTouchStart={onTouchStart} />
+        onMouseDown={onMouseDown} onTouchStart={onTouchStart} />
       <MessageArea messages={messages} loading={loading} error={error}>
         {messages.length === 0 && (
           <div className="flex flex-col items-center text-center gap-3 pt-3">
@@ -454,7 +454,7 @@ function GuestPanelDraggable({
             <div className="flex flex-wrap gap-1.5 justify-center mt-1">
               {QUICK_CHIPS.GUEST.map(chip => (
                 <button key={chip} onClick={() => sendMessage(chip)} disabled={limitReached}
-                        className="px-3 py-[6px] rounded-full text-[11.5px] font-medium
+                  className="px-3 py-[6px] rounded-full text-[11.5px] font-medium
                                    border border-border/60 bg-muted/40 text-muted-foreground
                                    hover:border-teal-300/80 hover:text-teal-600
                                    hover:bg-teal-50/60 dark:hover:bg-teal-950/20 transition-all
@@ -469,19 +469,19 @@ function GuestPanelDraggable({
       </MessageArea>
       {!limitReached ? (
         <InputBar value={input} onChange={setInput} onSend={handleSend} loading={loading}
-                  footer={
-                    <div className="mt-2 flex items-center gap-2">
-                      <div className="flex-1 h-[2px] rounded-full bg-border/40 overflow-hidden">
-                        <div className="h-full rounded-full bg-amber-400 transition-all duration-500"
-                             style={{ width: `${(userMessageCount / 3) * 100}%` }} />
-                      </div>
-                      <span className="text-[10px] text-muted-foreground/50 tabular-nums flex-shrink-0">{userMessageCount}/3</span>
-                    </div>
-                  } />
+          footer={
+            <div className="mt-2 flex items-center gap-2">
+              <div className="flex-1 h-[2px] rounded-full bg-border/40 overflow-hidden">
+                <div className="h-full rounded-full bg-amber-400 transition-all duration-500"
+                  style={{ width: `${(userMessageCount / 3) * 100}%` }} />
+              </div>
+              <span className="text-[10px] text-muted-foreground/50 tabular-nums flex-shrink-0">{userMessageCount}/3</span>
+            </div>
+          } />
       ) : (
         <div className="px-3 py-3 border-t border-border/60 bg-background/95 flex-shrink-0">
           <button onClick={onLogin}
-                  className="w-full h-[38px] rounded-full flex items-center justify-center gap-2
+            className="w-full h-[38px] rounded-full flex items-center justify-center gap-2
                              bg-gradient-to-r from-teal-600 to-teal-500 text-white text-[13px] font-medium
                              transition-all hover:scale-[1.01] shadow-sm shadow-teal-500/30">
             <RiLoginBoxLine /> Log in for unlimited chat
@@ -497,19 +497,19 @@ export default function ChatWidget({ user, loginPath = "/auth/signin" }: ChatWid
   const router = useRouter();
   const isLoggedIn = !!user;
 
-  const open     = () => setPanelState("open");
+  const open = () => setPanelState("open");
   const minimize = () => setPanelState("minimized");
-  const close    = () => setPanelState("closed");
+  const close = () => setPanelState("closed");
   const handleLogin = () => { close(); router.push(loginPath); };
 
   // Draggable – size depends on panel state
-  const FAB_SIZE  = 54;
-  const PILL_W    = 200; const PILL_H = 50;
-  const PANEL_W   = 370; const PANEL_H = 590;
+  const FAB_SIZE = 54;
+  const PILL_W = 200; const PILL_H = 50;
+  const PANEL_W = 370; const PANEL_H = 590;
 
-  const fabDrag   = useDraggable(FAB_SIZE, FAB_SIZE);
-  const pillDrag  = useDraggable(PILL_W,   PILL_H);
-  const panelDrag = useDraggable(PANEL_W,  PANEL_H);
+  const fabDrag = useDraggable(FAB_SIZE, FAB_SIZE);
+  const pillDrag = useDraggable(PILL_W, PILL_H);
+  const panelDrag = useDraggable(PANEL_W, PANEL_H);
 
   return (
     <>
@@ -591,17 +591,17 @@ export default function ChatWidget({ user, loginPath = "/auth/signin" }: ChatWid
         >
           {isLoggedIn
             ? <AuthPanelDraggable
-                userName={user.name} role={user.role}
-                onMinimize={minimize} onClose={close}
-                onMouseDown={panelDrag.onMouseDown}
-                onTouchStart={panelDrag.onTouchStart}
-              />
+              userName={user.name} role={user.role}
+              onMinimize={minimize} onClose={close}
+              onMouseDown={panelDrag.onMouseDown}
+              onTouchStart={panelDrag.onTouchStart}
+            />
             : <GuestPanelDraggable
-                onLogin={handleLogin}
-                onMinimize={minimize} onClose={close}
-                onMouseDown={panelDrag.onMouseDown}
-                onTouchStart={panelDrag.onTouchStart}
-              />
+              onLogin={handleLogin}
+              onMinimize={minimize} onClose={close}
+              onMouseDown={panelDrag.onMouseDown}
+              onTouchStart={panelDrag.onTouchStart}
+            />
           }
         </div>
       )}

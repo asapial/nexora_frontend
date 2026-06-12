@@ -20,10 +20,10 @@ interface FormData {
   newPassword: string;
   confirmPassword: string;
 }
-type FormErrors = Partial<FormData> & { general?: string };
+type FormErrors = Partial<FormData> & { general?: string; };
 
 // ─── Password strength ────────────────────────────────────
-function PasswordStrength({ password }: { password: string }) {
+function PasswordStrength({ password }: { password: string; }) {
   const rules = [
     { label: "8+ characters", pass: password.length >= 8 },
     { label: "Uppercase letter", pass: /[A-Z]/.test(password) },
@@ -170,7 +170,7 @@ export default function ChangePasswordPage() {
 
       console.log(data);
       if (data.success) {
-        window.location.href = "/dashboard"
+        window.location.href = "/dashboard";
         setSuccess(true);
       }
 
@@ -186,7 +186,7 @@ export default function ChangePasswordPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-950 px-4 py-12">
 
-<AmbientBg6></AmbientBg6>
+      <AmbientBg6></AmbientBg6>
 
       <div className="relative z-10 w-full max-w-[440px]">
 

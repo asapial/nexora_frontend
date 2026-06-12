@@ -206,7 +206,7 @@ function renderContent(text: string) {
 
 export default function TermsOfServicePage() {
   const [activeId, setActiveId] = useState("acceptance");
-  const [showTop, setShowTop]   = useState(false);
+  const [showTop, setShowTop] = useState(false);
   const hero = useReveal();
 
   useEffect(() => {

@@ -9,22 +9,22 @@ import { EditableField } from "./EditableField";
 export function AdminDetails({
   profile, onSave, flashSaved,
 }: {
-  profile:    AdminProfile;
-  onSave:     (p: Partial<AdminProfile>) => void;
+  profile: AdminProfile;
+  onSave: (p: Partial<AdminProfile>) => void;
   flashSaved: () => void;
 }) {
   const PERM_LABELS: Record<string, string> = {
-    MANAGE_STUDENTS:      "Manage Students",
-    MANAGE_TEACHERS:      "Manage Teachers",
-    MANAGE_ADMINS:        "Manage Admins",
-    MANAGE_CLUSTERS:      "Manage Clusters",
-    MANAGE_SESSIONS:      "Manage Sessions",
-    MANAGE_RESOURCES:     "Manage Resources",
-    MANAGE_TASKS:         "Manage Tasks",
-    MANAGE_CERTIFICATES:  "Manage Certificates",
-    VIEW_ANALYTICS:       "View Analytics",
-    VIEW_AUDIT_LOGS:      "View Audit Logs",
-    MANAGE_SETTINGS:      "Manage Settings",
+    MANAGE_STUDENTS: "Manage Students",
+    MANAGE_TEACHERS: "Manage Teachers",
+    MANAGE_ADMINS: "Manage Admins",
+    MANAGE_CLUSTERS: "Manage Clusters",
+    MANAGE_SESSIONS: "Manage Sessions",
+    MANAGE_RESOURCES: "Manage Resources",
+    MANAGE_TASKS: "Manage Tasks",
+    MANAGE_CERTIFICATES: "Manage Certificates",
+    VIEW_ANALYTICS: "View Analytics",
+    VIEW_AUDIT_LOGS: "View Audit Logs",
+    MANAGE_SETTINGS: "Manage Settings",
     MANAGE_ANNOUNCEMENTS: "Manage Announcements",
   };
 
@@ -66,10 +66,10 @@ export function AdminDetails({
       {/* Professional — all editable */}
       <Card title="Professional Information">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <EditableField label="Designation"   value={profile.designation ?? ""}  icon={<RiBriefcaseLine />}  onSave={v => { onSave({ designation: v }); flashSaved(); }} />
-          <EditableField label="Department"    value={profile.department ?? ""}   icon={<RiBookOpenLine />}   onSave={v => { onSave({ department: v }); flashSaved(); }} />
-          <EditableField label="Organisation"  value={profile.organization ?? ""} icon={<RiBuilding2Line />}  onSave={v => { onSave({ organization: v }); flashSaved(); }} />
-          <EditableField label="Nationality"   value={profile.nationality ?? ""}  icon={<RiMapPinLine />}     onSave={v => { onSave({ nationality: v }); flashSaved(); }} />
+          <EditableField label="Designation" value={profile.designation ?? ""} icon={<RiBriefcaseLine />} onSave={v => { onSave({ designation: v }); flashSaved(); }} />
+          <EditableField label="Department" value={profile.department ?? ""} icon={<RiBookOpenLine />} onSave={v => { onSave({ department: v }); flashSaved(); }} />
+          <EditableField label="Organisation" value={profile.organization ?? ""} icon={<RiBuilding2Line />} onSave={v => { onSave({ organization: v }); flashSaved(); }} />
+          <EditableField label="Nationality" value={profile.nationality ?? ""} icon={<RiMapPinLine />} onSave={v => { onSave({ nationality: v }); flashSaved(); }} />
         </div>
       </Card>
 
@@ -112,7 +112,7 @@ export function AdminDetails({
       <Card title="Links">
         <div className="flex flex-col gap-3">
           <EditableField label="LinkedIn" value={profile.linkedinUrl ?? ""} icon={<RiLinkedinBoxLine />} type="url" onSave={v => { onSave({ linkedinUrl: v }); flashSaved(); }} />
-          <EditableField label="Website"  value={profile.website ?? ""}    icon={<RiGlobalLine />}      type="url" onSave={v => { onSave({ website: v }); flashSaved(); }} />
+          <EditableField label="Website" value={profile.website ?? ""} icon={<RiGlobalLine />} type="url" onSave={v => { onSave({ website: v }); flashSaved(); }} />
         </div>
       </Card>
     </>

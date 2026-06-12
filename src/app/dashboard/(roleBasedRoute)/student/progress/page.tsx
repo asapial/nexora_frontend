@@ -18,21 +18,21 @@ import RefreshIcon from "@/components/shared/RefreshIcon";
 interface Badge {
   id: string;
   awardedAt: string;
-  milestone: { name: string; badgeIcon: string | null; criteria: unknown };
+  milestone: { name: string; badgeIcon: string | null; criteria: unknown; };
 }
 interface PendingHomework {
   id: string;
   title: string;
   homework: string;
   deadline: string | null;
-  StudySession: { id: string; title: string; scheduledAt: string };
+  StudySession: { id: string; title: string; scheduledAt: string; };
 }
 interface SessionItem {
   sessionId: string;
   sessionTitle: string;
   scheduledAt: string;
   sessionStatus: string;
-  cluster: { id: string; name: string };
+  cluster: { id: string; name: string; };
   attendanceStatus: string;
 }
 interface ProgressData {
@@ -50,11 +50,11 @@ interface ProgressData {
 
 // ─── Stat card ────────────────────────────────────────────────────────────────
 type Accent = "teal" | "violet" | "amber" | "sky";
-const ACCENT: Record<Accent, { icon: string; bg: string; border: string; ring: string }> = {
-  teal:   { icon: "text-teal-600 dark:text-teal-400",     bg: "bg-teal-100/70 dark:bg-teal-950/50",    border: "border-teal-200/70 dark:border-teal-800/50",   ring: "bg-teal-500" },
+const ACCENT: Record<Accent, { icon: string; bg: string; border: string; ring: string; }> = {
+  teal: { icon: "text-teal-600 dark:text-teal-400", bg: "bg-teal-100/70 dark:bg-teal-950/50", border: "border-teal-200/70 dark:border-teal-800/50", ring: "bg-teal-500" },
   violet: { icon: "text-violet-600 dark:text-violet-400", bg: "bg-violet-100/70 dark:bg-violet-950/50", border: "border-violet-200/70 dark:border-violet-800/50", ring: "bg-violet-500" },
-  amber:  { icon: "text-amber-600 dark:text-amber-400",   bg: "bg-amber-100/70 dark:bg-amber-950/50",  border: "border-amber-200/70 dark:border-amber-800/50",   ring: "bg-amber-500" },
-  sky:    { icon: "text-sky-600 dark:text-sky-400",       bg: "bg-sky-100/70 dark:bg-sky-950/50",      border: "border-sky-200/70 dark:border-sky-800/50",       ring: "bg-sky-500" },
+  amber: { icon: "text-amber-600 dark:text-amber-400", bg: "bg-amber-100/70 dark:bg-amber-950/50", border: "border-amber-200/70 dark:border-amber-800/50", ring: "bg-amber-500" },
+  sky: { icon: "text-sky-600 dark:text-sky-400", bg: "bg-sky-100/70 dark:bg-sky-950/50", border: "border-sky-200/70 dark:border-sky-800/50", ring: "bg-sky-500" },
 };
 
 function StatCard({
@@ -88,8 +88,8 @@ function StatCard({
 
 const ATTENDANCE_STYLE: Record<string, string> = {
   PRESENT: "text-teal-600 dark:text-teal-400 bg-teal-100/60 dark:bg-teal-950/40",
-  ABSENT:  "text-red-500 dark:text-red-400 bg-red-100/60 dark:bg-red-950/30",
-  LATE:    "text-amber-600 dark:text-amber-400 bg-amber-100/60 dark:bg-amber-950/40",
+  ABSENT: "text-red-500 dark:text-red-400 bg-red-100/60 dark:bg-red-950/30",
+  LATE: "text-amber-600 dark:text-amber-400 bg-amber-100/60 dark:bg-amber-950/40",
   EXCUSED: "text-sky-600 dark:text-sky-400 bg-sky-100/60 dark:bg-sky-950/40",
 };
 
@@ -109,10 +109,10 @@ export default function ProgressDashboardPage() {
 
   const stats = data
     ? [
-        { label: "Submission Rate", value: `${data.submissionRate}`, sub: `${data.submittedTasks}/${data.totalTasks} tasks`, icon: <RiCheckboxCircleLine />, accent: "teal" as Accent },
-        { label: "Average Score",   value: `${data.averageScore}`, sub: "out of 100", icon: <RiBarChartBoxLine />, accent: "violet" as Accent },
-        { label: "Attendance Rate", value: `${data.attendanceRate}`, sub: `${data.presentAttendance}/${data.totalAttendance} sessions`, icon: <RiCalendarCheckLine />, accent: "amber" as Accent },
-      ]
+      { label: "Submission Rate", value: `${data.submissionRate}`, sub: `${data.submittedTasks}/${data.totalTasks} tasks`, icon: <RiCheckboxCircleLine />, accent: "teal" as Accent },
+      { label: "Average Score", value: `${data.averageScore}`, sub: "out of 100", icon: <RiBarChartBoxLine />, accent: "violet" as Accent },
+      { label: "Attendance Rate", value: `${data.attendanceRate}`, sub: `${data.presentAttendance}/${data.totalAttendance} sessions`, icon: <RiCalendarCheckLine />, accent: "amber" as Accent },
+    ]
     : [];
 
   return (

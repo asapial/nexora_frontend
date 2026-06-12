@@ -138,7 +138,7 @@ const teacherNav: NavDocItem[] = [
       { title: "Task templates", url: "/dashboard/teacher/task-templates" },
     ],
   },
-    {
+  {
     title: "Notices",
     url: "/dashboard/student/notice",
     icon: <RiNotificationLine />,
@@ -335,7 +335,7 @@ const commonNav: NavSecondaryItem[] = [
 ];
 
 // ─── Role chip ────────────────────────────────────────────────────────────────
-const ROLE_CHIP: Record<string, { label: string; cls: string }> = {
+const ROLE_CHIP: Record<string, { label: string; cls: string; }> = {
   TEACHER: { label: "Teacher", cls: "text-teal-600 dark:text-teal-400 bg-teal-500/10 border-teal-500/25" },
   STUDENT: { label: "Student", cls: "text-sky-600  dark:text-sky-400  bg-sky-500/10  border-sky-500/25" },
   ADMIN: { label: "Admin", cls: "text-violet-600 dark:text-violet-400 bg-violet-500/10 border-violet-500/25" },

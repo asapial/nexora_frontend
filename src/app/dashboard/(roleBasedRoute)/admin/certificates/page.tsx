@@ -18,8 +18,8 @@ type Certificate = {
   pdfUrl?: string;
   verificationCode?: string;
   verifyCode?: string;
-  user?: { name: string; email: string };
-  course?: { id: string; title: string };
+  user?: { name: string; email: string; };
+  course?: { id: string; title: string; };
 };
 
 type Enrollment = {
@@ -30,8 +30,8 @@ type Enrollment = {
   completedAt?: string;
   paymentStatus: string;
   enrolledAt: string;
-  user?: { name: string; email: string };
-  course?: { title: string; status: string };
+  user?: { name: string; email: string; };
+  course?: { title: string; status: string; };
 };
 
 const fmtDate = (d: string) =>
@@ -47,11 +47,11 @@ function SkeletonRow() {
 
 export default function CertificatesPage() {
   const [certificates, setCertificates] = useState<Certificate[]>([]);
-  const [certTotal, setCertTotal]       = useState(0);
-  const [loading, setLoading]           = useState(true);
-  const [generating, setGenerating]     = useState<string | null>(null);
-  const [tab, setTab]                   = useState<"issued" | "generate">("issued");
-  const [enrollments, setEnrollments]   = useState<Enrollment[]>([]);
+  const [certTotal, setCertTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [generating, setGenerating] = useState<string | null>(null);
+  const [tab, setTab] = useState<"issued" | "generate">("issued");
+  const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [loadingEnrollments, setLoadingEnrollments] = useState(false);
   const [enrollSearch, setEnrollSearch] = useState("");
 
@@ -201,44 +201,44 @@ export default function CertificatesPage() {
           {loading
             ? Array.from({ length: 6 }).map((_, i) => <SkeletonRow key={i} />)
             : certificates.length === 0
-            ? (
-              <div className="py-16 text-center">
-                <RiAwardLine className="text-4xl text-muted-foreground/20 mx-auto mb-3" />
-                <p className="text-[13.5px] font-medium text-muted-foreground">No certificates issued yet</p>
-                <p className="text-[12px] text-muted-foreground/60 mt-1">Switch to &quot;Generate&quot; tab to create certificates for eligible students</p>
-              </div>
-            )
-            : certificates.map(cert => (
-              <div key={cert.id} className="grid grid-cols-[1fr_1fr_120px_120px] gap-4 px-5 py-4 border-b border-border/60 last:border-0 hover:bg-muted/10 transition-colors items-center">
-                <div className="min-w-0">
-                  <p className="text-[13px] font-semibold text-foreground truncate">{cert.user?.name ?? "—"}</p>
-                  <p className="text-[11.5px] text-muted-foreground truncate">{cert.user?.email ?? ""}</p>
+              ? (
+                <div className="py-16 text-center">
+                  <RiAwardLine className="text-4xl text-muted-foreground/20 mx-auto mb-3" />
+                  <p className="text-[13.5px] font-medium text-muted-foreground">No certificates issued yet</p>
+                  <p className="text-[12px] text-muted-foreground/60 mt-1">Switch to &quot;Generate&quot; tab to create certificates for eligible students</p>
                 </div>
-                <div className="min-w-0">
-                  <p className="text-[12.5px] text-muted-foreground truncate">{cert.course?.title ?? cert.title}</p>
-                  {(cert.verifyCode || cert.verificationCode) && (
-                    <p className="text-[10px] font-mono text-teal-600 dark:text-teal-400 truncate">{cert.verifyCode || cert.verificationCode}</p>
-                  )}
+              )
+              : certificates.map(cert => (
+                <div key={cert.id} className="grid grid-cols-[1fr_1fr_120px_120px] gap-4 px-5 py-4 border-b border-border/60 last:border-0 hover:bg-muted/10 transition-colors items-center">
+                  <div className="min-w-0">
+                    <p className="text-[13px] font-semibold text-foreground truncate">{cert.user?.name ?? "—"}</p>
+                    <p className="text-[11.5px] text-muted-foreground truncate">{cert.user?.email ?? ""}</p>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[12.5px] text-muted-foreground truncate">{cert.course?.title ?? cert.title}</p>
+                    {(cert.verifyCode || cert.verificationCode) && (
+                      <p className="text-[10px] font-mono text-teal-600 dark:text-teal-400 truncate">{cert.verifyCode || cert.verificationCode}</p>
+                    )}
+                  </div>
+                  <p className="text-[12.5px] text-muted-foreground">{fmtDate(cert.issuedAt)}</p>
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => copyVerificationUrl(cert.verifyCode || cert.verificationCode)}
+                      title="Copy verification URL"
+                      className="w-7 h-7 rounded-lg flex items-center justify-center text-sky-600 hover:bg-sky-50/60 dark:hover:bg-sky-950/30 transition-all">
+                      <RiLinkM className="text-sm" />
+                    </button>
+                    {cert.pdfUrl ? (
+                      <a href={cert.pdfUrl} target="_blank" rel="noopener noreferrer"
+                        title="Download PDF from Cloudinary"
+                        className="w-7 h-7 rounded-lg flex items-center justify-center text-teal-600 hover:bg-teal-50/60 dark:hover:bg-teal-950/30 transition-all">
+                        <RiDownloadLine className="text-sm" />
+                      </a>
+                    ) : (
+                      <span className="text-[10px] text-muted-foreground/50 italic">No PDF</span>
+                    )}
+                  </div>
                 </div>
-                <p className="text-[12.5px] text-muted-foreground">{fmtDate(cert.issuedAt)}</p>
-                <div className="flex items-center gap-1">
-                  <button onClick={() => copyVerificationUrl(cert.verifyCode || cert.verificationCode)}
-                    title="Copy verification URL"
-                    className="w-7 h-7 rounded-lg flex items-center justify-center text-sky-600 hover:bg-sky-50/60 dark:hover:bg-sky-950/30 transition-all">
-                    <RiLinkM className="text-sm" />
-                  </button>
-                  {cert.pdfUrl ? (
-                    <a href={cert.pdfUrl} target="_blank" rel="noopener noreferrer"
-                      title="Download PDF from Cloudinary"
-                      className="w-7 h-7 rounded-lg flex items-center justify-center text-teal-600 hover:bg-teal-50/60 dark:hover:bg-teal-950/30 transition-all">
-                      <RiDownloadLine className="text-sm" />
-                    </a>
-                  ) : (
-                    <span className="text-[10px] text-muted-foreground/50 italic">No PDF</span>
-                  )}
-                </div>
-              </div>
-            ))}
+              ))}
         </div>
       ) : (
         <div className="flex flex-col gap-4">
@@ -246,7 +246,7 @@ export default function CertificatesPage() {
           <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-amber-50/40 dark:bg-amber-950/20 border border-amber-200/40 dark:border-amber-800/30">
             <RiFilterLine className="text-amber-500 text-base mt-0.5 shrink-0" />
             <p className="text-[12px] text-amber-700 dark:text-amber-300">
-              Only students who have <strong>completed</strong> a <strong>FINISHED</strong> course are eligible for certificate generation. 
+              Only students who have <strong>completed</strong> a <strong>FINISHED</strong> course are eligible for certificate generation.
               The PDF will be generated, uploaded to Cloudinary, and a notification sent to the student.
             </p>
           </div>
@@ -268,26 +268,26 @@ export default function CertificatesPage() {
             {loadingEnrollments
               ? Array.from({ length: 6 }).map((_, i) => <SkeletonRow key={i} />)
               : sortedEnrollments.length === 0
-              ? (
-                <div className="py-16 text-center">
-                  <RiBookOpenLine className="text-4xl text-muted-foreground/20 mx-auto mb-3" />
-                  <p className="text-[13.5px] font-medium text-muted-foreground">No enrollments found</p>
-                </div>
-              )
-              : sortedEnrollments.map(e => {
+                ? (
+                  <div className="py-16 text-center">
+                    <RiBookOpenLine className="text-4xl text-muted-foreground/20 mx-auto mb-3" />
+                    <p className="text-[13.5px] font-medium text-muted-foreground">No enrollments found</p>
+                  </div>
+                )
+                : sortedEnrollments.map(e => {
                   const isCompleted = e.completedAt || e.progress >= 100;
                   const alreadyIssued = hasCertificate(e);
                   const isFinished = e.course?.status === "FINISHED";
                   const canGenerate = isCompleted && !alreadyIssued;
-                  
+
                   return (
                     <div key={e.id} className={cn(
                       "flex items-center gap-4 px-5 py-4 border-b border-border/60 last:border-0 transition-colors",
                       canGenerate ? "hover:bg-muted/10" : "opacity-60"
                     )}>
-                      <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" 
+                      <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
                         style={{ background: isCompleted ? "linear-gradient(135deg, rgba(20,184,166,0.3), rgba(59,130,246,0.3))" : "var(--muted)" }}>
-                        {isCompleted 
+                        {isCompleted
                           ? <RiCheckboxCircleLine className="text-teal-600 dark:text-teal-400 text-xs" />
                           : <RiUserLine className="text-muted-foreground text-xs" />
                         }

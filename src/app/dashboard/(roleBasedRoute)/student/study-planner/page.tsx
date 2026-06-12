@@ -22,13 +22,13 @@ type Goal = {
   createdAt: string;
 };
 
-const COLUMNS: { key: KanbanStatus; label: string; color: string; bg: string }[] = [
-  { key: "TODO",        label: "To Do",       color: "text-sky-600 dark:text-sky-400",    bg: "bg-sky-50/60 dark:bg-sky-950/20 border-sky-200/50 dark:border-sky-800/30" },
+const COLUMNS: { key: KanbanStatus; label: string; color: string; bg: string; }[] = [
+  { key: "TODO", label: "To Do", color: "text-sky-600 dark:text-sky-400", bg: "bg-sky-50/60 dark:bg-sky-950/20 border-sky-200/50 dark:border-sky-800/30" },
   { key: "IN_PROGRESS", label: "In Progress", color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50/60 dark:bg-amber-950/20 border-amber-200/50 dark:border-amber-800/30" },
-  { key: "DONE",        label: "Done",        color: "text-teal-600 dark:text-teal-400",   bg: "bg-teal-50/60 dark:bg-teal-950/20 border-teal-200/50 dark:border-teal-800/30" },
+  { key: "DONE", label: "Done", color: "text-teal-600 dark:text-teal-400", bg: "bg-teal-50/60 dark:bg-teal-950/20 border-teal-200/50 dark:border-teal-800/30" },
 ];
 
-function StreakBadge({ streak }: { streak: number }) {
+function StreakBadge({ streak }: { streak: number; }) {
   if (streak === 0) return null;
   return (
     <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-orange-200/60 dark:border-orange-800/40 bg-orange-50/60 dark:bg-orange-950/20">
@@ -224,14 +224,14 @@ export default function StudentStudyPlannerPage() {
               {loading
                 ? Array.from({ length: 2 }).map((_, i) => <SkeletonCard key={i} />)
                 : colGoals.length === 0
-                ? (
-                  <div className="py-8 text-center">
-                    <p className="text-[12px] text-muted-foreground/50">No goals here yet</p>
-                  </div>
-                )
-                : colGoals.map(g => (
-                  <GoalCard key={g.id} goal={g} onMove={moveGoal} onDelete={deleteGoal} onEdit={openEdit} />
-                ))
+                  ? (
+                    <div className="py-8 text-center">
+                      <p className="text-[12px] text-muted-foreground/50">No goals here yet</p>
+                    </div>
+                  )
+                  : colGoals.map(g => (
+                    <GoalCard key={g.id} goal={g} onMove={moveGoal} onDelete={deleteGoal} onEdit={openEdit} />
+                  ))
               }
               {col.key === "TODO" && (
                 <button

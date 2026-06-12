@@ -4,9 +4,9 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import {
-  RiSparklingFill,  RiGroupLine,
+  RiSparklingFill, RiGroupLine,
   RiStarFill, RiCheckLine, RiArrowRightLine,
-  RiFileTextLine, RiAlertLine, 
+  RiFileTextLine, RiAlertLine,
   RiShieldCheckLine, RiLock2Line,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
@@ -18,7 +18,7 @@ const fmtUSD = (n: number) => new Intl.NumberFormat("en-US", { style: "currency"
 
 export default function CourseDetailPublicPage() {
   const router = useRouter();
-  const { id } = useParams() as { id: string };
+  const { id } = useParams() as { id: string; };
   const [course, setCourse] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

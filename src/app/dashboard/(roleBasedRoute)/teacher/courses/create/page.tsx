@@ -41,7 +41,7 @@ function AmbientBg() {
 }
 
 // ─── Tag Input ────────────────────────────────────────────
-function TagInput({ tags, onChange }: { tags: string[]; onChange: (t: string[]) => void }) {
+function TagInput({ tags, onChange }: { tags: string[]; onChange: (t: string[]) => void; }) {
   const [input, setInput] = useState("");
   const add = () => {
     const v = input.trim();
@@ -73,7 +73,7 @@ function TagInput({ tags, onChange }: { tags: string[]; onChange: (t: string[]) 
 }
 
 // ─── Section ──────────────────────────────────────────────
-function Section({ icon, title, description, children }: { icon: React.ReactNode; title: string; description?: string; children: React.ReactNode }) {
+function Section({ icon, title, description, children }: { icon: React.ReactNode; title: string; description?: string; children: React.ReactNode; }) {
   return (
     <div className="rounded-2xl border border-border bg-card/90 backdrop-blur-sm overflow-hidden">
       <div className="flex items-center gap-3 px-6 py-4 border-b border-border">
@@ -107,16 +107,16 @@ export default function CreateCoursePage() {
   const [createdId, setCreatedId] = useState<string | null>(null);
 
   // ── AI suggestion state ──────────────────────────────────────────────────
-  const [aiLoading, setAiLoading]           = useState(false);
-  const [aiError, setAiError]               = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
   const [aiErrorDetails, setAiErrorDetails] = useState<string[]>([]);
-  const [aiSuggestion, setAiSuggestion]     = useState<{
+  const [aiSuggestion, setAiSuggestion] = useState<{
     titles: string[]; descriptions: string[]; tagSets: string[][];
   } | null>(null);
   // Which option (0-3) is selected per field
-  const [selTitle, setSelTitle]   = useState(0);
-  const [selDesc,  setSelDesc]    = useState(0);
-  const [selTags,  setSelTags]    = useState(0);
+  const [selTitle, setSelTitle] = useState(0);
+  const [selDesc, setSelDesc] = useState(0);
+  const [selTags, setSelTags] = useState(0);
   // Keep last dataUrl so the teacher can retry without re-uploading
   const [lastDataUrl, setLastDataUrl] = useState<string | null>(null);
 
@@ -128,7 +128,7 @@ export default function CreateCoursePage() {
         const MAX = 512;
         const scale = Math.min(1, MAX / Math.max(img.width, img.height));
         const canvas = document.createElement("canvas");
-        canvas.width  = Math.round(img.width  * scale);
+        canvas.width = Math.round(img.width * scale);
         canvas.height = Math.round(img.height * scale);
         canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
         resolve(canvas.toDataURL("image/jpeg", 0.65));
@@ -155,9 +155,9 @@ export default function CreateCoursePage() {
         setAiErrorDetails(Array.isArray(data?.details) ? data.details : []);
         return;
       }
-      const titles  = Array.isArray(data.titles)  ? data.titles  : [];
-      const descs   = Array.isArray(data.descriptions) ? data.descriptions : [];
-      const tagSets = Array.isArray(data.tagSets)  ? data.tagSets  : [];
+      const titles = Array.isArray(data.titles) ? data.titles : [];
+      const descs = Array.isArray(data.descriptions) ? data.descriptions : [];
+      const tagSets = Array.isArray(data.tagSets) ? data.tagSets : [];
       if (titles.length || descs.length || tagSets.length) {
         setAiSuggestion({ titles, descriptions: descs, tagSets });
       } else {
@@ -293,24 +293,21 @@ export default function CreateCoursePage() {
         <Section icon={<RiBookOpenLine />} title="Course Details" description="Basic information about your course.">
           {/* ── AI Suggestion Panel ─────────────────────────────────── */}
           {(aiLoading || aiSuggestion || aiError) && (
-            <div className={`rounded-xl border flex flex-col gap-0 overflow-hidden transition-all ${
-              aiError
+            <div className={`rounded-xl border flex flex-col gap-0 overflow-hidden transition-all ${aiError
                 ? "border-red-200/60 dark:border-red-800/40"
                 : "border-teal-300/60 dark:border-teal-700/50"
-            }`}>
+              }`}>
 
               {/* Panel header */}
-              <div className={`flex items-center gap-2 px-4 py-3 ${
-                aiError ? "bg-red-50/60 dark:bg-red-950/25" : "bg-teal-50/70 dark:bg-teal-950/30"
-              }`}>
+              <div className={`flex items-center gap-2 px-4 py-3 ${aiError ? "bg-red-50/60 dark:bg-red-950/25" : "bg-teal-50/70 dark:bg-teal-950/30"
+                }`}>
                 {aiLoading
                   ? <RiLoader4Line className="animate-spin text-teal-500 text-sm flex-shrink-0" />
                   : aiError
                     ? <RiAlertLine className="text-red-500 text-sm flex-shrink-0" />
                     : <RiMagicLine className="text-teal-500 text-sm flex-shrink-0" />}
-                <p className={`text-[12.5px] font-bold ${
-                  aiError ? "text-red-600 dark:text-red-400" : "text-teal-700 dark:text-teal-300"
-                }`}>
+                <p className={`text-[12.5px] font-bold ${aiError ? "text-red-600 dark:text-red-400" : "text-teal-700 dark:text-teal-300"
+                  }`}>
                   {aiLoading ? "Analysing your thumbnail…" : aiError ? "AI Suggestion Failed" : "AI Suggestions — pick one per field"}
                 </p>
                 <div className="ml-auto flex items-center gap-1.5">
@@ -356,7 +353,7 @@ export default function CreateCoursePage() {
                       <div className="flex items-center justify-between">
                         <p className="text-[10.5px] font-bold uppercase tracking-wider text-teal-600/70 dark:text-teal-400/60">Title</p>
                         <button type="button"
-                          onClick={() => { setTitle(aiSuggestion.titles[selTitle]); setErrors(p => ({...p, title: ""})); }}
+                          onClick={() => { setTitle(aiSuggestion.titles[selTitle]); setErrors(p => ({ ...p, title: "" })); }}
                           className="flex items-center gap-1 h-6 px-2.5 rounded-lg text-[11px] font-semibold bg-teal-600 text-white hover:bg-teal-700 transition-colors">
                           Apply <RiArrowRightLine className="text-xs" />
                         </button>
@@ -457,9 +454,9 @@ export default function CreateCoursePage() {
                   <div className="px-4 py-3 bg-teal-50/30 dark:bg-teal-950/20">
                     <button type="button"
                       onClick={() => {
-                        if (aiSuggestion.titles.length)       { setTitle(aiSuggestion.titles[selTitle]); setErrors(p => ({...p, title: ""})); }
+                        if (aiSuggestion.titles.length) { setTitle(aiSuggestion.titles[selTitle]); setErrors(p => ({ ...p, title: "" })); }
                         if (aiSuggestion.descriptions.length) setDescription(aiSuggestion.descriptions[selDesc]);
-                        if (aiSuggestion.tagSets.length)      setTags(prev => [...new Set([...prev, ...aiSuggestion.tagSets[selTags]])].slice(0, 12));
+                        if (aiSuggestion.tagSets.length) setTags(prev => [...new Set([...prev, ...aiSuggestion.tagSets[selTags]])].slice(0, 12));
                         setAiSuggestion(null);
                       }}
                       className="w-full h-9 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-[12.5px] font-bold transition-colors flex items-center justify-center gap-2">

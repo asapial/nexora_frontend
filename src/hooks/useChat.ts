@@ -8,9 +8,9 @@ export interface ChatMessage {
   timestamp: Date;
 }
 
-const STORAGE_KEY_AUTH   = "nexora_chat_messages";
-const STORAGE_KEY_GUEST  = "nexora_guest_chat";
-const GUEST_LIMIT        = 3;
+const STORAGE_KEY_AUTH = "nexora_chat_messages";
+const STORAGE_KEY_GUEST = "nexora_guest_chat";
+const GUEST_LIMIT = 3;
 
 function loadFromStorage(key: string): ChatMessage[] {
   if (typeof window === "undefined") return [];
@@ -27,7 +27,7 @@ function saveToStorage(key: string, messages: ChatMessage[]) {
   try {
     // Keep last 50 messages only
     localStorage.setItem(key, JSON.stringify(messages.slice(-50)));
-  } catch {}
+  } catch { }
 }
 
 // ── Authenticated chat hook ────────────────────────────────
@@ -35,8 +35,8 @@ export function useAuthChat() {
   const [messages, setMessages] = useState<ChatMessage[]>(() =>
     loadFromStorage(STORAGE_KEY_AUTH)
   );
-  const [loading, setLoading]   = useState(false);
-  const [error, setError]       = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const sendMessage = useCallback(async (content: string) => {
     if (!content.trim() || loading) return;
@@ -97,12 +97,12 @@ export function useGuestChat() {
   const [messages, setMessages] = useState<ChatMessage[]>(() =>
     loadFromStorage(STORAGE_KEY_GUEST)
   );
-  const [loading, setLoading]   = useState(false);
-  const [error, setError]       = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Count only user messages
   const userMessageCount = messages.filter(m => m.role === "user").length;
-  const limitReached     = userMessageCount >= GUEST_LIMIT;
+  const limitReached = userMessageCount >= GUEST_LIMIT;
 
   const sendMessage = useCallback(async (content: string) => {
     if (!content.trim() || loading || limitReached) return;

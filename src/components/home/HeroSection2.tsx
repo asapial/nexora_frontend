@@ -30,7 +30,7 @@ interface FeaturedTeacher {
     designation: string;
     department: string;
     specialization: string;
-  }
+  };
 }
 
 // ─── Types ────────────────────────────────────────────────
@@ -188,7 +188,7 @@ function Orb({
 }
 
 // ─── Floating Stat Card ───────────────────────────────────
-function FloatingCard({ card }: { card: FloatingCard }) {
+function FloatingCard({ card }: { card: FloatingCard; }) {
   return (
     <div
       className={cn(
@@ -593,7 +593,7 @@ export default function HeroSection2() {
             <div className="relative w-full max-w-[480px] xl:max-w-[560px] aspect-[4/5] mx-auto lg:mx-0 lg:mr-8 xl:mr-12">
               {/* Abstract background elements behind the card */}
               <div className="absolute inset-0 -m-8 bg-[radial-gradient(circle_at_center,rgba(20,184,166,0.15)_0%,transparent_70%)] rounded-full blur-2xl pointer-events-none" />
-              
+
               {/* Main Card */}
               <div className="relative w-full h-full rounded-[32px] p-2 bg-white/20 dark:bg-zinc-900/40 backdrop-blur-xl border border-white/40 dark:border-zinc-700/50 shadow-2xl overflow-visible group">
                 {/* Glowing Gradient Border Effect (achieved via an underlay) */}
@@ -640,7 +640,7 @@ export default function HeroSection2() {
                     Research Graph
                   </div>
                   <svg width="80" height="30" viewBox="0 0 80 30" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M0 25C10 25 15 15 25 15C35 15 40 5 50 5C60 5 65 20 80 10" stroke="url(#paint0_linear)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M0 25C10 25 15 15 25 15C35 15 40 5 50 5C60 5 65 20 80 10" stroke="url(#paint0_linear)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
                     <defs>
                       <linearGradient id="paint0_linear" x1="0" y1="15" x2="80" y2="15" gradientUnits="userSpaceOnUse">
                         <stop stopColor="#06b6d4" />

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { courseImageRequestSchema } from "@/lib/formSchemas";
 
 const KEY = process.env.OPENROUTER_API_KEY ?? "";
 
@@ -141,9 +142,9 @@ function extractJSON(raw: string): AISuggestions {
     .slice(0, 4);
 
   return {
-    titles:       toStrArray(parsed.titles,       100, 4),
+    titles: toStrArray(parsed.titles, 100, 4),
     descriptions: toStrArray(parsed.descriptions, 450, 4),
-    tagSets:      tagSets.length > 0 ? tagSets : [],
+    tagSets: tagSets.length > 0 ? tagSets : [],
   };
 }
 
@@ -157,11 +158,7 @@ export async function POST(req: NextRequest) {
 
   let imageBase64: string;
   try {
-    const body = (await req.json()) as { imageBase64?: string };
-    if (!body?.imageBase64?.startsWith("data:")) {
-      throw new Error("imageBase64 must be a data URL (data:image/...;base64,...)");
-    }
-    imageBase64 = body.imageBase64;
+    imageBase64 = courseImageRequestSchema.parse(await req.json()).imageBase64;
   } catch {
     return NextResponse.json(
       { error: "Request body must contain { imageBase64: string } where the value is a base64 data URL." },
@@ -176,7 +173,7 @@ export async function POST(req: NextRequest) {
     for (let attempt = 1; attempt <= 2; attempt++) {
       try {
         console.log(`[course-suggest] Trying ${model} (attempt ${attempt})`);
-        const raw  = await callOpenRouter(model, imageBase64);
+        const raw = await callOpenRouter(model, imageBase64);
         const data = extractJSON(raw);
 
         if (!data.titles.length && !data.descriptions.length && !data.tagSets.length) {
@@ -187,7 +184,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ ...data, _model: model });
 
       } catch (err: unknown) {
-        const e = err as Error & { isRateLimit?: boolean };
+        const e = err as Error & { isRateLimit?: boolean; };
         const msg = e.message ?? String(err);
 
         if (e.isRateLimit && attempt === 1) {

@@ -14,7 +14,7 @@ import { NextRequest, NextResponse } from "next/server";
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
 
-  const accessToken  = searchParams.get("accessToken");
+  const accessToken = searchParams.get("accessToken");
   const refreshToken = searchParams.get("refreshToken");
   // The raw BetterAuth session token — passed from the backend so we can set it
   // as a cookie on THE FRONTEND DOMAIN. This is essential in production where

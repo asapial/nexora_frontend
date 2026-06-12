@@ -30,24 +30,24 @@ function AmbientBg() {
 const fmtCurrency = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
 const fmtDate = (d: string) => new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 
-const PAYMENT_CFG: Record<PaymentStatus, { label: string; badge: string }> = {
-  FREE:     { label: "Free",     badge: "text-teal-600 dark:text-teal-400 bg-teal-50/60 dark:bg-teal-950/30 border-teal-200/60 dark:border-teal-800/50" },
-  PENDING:  { label: "Pending",  badge: "text-amber-600 dark:text-amber-400 bg-amber-50/60 dark:bg-amber-950/30 border-amber-200/60 dark:border-amber-800/50" },
-  PAID:     { label: "Paid",     badge: "text-blue-600 dark:text-blue-400 bg-blue-50/60 dark:bg-blue-950/30 border-blue-200/60 dark:border-blue-800/50" },
-  FAILED:   { label: "Failed",   badge: "text-red-600 dark:text-red-400 bg-red-50/40 dark:bg-red-950/20 border-red-200/60 dark:border-red-800/50" },
+const PAYMENT_CFG: Record<PaymentStatus, { label: string; badge: string; }> = {
+  FREE: { label: "Free", badge: "text-teal-600 dark:text-teal-400 bg-teal-50/60 dark:bg-teal-950/30 border-teal-200/60 dark:border-teal-800/50" },
+  PENDING: { label: "Pending", badge: "text-amber-600 dark:text-amber-400 bg-amber-50/60 dark:bg-amber-950/30 border-amber-200/60 dark:border-amber-800/50" },
+  PAID: { label: "Paid", badge: "text-blue-600 dark:text-blue-400 bg-blue-50/60 dark:bg-blue-950/30 border-blue-200/60 dark:border-blue-800/50" },
+  FAILED: { label: "Failed", badge: "text-red-600 dark:text-red-400 bg-red-50/40 dark:bg-red-950/20 border-red-200/60 dark:border-red-800/50" },
   REFUNDED: { label: "Refunded", badge: "text-muted-foreground bg-muted/40 border-border" },
 };
 
 const PRICE_CFG = {
-  PENDING:  { label: "Pending",  badge: "text-amber-600 dark:text-amber-400 bg-amber-50/60 dark:bg-amber-950/30 border-amber-200/60 dark:border-amber-800/50", dot: "bg-amber-500 animate-pulse" },
-  APPROVED: { label: "Approved", badge: "text-teal-600 dark:text-teal-400 bg-teal-50/60 dark:bg-teal-950/30 border-teal-200/60 dark:border-teal-800/50",     dot: "bg-teal-500" },
-  REJECTED: { label: "Rejected", badge: "text-red-600 dark:text-red-400 bg-red-50/40 dark:bg-red-950/20 border-red-200/60 dark:border-red-800/50",             dot: "bg-red-500" },
+  PENDING: { label: "Pending", badge: "text-amber-600 dark:text-amber-400 bg-amber-50/60 dark:bg-amber-950/30 border-amber-200/60 dark:border-amber-800/50", dot: "bg-amber-500 animate-pulse" },
+  APPROVED: { label: "Approved", badge: "text-teal-600 dark:text-teal-400 bg-teal-50/60 dark:bg-teal-950/30 border-teal-200/60 dark:border-teal-800/50", dot: "bg-teal-500" },
+  REJECTED: { label: "Rejected", badge: "text-red-600 dark:text-red-400 bg-red-50/40 dark:bg-red-950/20 border-red-200/60 dark:border-red-800/50", dot: "bg-red-500" },
 };
 
 const iCls = "w-full h-10 px-3.5 rounded-xl text-[13px] font-medium bg-muted/40 border border-border text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-teal-400/20 focus:border-teal-400/70 transition-all";
 
 // ─── New Price Request Modal ──────────────────────────────
-function NewPriceRequestModal({ courseId, onClose, onCreated }: { courseId: string; onClose: () => void; onCreated: (r: CoursePriceRequest) => void }) {
+function NewPriceRequestModal({ courseId, onClose, onCreated }: { courseId: string; onClose: () => void; onCreated: (r: CoursePriceRequest) => void; }) {
   const [price, setPrice] = useState("");
   const [note, setNote] = useState("");
   const [error, setError] = useState("");
@@ -108,7 +108,7 @@ function NewPriceRequestModal({ courseId, onClose, onCreated }: { courseId: stri
 // ─── Enrollments Page ─────────────────────────────────────
 export function EnrollmentsDetailPage() {
   const router = useRouter();
-  const { id: courseId } = useParams() as { id: string };
+  const { id: courseId } = useParams() as { id: string; };
   const [enrollments, setEnrollments] = useState<CourseEnrollment[]>([]);
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -171,8 +171,8 @@ export function EnrollmentsDetailPage() {
           <div key={i} className="flex items-center gap-3 px-4 py-4 rounded-2xl border border-border bg-card/90 backdrop-blur-sm">
             <div className={cn("w-9 h-9 rounded-xl flex-shrink-0 flex items-center justify-center text-base border",
               s.a === "amber" ? "bg-amber-100/60 dark:bg-amber-950/40 border-amber-200/60 dark:border-amber-800/50 text-amber-600 dark:text-amber-400"
-              : s.a === "blue" ? "bg-blue-100/60 dark:bg-blue-950/40 border-blue-200/60 dark:border-blue-800/50 text-blue-600 dark:text-blue-400"
-              : "bg-teal-100/60 dark:bg-teal-950/40 border-teal-200/60 dark:border-teal-800/50 text-teal-600 dark:text-teal-400"
+                : s.a === "blue" ? "bg-blue-100/60 dark:bg-blue-950/40 border-blue-200/60 dark:border-blue-800/50 text-blue-600 dark:text-blue-400"
+                  : "bg-teal-100/60 dark:bg-teal-950/40 border-teal-200/60 dark:border-teal-800/50 text-teal-600 dark:text-teal-400"
             )}>{s.icon}</div>
             <div>
               {loading ? <div className="h-5 w-12 rounded bg-muted/60 animate-pulse mb-1" />
@@ -212,28 +212,28 @@ export function EnrollmentsDetailPage() {
               {enrollments.length === 0
                 ? <div className="py-14 flex flex-col items-center gap-2 text-center"><RiGroupLine className="text-2xl text-muted-foreground/30" /><p className="text-[13px] text-muted-foreground">No enrollments found</p></div>
                 : enrollments.map(e => {
-                    const pcfg = PAYMENT_CFG[e.paymentStatus];
-                    return (
-                      <div key={e.id} className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr] gap-4 px-5 py-3.5 items-center hover:bg-muted/20 transition-colors">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-500/30 to-blue-500/30 flex-shrink-0 flex items-center justify-center text-[11px] font-bold text-teal-700 dark:text-teal-300 border border-teal-200/40 dark:border-teal-800/40">
-                            {e.user?.name?.charAt(0).toUpperCase()}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-[13px] font-bold text-foreground truncate">{e.user?.name}</p>
-                            <p className="text-[11.5px] text-muted-foreground truncate">{e.user?.email}</p>
-                          </div>
+                  const pcfg = PAYMENT_CFG[e.paymentStatus];
+                  return (
+                    <div key={e.id} className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr] gap-4 px-5 py-3.5 items-center hover:bg-muted/20 transition-colors">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-500/30 to-blue-500/30 flex-shrink-0 flex items-center justify-center text-[11px] font-bold text-teal-700 dark:text-teal-300 border border-teal-200/40 dark:border-teal-800/40">
+                          {e.user?.name?.charAt(0).toUpperCase()}
                         </div>
-                        <p className="text-[12.5px] text-muted-foreground">{fmtDate(e.enrolledAt)}</p>
-                        <span className={cn("inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold border w-fit", pcfg.badge)}>{pcfg.label}</span>
-                        <p className="text-[13px] font-bold text-foreground">{e.amountPaid ? fmtCurrency(e.amountPaid) : "—"}</p>
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1 h-1.5 rounded-full bg-muted/50"><div className="h-full rounded-full bg-teal-500" style={{ width: `${e.progress}%` }} /></div>
-                          <span className={cn("text-[11px] font-bold flex-shrink-0", e.completedAt ? "text-teal-600 dark:text-teal-400" : "text-muted-foreground")}>{e.progress}%</span>
+                        <div className="min-w-0">
+                          <p className="text-[13px] font-bold text-foreground truncate">{e.user?.name}</p>
+                          <p className="text-[11.5px] text-muted-foreground truncate">{e.user?.email}</p>
                         </div>
                       </div>
-                    );
-                  })
+                      <p className="text-[12.5px] text-muted-foreground">{fmtDate(e.enrolledAt)}</p>
+                      <span className={cn("inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold border w-fit", pcfg.badge)}>{pcfg.label}</span>
+                      <p className="text-[13px] font-bold text-foreground">{e.amountPaid ? fmtCurrency(e.amountPaid) : "—"}</p>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 h-1.5 rounded-full bg-muted/50"><div className="h-full rounded-full bg-teal-500" style={{ width: `${e.progress}%` }} /></div>
+                        <span className={cn("text-[11px] font-bold flex-shrink-0", e.completedAt ? "text-teal-600 dark:text-teal-400" : "text-muted-foreground")}>{e.progress}%</span>
+                      </div>
+                    </div>
+                  );
+                })
               }
             </div>
           )
@@ -257,7 +257,7 @@ export function EnrollmentsDetailPage() {
 // ─── Price Requests Page ──────────────────────────────────
 export default function PriceRequestsPage() {
   const router = useRouter();
-  const { id: courseId } = useParams() as { id: string };
+  const { id: courseId } = useParams() as { id: string; };
   const [requests, setRequests] = useState<CoursePriceRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

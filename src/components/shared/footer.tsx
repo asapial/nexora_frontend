@@ -124,7 +124,7 @@ const DEFAULT_DATA: FooterData = {
 };
 
 // ─── Section ───────────────────────────────────────────────
-export default function FooterSection({ data = DEFAULT_DATA }: { data?: FooterData }) {
+export default function FooterSection({ data = DEFAULT_DATA }: { data?: FooterData; }) {
   return (
     <footer className="relative bg-zinc-950 text-zinc-400">
 

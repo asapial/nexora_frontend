@@ -22,7 +22,7 @@ const fmtUsd = (n: number) =>
 const fmtDate = (iso: string | null) =>
   iso ? new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—";
 
-const STATUS: Record<string, { label: string; cls: string; icon: React.ReactNode }> = {
+const STATUS: Record<string, { label: string; cls: string; icon: React.ReactNode; }> = {
   PAID: {
     label: "Paid",
     cls: "bg-teal-100/80 dark:bg-teal-950/50 text-teal-700 dark:text-teal-400 border-teal-200/70 dark:border-teal-800/50",

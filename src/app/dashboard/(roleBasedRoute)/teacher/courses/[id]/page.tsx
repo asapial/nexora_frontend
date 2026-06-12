@@ -29,30 +29,30 @@ const fmtCurrency = (n: number) => new Intl.NumberFormat("en-US", { style: "curr
 const fmtDate = (d: string) => new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 
 const MISSION_STATUS_CFG = {
-  DRAFT:            { label: "Draft",    badge: "text-muted-foreground bg-muted/40 border-border",                                                                        dot: "bg-muted-foreground/40" },
-  PENDING_APPROVAL: { label: "Pending",  badge: "text-amber-600 dark:text-amber-400 bg-amber-50/60 dark:bg-amber-950/30 border-amber-200/60 dark:border-amber-800/50",   dot: "bg-amber-500 animate-pulse" },
-  PUBLISHED:        { label: "Published",badge: "text-teal-600 dark:text-teal-400 bg-teal-50/60 dark:bg-teal-950/30 border-teal-200/60 dark:border-teal-800/50",         dot: "bg-teal-500" },
-  REJECTED:         { label: "Rejected", badge: "text-red-600 dark:text-red-400 bg-red-50/40 dark:bg-red-950/20 border-red-200/60 dark:border-red-800/50",               dot: "bg-red-500" },
+  DRAFT: { label: "Draft", badge: "text-muted-foreground bg-muted/40 border-border", dot: "bg-muted-foreground/40" },
+  PENDING_APPROVAL: { label: "Pending", badge: "text-amber-600 dark:text-amber-400 bg-amber-50/60 dark:bg-amber-950/30 border-amber-200/60 dark:border-amber-800/50", dot: "bg-amber-500 animate-pulse" },
+  PUBLISHED: { label: "Published", badge: "text-teal-600 dark:text-teal-400 bg-teal-50/60 dark:bg-teal-950/30 border-teal-200/60 dark:border-teal-800/50", dot: "bg-teal-500" },
+  REJECTED: { label: "Rejected", badge: "text-red-600 dark:text-red-400 bg-red-50/40 dark:bg-red-950/20 border-red-200/60 dark:border-red-800/50", dot: "bg-red-500" },
 };
 
 const COURSE_STATUS_MAP: Record<string, string> = {
-  DRAFT:            "text-muted-foreground bg-muted/40 border-border",
+  DRAFT: "text-muted-foreground bg-muted/40 border-border",
   PENDING_APPROVAL: "text-amber-600 dark:text-amber-400 bg-amber-50/60 dark:bg-amber-950/30 border-amber-200/60 dark:border-amber-800/50",
-  PUBLISHED:        "text-teal-600 dark:text-teal-400 bg-teal-50/60 dark:bg-teal-950/30 border-teal-200/60 dark:border-teal-800/50",
-  CLOSED:           "text-blue-600 dark:text-blue-400 bg-blue-50/60 dark:bg-blue-950/30 border-blue-200/60 dark:border-blue-800/50",
-  FINISHED:         "text-violet-600 dark:text-violet-400 bg-violet-50/60 dark:bg-violet-950/30 border-violet-200/60 dark:border-violet-800/50",
-  REJECTED:         "text-red-600 dark:text-red-400 bg-red-50/40 dark:bg-red-950/20 border-red-200/60 dark:border-red-800/50",
+  PUBLISHED: "text-teal-600 dark:text-teal-400 bg-teal-50/60 dark:bg-teal-950/30 border-teal-200/60 dark:border-teal-800/50",
+  CLOSED: "text-blue-600 dark:text-blue-400 bg-blue-50/60 dark:bg-blue-950/30 border-blue-200/60 dark:border-blue-800/50",
+  FINISHED: "text-violet-600 dark:text-violet-400 bg-violet-50/60 dark:bg-violet-950/30 border-violet-200/60 dark:border-violet-800/50",
+  REJECTED: "text-red-600 dark:text-red-400 bg-red-50/40 dark:bg-red-950/20 border-red-200/60 dark:border-red-800/50",
 };
 const COURSE_STATUS_LABELS: Record<string, string> = {
   DRAFT: "Draft", PENDING_APPROVAL: "Pending Approval", PUBLISHED: "Published", CLOSED: "Closed", FINISHED: "Finished", REJECTED: "Rejected",
 };
 
-function MissionBadge({ status }: { status: string }) {
+function MissionBadge({ status }: { status: string; }) {
   const cfg = (MISSION_STATUS_CFG as any)[status] ?? MISSION_STATUS_CFG.DRAFT;
   return <span className={cn("inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold border", cfg.badge)}><span className={cn("w-1.5 h-1.5 rounded-full", cfg.dot)} />{cfg.label}</span>;
 }
 
-function InfoTile({ icon, label, value, accent }: { icon: React.ReactNode; label: string; value: React.ReactNode; accent?: string }) {
+function InfoTile({ icon, label, value, accent }: { icon: React.ReactNode; label: string; value: React.ReactNode; accent?: string; }) {
   return (
     <div className="relative flex flex-col gap-1.5 px-4 py-3.5 rounded-xl bg-muted/30 border border-border hover:border-teal-200/40 dark:hover:border-teal-800/40 transition-colors overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-br from-transparent to-teal-500/[0.02] pointer-events-none" />
@@ -68,7 +68,7 @@ function InfoTile({ icon, label, value, accent }: { icon: React.ReactNode; label
 // ─── Main ─────────────────────────────────────────────────
 export default function CourseDetailPage() {
   const router = useRouter();
-  const { id } = useParams() as { id: string };
+  const { id } = useParams() as { id: string; };
   const [course, setCourse] = useState<Course | null>(null);
   const [missions, setMissions] = useState<CourseMission[]>([]);
   const [enrollStats, setEnrollStats] = useState<any>(null);
@@ -277,11 +277,11 @@ export default function CourseDetailPage() {
           {!course.isFree && (
             <div className={cn("flex items-start gap-3 px-5 py-4 rounded-2xl border",
               course.priceApprovalStatus === "APPROVED" ? "bg-teal-50/40 dark:bg-teal-950/20 border-teal-200/60 dark:border-teal-800/50"
-              : course.priceApprovalStatus === "REJECTED" ? "bg-red-50/40 dark:bg-red-950/20 border-red-200/60 dark:border-red-800/50"
-              : "bg-amber-50/40 dark:bg-amber-950/20 border-amber-200/60 dark:border-amber-800/50")}>
+                : course.priceApprovalStatus === "REJECTED" ? "bg-red-50/40 dark:bg-red-950/20 border-red-200/60 dark:border-red-800/50"
+                  : "bg-amber-50/40 dark:bg-amber-950/20 border-amber-200/60 dark:border-amber-800/50")}>
               <RiShieldCheckLine className={cn("text-lg mt-0.5 flex-shrink-0",
                 course.priceApprovalStatus === "APPROVED" ? "text-teal-600 dark:text-teal-400"
-                : course.priceApprovalStatus === "REJECTED" ? "text-red-500" : "text-amber-600 dark:text-amber-400")} />
+                  : course.priceApprovalStatus === "REJECTED" ? "text-red-500" : "text-amber-600 dark:text-amber-400")} />
               <div>
                 <p className="text-[13px] font-bold text-foreground">
                   Price: {fmtCurrency(course.price)} · {course.priceApprovalStatus === "APPROVED" ? "Admin approved" : course.priceApprovalStatus === "REJECTED" ? "Request rejected" : "Awaiting admin approval"}
@@ -330,25 +330,25 @@ export default function CourseDetailPage() {
           </div>
           {missions.length === 0
             ? <div className="rounded-2xl border border-border bg-card/80 py-12 flex flex-col items-center gap-3 text-center">
-                <RiFileTextLine className="text-2xl text-muted-foreground/30" />
-                <p className="text-[13.5px] font-bold text-muted-foreground">No missions yet</p>
-                {canAddMissions && <button onClick={() => router.push(`/dashboard/teacher/courses/${id}/missions`)} className="text-[12.5px] font-semibold text-teal-600 dark:text-teal-400 hover:underline">Add your first mission →</button>}
-              </div>
+              <RiFileTextLine className="text-2xl text-muted-foreground/30" />
+              <p className="text-[13.5px] font-bold text-muted-foreground">No missions yet</p>
+              {canAddMissions && <button onClick={() => router.push(`/dashboard/teacher/courses/${id}/missions`)} className="text-[12.5px] font-semibold text-teal-600 dark:text-teal-400 hover:underline">Add your first mission →</button>}
+            </div>
             : missions.map((m, i) => (
-                <div key={m.id} onClick={() => router.push(`/dashboard/teacher/courses/${id}/missions`)}
-                  className="flex items-center gap-4 px-5 py-4 rounded-2xl border border-border bg-card/90 hover:border-teal-200/60 dark:hover:border-teal-800/50 hover:shadow-md hover:shadow-teal-500/5 transition-all cursor-pointer group">
-                  <div className="w-8 h-8 rounded-xl flex-shrink-0 flex items-center justify-center bg-teal-100/60 dark:bg-teal-950/40 border border-teal-200/60 dark:border-teal-800/50 text-teal-600 dark:text-teal-400 text-[12px] font-extrabold">{i + 1}</div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[13.5px] font-bold text-foreground truncate group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors">{m.title}</p>
-                    {m.description && <p className="text-[12px] text-muted-foreground truncate">{m.description}</p>}
-                  </div>
-                  <div className="flex items-center gap-3 flex-shrink-0">
-                    <span className="text-[11.5px] text-muted-foreground hidden sm:block">{m._count?.contents ?? 0} items</span>
-                    <MissionBadge status={m.status} />
-                    <RiArrowRightLine className="text-muted-foreground text-sm group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors" />
-                  </div>
+              <div key={m.id} onClick={() => router.push(`/dashboard/teacher/courses/${id}/missions`)}
+                className="flex items-center gap-4 px-5 py-4 rounded-2xl border border-border bg-card/90 hover:border-teal-200/60 dark:hover:border-teal-800/50 hover:shadow-md hover:shadow-teal-500/5 transition-all cursor-pointer group">
+                <div className="w-8 h-8 rounded-xl flex-shrink-0 flex items-center justify-center bg-teal-100/60 dark:bg-teal-950/40 border border-teal-200/60 dark:border-teal-800/50 text-teal-600 dark:text-teal-400 text-[12px] font-extrabold">{i + 1}</div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13.5px] font-bold text-foreground truncate group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors">{m.title}</p>
+                  {m.description && <p className="text-[12px] text-muted-foreground truncate">{m.description}</p>}
                 </div>
-              ))
+                <div className="flex items-center gap-3 flex-shrink-0">
+                  <span className="text-[11.5px] text-muted-foreground hidden sm:block">{m._count?.contents ?? 0} items</span>
+                  <MissionBadge status={m.status} />
+                  <RiArrowRightLine className="text-muted-foreground text-sm group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors" />
+                </div>
+              </div>
+            ))
           }
         </div>
       )}
@@ -365,7 +365,7 @@ export default function CourseDetailPage() {
               <div key={i} className="flex items-center gap-3 px-4 py-4 rounded-2xl border border-border bg-card/90">
                 <div className={cn("w-9 h-9 rounded-xl flex-shrink-0 flex items-center justify-center text-base border",
                   s.a === "amber" ? "bg-amber-100/60 dark:bg-amber-950/40 border-amber-200/60 dark:border-amber-800/50 text-amber-600 dark:text-amber-400"
-                  : "bg-teal-100/60 dark:bg-teal-950/40 border-teal-200/60 dark:border-teal-800/50 text-teal-600 dark:text-teal-400")}>{s.icon}</div>
+                    : "bg-teal-100/60 dark:bg-teal-950/40 border-teal-200/60 dark:border-teal-800/50 text-teal-600 dark:text-teal-400")}>{s.icon}</div>
                 <div>
                   <p className="text-[18px] font-extrabold text-foreground leading-none tabular-nums">{s.v}</p>
                   <p className="text-[11.5px] text-muted-foreground mt-0.5">{s.l}</p>
@@ -392,8 +392,8 @@ export default function CourseDetailPage() {
               <div key={i} className="flex items-center gap-3 px-5 py-4 rounded-2xl border border-border bg-card/90">
                 <div className={cn("w-9 h-9 rounded-xl flex-shrink-0 flex items-center justify-center text-base border",
                   s.a === "amber" ? "bg-amber-100/60 dark:bg-amber-950/40 border-amber-200/60 dark:border-amber-800/50 text-amber-600 dark:text-amber-400"
-                  : s.a === "blue" ? "bg-blue-100/60 dark:bg-blue-950/40 border-blue-200/60 dark:border-blue-800/50 text-blue-600 dark:text-blue-400"
-                  : "bg-teal-100/60 dark:bg-teal-950/40 border-teal-200/60 dark:border-teal-800/50 text-teal-600 dark:text-teal-400")}>{s.icon}</div>
+                    : s.a === "blue" ? "bg-blue-100/60 dark:bg-blue-950/40 border-blue-200/60 dark:border-blue-800/50 text-blue-600 dark:text-blue-400"
+                      : "bg-teal-100/60 dark:bg-teal-950/40 border-teal-200/60 dark:border-teal-800/50 text-teal-600 dark:text-teal-400")}>{s.icon}</div>
                 <div>
                   <p className="text-[18px] font-extrabold text-foreground leading-none">{s.v}</p>
                   <p className="text-[11.5px] text-muted-foreground mt-0.5">{s.l}</p>

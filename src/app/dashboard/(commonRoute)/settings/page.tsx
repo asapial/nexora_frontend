@@ -135,7 +135,7 @@ function ToggleRow({
   );
 }
 
-function SaveButton({ loading, saved, label }: { loading: boolean; saved: boolean; label?: string }) {
+function SaveButton({ loading, saved, label }: { loading: boolean; saved: boolean; label?: string; }) {
   return (
     <button
       type="submit"
@@ -198,7 +198,7 @@ function PasswordField({ label, value, onChange, placeholder }: {
   );
 }
 
-function LoadingSkeleton({ rows = 3 }: { rows?: number }) {
+function LoadingSkeleton({ rows = 3 }: { rows?: number; }) {
   return (
     <div className="flex flex-col gap-4 max-w-3xl">
       {Array.from({ length: rows }).map((_, i) => (
@@ -208,7 +208,7 @@ function LoadingSkeleton({ rows = 3 }: { rows?: number }) {
   );
 }
 
-function ErrorBlock({ message }: { message: string }) {
+function ErrorBlock({ message }: { message: string; }) {
   return (
     <div className="rounded-2xl border border-red-200 dark:border-red-800/50 bg-red-50/50 dark:bg-red-950/20 px-4 py-3 text-[13px] text-red-600 dark:text-red-400">
       {message}
@@ -355,7 +355,7 @@ function TwoFactorSection() {
   useEffect(() => {
     settingsApi.getTwoFactorStatus()
       .then(r => setEnabled(r.data.twoFactorEnabled))
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setLoading(false));
   }, []);
 
@@ -802,7 +802,7 @@ function PrivacyTab() {
       <Section title="Active Sessions" description="Devices currently logged into your account.">
         {sessionsLoading ? (
           <div className="flex flex-col gap-2">
-            {[1,2,3].map(i => <div key={i} className="h-16 rounded-xl bg-muted/30 animate-pulse" />)}
+            {[1, 2, 3].map(i => <div key={i} className="h-16 rounded-xl bg-muted/30 animate-pulse" />)}
           </div>
         ) : sessions.length === 0 ? (
           <p className="text-[13px] text-muted-foreground py-4 text-center">No active sessions found</p>

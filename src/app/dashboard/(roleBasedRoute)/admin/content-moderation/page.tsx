@@ -19,9 +19,9 @@ type Course = {
   title: string;
   status: string;
   createdAt: string;
-  _count?: { enrollments: number };
+  _count?: { enrollments: number; };
   teacher?: {
-    user?: { id: string; name: string; email: string };
+    user?: { id: string; name: string; email: string; };
   };
 };
 
@@ -30,7 +30,7 @@ type Resource = {
   title: string;
   fileType: string;
   createdAt: string;
-  uploader?: { id: string; name: string };
+  uploader?: { id: string; name: string; };
 };
 
 type Warning = {
@@ -173,14 +173,14 @@ function WarningsPanel({ userId, userName, onClose }: {
 }
 
 export default function ContentModerationPage() {
-  const [courses, setCourses]     = useState<Course[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
   const [resources, setResources] = useState<Resource[]>([]);
-  const [loading, setLoading]     = useState(true);
+  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"courses" | "resources">("courses");
-  const [warnTarget, setWarnTarget] = useState<{ userId: string; name: string } | null>(null);
-  const [warningsTarget, setWarningsTarget] = useState<{ userId: string; name: string } | null>(null);
+  const [warnTarget, setWarnTarget] = useState<{ userId: string; name: string; } | null>(null);
+  const [warningsTarget, setWarningsTarget] = useState<{ userId: string; name: string; } | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
-  const [actionLog, setActionLog]   = useState<string[]>([]);
+  const [actionLog, setActionLog] = useState<string[]>([]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -225,8 +225,8 @@ export default function ContentModerationPage() {
   };
 
   const tabs = [
-    { key: "courses"   as const, label: "Courses",   count: courses.length,   icon: <RiBookOpenLine /> },
-    { key: "resources" as const, label: "Resources",  count: resources.length, icon: <RiFileTextLine /> },
+    { key: "courses" as const, label: "Courses", count: courses.length, icon: <RiBookOpenLine /> },
+    { key: "resources" as const, label: "Resources", count: resources.length, icon: <RiFileTextLine /> },
   ];
 
   return (
@@ -271,112 +271,112 @@ export default function ContentModerationPage() {
         {loading
           ? Array.from({ length: 6 }).map((_, i) => <SkeletonRow key={i} />)
           : activeTab === "courses"
-          ? courses.length === 0
-            ? (
-              <div className="py-16 text-center">
-                <RiShieldCheckLine className="text-4xl text-muted-foreground/20 mx-auto mb-3" />
-                <p className="text-[13.5px] font-medium text-muted-foreground">No published courses</p>
-              </div>
-            )
-            : courses.map(c => (
-              <div key={c.id} className="px-5 py-4 border-b border-border/60 last:border-0 hover:bg-muted/10 transition-colors flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-rose-50/70 dark:bg-rose-950/30 border border-rose-200/60 flex items-center justify-center shrink-0">
-                  <RiBookOpenLine className="text-rose-600 dark:text-rose-400 text-sm" />
+            ? courses.length === 0
+              ? (
+                <div className="py-16 text-center">
+                  <RiShieldCheckLine className="text-4xl text-muted-foreground/20 mx-auto mb-3" />
+                  <p className="text-[13.5px] font-medium text-muted-foreground">No published courses</p>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[13px] font-semibold text-foreground truncate">{c.title}</p>
-                  <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                    {c.teacher?.user && (
-                      <span className="flex items-center gap-0.5 text-[11px] text-muted-foreground/70">
-                        <RiUserLine className="text-xs" /> {c.teacher.user.name}
+              )
+              : courses.map(c => (
+                <div key={c.id} className="px-5 py-4 border-b border-border/60 last:border-0 hover:bg-muted/10 transition-colors flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-rose-50/70 dark:bg-rose-950/30 border border-rose-200/60 flex items-center justify-center shrink-0">
+                    <RiBookOpenLine className="text-rose-600 dark:text-rose-400 text-sm" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[13px] font-semibold text-foreground truncate">{c.title}</p>
+                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                      {c.teacher?.user && (
+                        <span className="flex items-center gap-0.5 text-[11px] text-muted-foreground/70">
+                          <RiUserLine className="text-xs" /> {c.teacher.user.name}
+                        </span>
+                      )}
+                      {c._count && (
+                        <span className="text-[11px] text-muted-foreground/60">{c._count.enrollments} enrolled</span>
+                      )}
+                      <span className="flex items-center gap-0.5 text-[11px] text-muted-foreground/60">
+                        <RiTimeLine className="text-xs" /> {fmtDate(c.createdAt)}
                       </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    {c.teacher?.user && (
+                      <>
+                        <button
+                          onClick={() => setWarningsTarget({ userId: c.teacher!.user!.id, name: c.teacher!.user!.name })}
+                          className="w-7 h-7 rounded-lg flex items-center justify-center text-sky-600 hover:bg-sky-50/60 dark:hover:bg-sky-950/30 transition-all"
+                          title="View warnings">
+                          <RiEyeLine className="text-sm" />
+                        </button>
+                        <button
+                          onClick={() => setWarnTarget({ userId: c.teacher!.user!.id, name: c.teacher!.user!.name })}
+                          className="w-7 h-7 rounded-lg flex items-center justify-center text-amber-600 hover:bg-amber-50/60 dark:hover:bg-amber-950/30 transition-all"
+                          title="Warn teacher">
+                          <RiAlertLine className="text-sm" />
+                        </button>
+                      </>
                     )}
-                    {c._count && (
-                      <span className="text-[11px] text-muted-foreground/60">{c._count.enrollments} enrolled</span>
-                    )}
-                    <span className="flex items-center gap-0.5 text-[11px] text-muted-foreground/60">
-                      <RiTimeLine className="text-xs" /> {fmtDate(c.createdAt)}
-                    </span>
+                    <button
+                      onClick={() => removeCourse(c.id, c.title)}
+                      disabled={removingId === c.id}
+                      className="w-7 h-7 rounded-lg flex items-center justify-center text-rose-600 hover:bg-rose-50/60 dark:hover:bg-rose-950/30 transition-all"
+                      title="Remove course">
+                      {removingId === c.id ? <RiLoader4Line className="text-sm animate-spin" /> : <RiDeleteBinLine className="text-sm" />}
+                    </button>
                   </div>
                 </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  {c.teacher?.user && (
-                    <>
-                      <button
-                        onClick={() => setWarningsTarget({ userId: c.teacher!.user!.id, name: c.teacher!.user!.name })}
-                        className="w-7 h-7 rounded-lg flex items-center justify-center text-sky-600 hover:bg-sky-50/60 dark:hover:bg-sky-950/30 transition-all"
-                        title="View warnings">
-                        <RiEyeLine className="text-sm" />
-                      </button>
-                      <button
-                        onClick={() => setWarnTarget({ userId: c.teacher!.user!.id, name: c.teacher!.user!.name })}
-                        className="w-7 h-7 rounded-lg flex items-center justify-center text-amber-600 hover:bg-amber-50/60 dark:hover:bg-amber-950/30 transition-all"
-                        title="Warn teacher">
-                        <RiAlertLine className="text-sm" />
-                      </button>
-                    </>
-                  )}
-                  <button
-                    onClick={() => removeCourse(c.id, c.title)}
-                    disabled={removingId === c.id}
-                    className="w-7 h-7 rounded-lg flex items-center justify-center text-rose-600 hover:bg-rose-50/60 dark:hover:bg-rose-950/30 transition-all"
-                    title="Remove course">
-                    {removingId === c.id ? <RiLoader4Line className="text-sm animate-spin" /> : <RiDeleteBinLine className="text-sm" />}
-                  </button>
+              ))
+            : resources.length === 0
+              ? (
+                <div className="py-16 text-center">
+                  <RiShieldCheckLine className="text-4xl text-muted-foreground/20 mx-auto mb-3" />
+                  <p className="text-[13.5px] font-medium text-muted-foreground">No resources to review</p>
                 </div>
-              </div>
-            ))
-          : resources.length === 0
-          ? (
-            <div className="py-16 text-center">
-              <RiShieldCheckLine className="text-4xl text-muted-foreground/20 mx-auto mb-3" />
-              <p className="text-[13.5px] font-medium text-muted-foreground">No resources to review</p>
-            </div>
-          )
-          : resources.map(r => (
-            <div key={r.id} className="px-5 py-4 border-b border-border/60 last:border-0 hover:bg-muted/10 transition-colors flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-muted border border-border flex items-center justify-center shrink-0">
-                <RiFileTextLine className="text-muted-foreground text-sm" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[13px] font-semibold text-foreground truncate">{r.title}</p>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-[10.5px] uppercase font-bold text-muted-foreground/60 tracking-wide">{r.fileType}</span>
-                  {r.uploader && (
-                    <span className="flex items-center gap-0.5 text-[11px] text-muted-foreground/60">
-                      <RiUserLine className="text-xs" /> {r.uploader.name}
-                    </span>
-                  )}
-                  <span className="text-[11px] text-muted-foreground/60">{fmtDate(r.createdAt)}</span>
+              )
+              : resources.map(r => (
+                <div key={r.id} className="px-5 py-4 border-b border-border/60 last:border-0 hover:bg-muted/10 transition-colors flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-muted border border-border flex items-center justify-center shrink-0">
+                    <RiFileTextLine className="text-muted-foreground text-sm" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[13px] font-semibold text-foreground truncate">{r.title}</p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-[10.5px] uppercase font-bold text-muted-foreground/60 tracking-wide">{r.fileType}</span>
+                      {r.uploader && (
+                        <span className="flex items-center gap-0.5 text-[11px] text-muted-foreground/60">
+                          <RiUserLine className="text-xs" /> {r.uploader.name}
+                        </span>
+                      )}
+                      <span className="text-[11px] text-muted-foreground/60">{fmtDate(r.createdAt)}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    {r.uploader && (
+                      <>
+                        <button
+                          onClick={() => setWarningsTarget({ userId: r.uploader!.id, name: r.uploader!.name })}
+                          className="w-7 h-7 rounded-lg flex items-center justify-center text-sky-600 hover:bg-sky-50/60 transition-all"
+                          title="View warnings">
+                          <RiEyeLine className="text-sm" />
+                        </button>
+                        <button
+                          onClick={() => setWarnTarget({ userId: r.uploader!.id, name: r.uploader!.name })}
+                          className="w-7 h-7 rounded-lg flex items-center justify-center text-amber-600 hover:bg-amber-50/60 transition-all"
+                          title="Warn uploader">
+                          <RiAlertLine className="text-sm" />
+                        </button>
+                      </>
+                    )}
+                    <button
+                      onClick={() => removeResource(r.id, r.title)}
+                      disabled={removingId === r.id}
+                      className="w-7 h-7 rounded-lg flex items-center justify-center text-rose-600 hover:bg-rose-50/60 transition-all"
+                      title="Remove resource">
+                      {removingId === r.id ? <RiLoader4Line className="text-sm animate-spin" /> : <RiDeleteBinLine className="text-sm" />}
+                    </button>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center gap-1 shrink-0">
-                {r.uploader && (
-                  <>
-                    <button
-                      onClick={() => setWarningsTarget({ userId: r.uploader!.id, name: r.uploader!.name })}
-                      className="w-7 h-7 rounded-lg flex items-center justify-center text-sky-600 hover:bg-sky-50/60 transition-all"
-                      title="View warnings">
-                      <RiEyeLine className="text-sm" />
-                    </button>
-                    <button
-                      onClick={() => setWarnTarget({ userId: r.uploader!.id, name: r.uploader!.name })}
-                      className="w-7 h-7 rounded-lg flex items-center justify-center text-amber-600 hover:bg-amber-50/60 transition-all"
-                      title="Warn uploader">
-                      <RiAlertLine className="text-sm" />
-                    </button>
-                  </>
-                )}
-                <button
-                  onClick={() => removeResource(r.id, r.title)}
-                  disabled={removingId === r.id}
-                  className="w-7 h-7 rounded-lg flex items-center justify-center text-rose-600 hover:bg-rose-50/60 transition-all"
-                  title="Remove resource">
-                  {removingId === r.id ? <RiLoader4Line className="text-sm animate-spin" /> : <RiDeleteBinLine className="text-sm" />}
-                </button>
-              </div>
-            </div>
-          ))}
+              ))}
       </div>
 
       {/* Action log */}

@@ -9,11 +9,11 @@ import { cn } from "@/lib/utils";
 import RefreshIcon from "@/components/shared/RefreshIcon";
 
 type Scope = "GLOBAL" | "CLUSTER";
-interface Cluster { id: string; name: string }
+interface Cluster { id: string; name: string; }
 interface Category {
   id: string; name: string; color: string; isGlobal: boolean;
   clusterId: string | null; teacherId: string | null;
-  _count: { resources: number };
+  _count: { resources: number; };
 }
 
 const COLOR_OPTIONS = [
@@ -26,14 +26,14 @@ function CategoryForm({
   initial, clusters, onSubmit, onCancel, loading,
 }: {
   initial?: Partial<Category>; clusters: Cluster[];
-  onSubmit: (data: { name: string; color: string; isGlobal: boolean; clusterId?: string }) => void;
+  onSubmit: (data: { name: string; color: string; isGlobal: boolean; clusterId?: string; }) => void;
   onCancel: () => void; loading?: boolean;
 }) {
-  const [name, setName]         = useState(initial?.name ?? "");
-  const [color, setColor]       = useState(initial?.color ?? COLOR_OPTIONS[0]);
-  const [scope, setScope]       = useState<Scope>(initial?.isGlobal ? "GLOBAL" : "CLUSTER");
+  const [name, setName] = useState(initial?.name ?? "");
+  const [color, setColor] = useState(initial?.color ?? COLOR_OPTIONS[0]);
+  const [scope, setScope] = useState<Scope>(initial?.isGlobal ? "GLOBAL" : "CLUSTER");
   const [clusterId, setCluster] = useState(initial?.clusterId ?? "");
-  const [err, setErr]           = useState("");
+  const [err, setErr] = useState("");
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,12 +95,12 @@ function CategoryForm({
 }
 
 export default function ResourceCategoriesPage() {
-  const [categories, setCategories]     = useState<Category[]>([]);
-  const [clusters, setClusters]         = useState<Cluster[]>([]);
-  const [loading, setLoading]           = useState(true);
-  const [saving, setSaving]             = useState(false);
-  const [showCreate, setShowCreate]     = useState(false);
-  const [editTarget, setEditTarget]     = useState<Category | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [clusters, setClusters] = useState<Cluster[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [showCreate, setShowCreate] = useState(false);
+  const [editTarget, setEditTarget] = useState<Category | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Category | null>(null);
 
   const fetchAll = useCallback(() => {
@@ -115,7 +115,7 @@ export default function ResourceCategoriesPage() {
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  const handleCreate = async (data: { name: string; color: string; isGlobal: boolean; clusterId?: string }) => {
+  const handleCreate = async (data: { name: string; color: string; isGlobal: boolean; clusterId?: string; }) => {
     setSaving(true);
     const res = await fetch("/api/teacher/categories", {
       method: "POST", credentials: "include",
@@ -126,7 +126,7 @@ export default function ResourceCategoriesPage() {
     setShowCreate(false); setSaving(false);
   };
 
-  const handleEdit = async (data: { name: string; color: string; isGlobal: boolean; clusterId?: string }) => {
+  const handleEdit = async (data: { name: string; color: string; isGlobal: boolean; clusterId?: string; }) => {
     if (!editTarget) return; setSaving(true);
     const res = await fetch(`/api/teacher/categories/${editTarget.id}`, {
       method: "PATCH", credentials: "include",
@@ -144,10 +144,10 @@ export default function ResourceCategoriesPage() {
     setDeleteTarget(null);
   };
 
-  const globalCats  = categories.filter(c => c.isGlobal);
+  const globalCats = categories.filter(c => c.isGlobal);
   const clusterCats = categories.filter(c => !c.isGlobal);
 
-  function CatRow({ cat }: { cat: Category }) {
+  function CatRow({ cat }: { cat: Category; }) {
     const [menu, setMenu] = useState(false);
     return (
       <div className="flex items-center gap-4 px-5 py-3.5 hover:bg-muted/30 transition-colors">

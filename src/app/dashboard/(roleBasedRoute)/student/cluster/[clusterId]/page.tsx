@@ -13,21 +13,21 @@ import { cn } from "@/lib/utils";
 type AttStatus = "PRESENT" | "ABSENT" | "EXCUSED";
 type TaskStatus = "PENDING" | "SUBMITTED" | "REVIEWED";
 
-interface Member { userId: string; name: string; email: string; image: string | null; joinedAt: string; subtype: string }
-interface SessionTile { id: string; title: string; scheduledAt: string; status: string; durationMins: number | null }
+interface Member { userId: string; name: string; email: string; image: string | null; joinedAt: string; subtype: string; }
+interface SessionTile { id: string; title: string; scheduledAt: string; status: string; durationMins: number | null; }
 interface MyTask {
   id: string; title: string; status: TaskStatus; deadline: string | null; finalScore: number | null;
-  submission: { id: string; submittedAt: string } | null;
-  StudySession: { id: string; title: string; scheduledAt: string; status: string };
+  submission: { id: string; submittedAt: string; } | null;
+  StudySession: { id: string; title: string; scheduledAt: string; status: string; };
 }
 interface MyAtt {
   status: AttStatus; note: string | null; markedAt: string;
-  StudySession: { id: string; title: string; scheduledAt: string };
+  StudySession: { id: string; title: string; scheduledAt: string; };
 }
 interface ClusterDetail {
   id: string; name: string; description: string | null; batchTag: string | null;
   healthScore: number | null; healthStatus: string | null; isActive: boolean;
-  teacher: { name: string; email: string; image: string | null } | null;
+  teacher: { name: string; email: string; image: string | null; } | null;
   memberCount: number; sessionCount: number;
   members: Member[];
   sessions: SessionTile[];
@@ -39,24 +39,24 @@ interface ClusterDetail {
 type Tab = "overview" | "members" | "tasks" | "attendance";
 
 const TASK_STATUS: Record<TaskStatus, string> = {
-  PENDING:   "bg-sky-100/80 dark:bg-sky-950/40 text-sky-700 dark:text-sky-400 border-sky-200/70 dark:border-sky-800/50",
+  PENDING: "bg-sky-100/80 dark:bg-sky-950/40 text-sky-700 dark:text-sky-400 border-sky-200/70 dark:border-sky-800/50",
   SUBMITTED: "bg-teal-100/80 dark:bg-teal-950/50 text-teal-700 dark:text-teal-400 border-teal-200/70 dark:border-teal-800/50",
-  REVIEWED:  "bg-violet-100/80 dark:bg-violet-950/50 text-violet-700 dark:text-violet-400 border-violet-200/70 dark:border-violet-800/50",
+  REVIEWED: "bg-violet-100/80 dark:bg-violet-950/50 text-violet-700 dark:text-violet-400 border-violet-200/70 dark:border-violet-800/50",
 };
 const ATT_STATUS: Record<AttStatus, string> = {
   PRESENT: "bg-teal-100/80 dark:bg-teal-950/50 text-teal-700 dark:text-teal-400 border-teal-200/70",
-  ABSENT:  "bg-red-100/70 dark:bg-red-950/30 text-red-600 dark:text-red-400 border-red-200/70",
+  ABSENT: "bg-red-100/70 dark:bg-red-950/30 text-red-600 dark:text-red-400 border-red-200/70",
   EXCUSED: "bg-amber-100/80 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border-amber-200/70",
 };
 
 export default function StudentClusterDetailPage() {
   const router = useRouter();
-  const { clusterId } = useParams() as { clusterId: string };
+  const { clusterId } = useParams() as { clusterId: string; };
 
   const [cluster, setCluster] = useState<ClusterDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError]     = useState<string | null>(null);
-  const [tab, setTab]         = useState<Tab>("overview");
+  const [error, setError] = useState<string | null>(null);
+  const [tab, setTab] = useState<Tab>("overview");
 
   const fetchCluster = useCallback(async () => {
     setLoading(true); setError(null);
@@ -94,12 +94,12 @@ export default function StudentClusterDetailPage() {
   }
 
   const doneTaskCount = cluster.myTasks.filter(t => t.status === "SUBMITTED" || t.status === "REVIEWED").length;
-  const presentCount  = cluster.myAttendance.filter(a => a.status === "PRESENT").length;
+  const presentCount = cluster.myAttendance.filter(a => a.status === "PRESENT").length;
 
-  const TABS: { key: Tab; label: string; icon: React.ReactNode; count?: number }[] = [
-    { key: "overview",    label: "Overview",    icon: <RiFlaskLine />,             count: undefined },
-    { key: "members",     label: "Members",     icon: <RiGroupLine />,             count: cluster.memberCount },
-    { key: "tasks",       label: "My Tasks",    icon: <RiFileTextLine />,          count: cluster.myTasks.length },
+  const TABS: { key: Tab; label: string; icon: React.ReactNode; count?: number; }[] = [
+    { key: "overview", label: "Overview", icon: <RiFlaskLine />, count: undefined },
+    { key: "members", label: "Members", icon: <RiGroupLine />, count: cluster.memberCount },
+    { key: "tasks", label: "My Tasks", icon: <RiFileTextLine />, count: cluster.myTasks.length },
     // { key: "attendance",  label: "Attendance",  icon: <RiCalendarLine />,          count: cluster.myAttendance.length },
   ];
 
@@ -135,10 +135,10 @@ export default function StudentClusterDetailPage() {
       {/* Quick stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { v: cluster.memberCount,     l: "Members",   cls: "text-teal-600 dark:text-teal-400 bg-teal-100/60 dark:bg-teal-950/40 border-teal-200/60 dark:border-teal-800/40",   i: <RiGroupLine /> },
-          { v: cluster.sessionCount,    l: "Sessions",  cls: "text-sky-600 dark:text-sky-400 bg-sky-100/60 dark:bg-sky-950/40 border-sky-200/60 dark:border-sky-800/40",         i: <RiCalendarLine /> },
-          { v: `${doneTaskCount}/${cluster.myTasks.length}`, l: "Tasks Done",  cls: "text-violet-600 dark:text-violet-400 bg-violet-100/60 dark:bg-violet-950/40 border-violet-200/60 dark:border-violet-800/40", i: <RiCheckboxCircleLine /> },
-          { v: `${presentCount}/${cluster.myAttendance.length}`, l: "Present",     cls: "text-amber-600 dark:text-amber-400 bg-amber-100/60 dark:bg-amber-950/40 border-amber-200/60 dark:border-amber-800/40", i: <RiCheckLine /> },
+          { v: cluster.memberCount, l: "Members", cls: "text-teal-600 dark:text-teal-400 bg-teal-100/60 dark:bg-teal-950/40 border-teal-200/60 dark:border-teal-800/40", i: <RiGroupLine /> },
+          { v: cluster.sessionCount, l: "Sessions", cls: "text-sky-600 dark:text-sky-400 bg-sky-100/60 dark:bg-sky-950/40 border-sky-200/60 dark:border-sky-800/40", i: <RiCalendarLine /> },
+          { v: `${doneTaskCount}/${cluster.myTasks.length}`, l: "Tasks Done", cls: "text-violet-600 dark:text-violet-400 bg-violet-100/60 dark:bg-violet-950/40 border-violet-200/60 dark:border-violet-800/40", i: <RiCheckboxCircleLine /> },
+          { v: `${presentCount}/${cluster.myAttendance.length}`, l: "Present", cls: "text-amber-600 dark:text-amber-400 bg-amber-100/60 dark:bg-amber-950/40 border-amber-200/60 dark:border-amber-800/40", i: <RiCheckLine /> },
         ].map(s => (
           <div key={s.l} className="rounded-2xl border border-border bg-card p-4">
             <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center text-sm border mb-2.5", s.cls)}>{s.i}</div>

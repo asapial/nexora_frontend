@@ -73,10 +73,10 @@ const DEFAULT_ROLES: RoleCard[] = [
 ];
 
 // ─── Single role card ──────────────────────────────────────
-function RoleCardItem({ role, idx }: { role: RoleCard; idx: number }) {
+function RoleCardItem({ role, idx }: { role: RoleCard; idx: number; }) {
   const gradient = ROLE_GRADIENTS[idx % ROLE_GRADIENTS.length];
-  const glowBase   = `0 20px 60px -12px ${role.glowColor}`;
-  const glowHover  = `0 28px 70px -10px ${role.glowColor.replace("0.45", "0.6")}`;
+  const glowBase = `0 20px 60px -12px ${role.glowColor}`;
+  const glowHover = `0 28px 70px -10px ${role.glowColor.replace("0.45", "0.6")}`;
 
   return (
     <div

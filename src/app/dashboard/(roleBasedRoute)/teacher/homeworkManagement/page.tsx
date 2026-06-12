@@ -18,7 +18,7 @@ import {
 type HWStatus = "PENDING" | "SUBMITTED" | "REVIEWED";
 type SessionStatus = "upcoming" | "ongoing" | "completed";
 
-interface Submission { id: string; submittedAt: string; videoUrl?: string | null; textBody?: string | null; pdfUrl?: string | null }
+interface Submission { id: string; submittedAt: string; videoUrl?: string | null; textBody?: string | null; pdfUrl?: string | null; }
 interface MemberTask {
   id: string; title: string; description: string | null; homework: string | null;
   status: HWStatus; deadline: string | null; finalScore: number | null; reviewNote: string | null;
@@ -30,20 +30,20 @@ interface Member {
 }
 interface Session {
   id: string; title: string; scheduledAt: string; status: SessionStatus;
-  cluster: { id: string; name: string };
+  cluster: { id: string; name: string; };
   tasks: MemberTask[];
-  _count: { attendance: number };
+  _count: { attendance: number; };
 }
 
-const STATUS_CFG: Record<HWStatus, { label: string; cls: string }> = {
-  PENDING:   { label: "Pending",   cls: "bg-sky-100/80 dark:bg-sky-950/50 text-sky-700 dark:text-sky-400 border-sky-200/70 dark:border-sky-800/50" },
+const STATUS_CFG: Record<HWStatus, { label: string; cls: string; }> = {
+  PENDING: { label: "Pending", cls: "bg-sky-100/80 dark:bg-sky-950/50 text-sky-700 dark:text-sky-400 border-sky-200/70 dark:border-sky-800/50" },
   SUBMITTED: { label: "Submitted", cls: "bg-teal-100/80 dark:bg-teal-950/50 text-teal-700 dark:text-teal-400 border-teal-200/70 dark:border-teal-800/50" },
-  REVIEWED:  { label: "Reviewed",  cls: "bg-violet-100/80 dark:bg-violet-950/50 text-violet-700 dark:text-violet-400 border-violet-200/70 dark:border-violet-800/50" },
+  REVIEWED: { label: "Reviewed", cls: "bg-violet-100/80 dark:bg-violet-950/50 text-violet-700 dark:text-violet-400 border-violet-200/70 dark:border-violet-800/50" },
 };
 
-const SESSION_STATUS_CFG: Record<SessionStatus, { label: string; cls: string }> = {
-  upcoming:  { label: "Upcoming",  cls: "bg-sky-100/80 dark:bg-sky-950/50 text-sky-700 dark:text-sky-400 border-sky-200/70" },
-  ongoing:   { label: "Ongoing",   cls: "bg-teal-100/80 dark:bg-teal-950/50 text-teal-700 dark:text-teal-400 border-teal-200/70" },
+const SESSION_STATUS_CFG: Record<SessionStatus, { label: string; cls: string; }> = {
+  upcoming: { label: "Upcoming", cls: "bg-sky-100/80 dark:bg-sky-950/50 text-sky-700 dark:text-sky-400 border-sky-200/70" },
+  ongoing: { label: "Ongoing", cls: "bg-teal-100/80 dark:bg-teal-950/50 text-teal-700 dark:text-teal-400 border-teal-200/70" },
   completed: { label: "Completed", cls: "bg-muted/60 text-muted-foreground border-border" },
 };
 
@@ -56,12 +56,12 @@ function AssignMemberModal({
   sessionId: string; member: Member; onClose: () => void;
   onCreated: (task: MemberTask) => void;
 }) {
-  const [title, setTitle]       = useState("");
-  const [desc, setDesc]         = useState("");
+  const [title, setTitle] = useState("");
+  const [desc, setDesc] = useState("");
   const [homework, setHomework] = useState("");
   const [deadline, setDeadline] = useState("");
-  const [saving, setSaving]     = useState(false);
-  const [err, setErr]           = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -140,14 +140,14 @@ function AssignMemberModal({
 function EditTaskModal({ task, onClose, onUpdated }: {
   task: MemberTask; onClose: () => void; onUpdated: (t: MemberTask) => void;
 }) {
-  const [title, setTitle]       = useState(task.title);
-  const [desc, setDesc]         = useState(task.description ?? "");
+  const [title, setTitle] = useState(task.title);
+  const [desc, setDesc] = useState(task.description ?? "");
   const [homework, setHomework] = useState(task.homework ?? "");
   const [deadline, setDeadline] = useState(
     task.deadline ? new Date(task.deadline).toISOString().slice(0, 16) : ""
   );
   const [saving, setSaving] = useState(false);
-  const [err, setErr]       = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -321,11 +321,11 @@ function MemberRow({
   onDeleted: (m: Member) => void;
 }) {
   const router = useRouter();
-  const [showAssign, setShowAssign]         = useState(false);
-  const [showEdit, setShowEdit]             = useState(false);
-  const [deleting, setDeleting]             = useState(false);
-  const [closing, setClosing]               = useState(false);
-  const [showCloseDialog, setShowCloseDialog]   = useState(false);
+  const [showAssign, setShowAssign] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [closing, setClosing] = useState(false);
+  const [showCloseDialog, setShowCloseDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const handleCloseNow = async () => {
@@ -471,7 +471,7 @@ function MemberRow({
 }
 
 // ─── Session Deadline Banner ──────────────────────────────────────────────────
-function SessionDeadlineBanner({ session, onRefresh }: { session: Session; onRefresh: () => void }) {
+function SessionDeadlineBanner({ session, onRefresh }: { session: Session; onRefresh: () => void; }) {
   const allPending = session.tasks.filter(t => t.status === "PENDING");
   const pendingWithDeadline = allPending.filter(t => t.deadline);
 
@@ -480,13 +480,13 @@ function SessionDeadlineBanner({ session, onRefresh }: { session: Session; onRef
     return new Date(t.deadline!) < new Date(best.deadline!) ? t : best;
   }, null);
 
-  const [timeLeft, setTimeLeft]                   = useState("");
-  const [isOverdue, setIsOverdue]                 = useState(false);
-  const [closing, setClosing]                     = useState(false);
-  const [extending, setExtending]                 = useState(false);
-  const [showCloseDialog, setShowCloseDialog]     = useState(false);
-  const [showExtendDialog, setShowExtendDialog]   = useState(false);
-  const [newDeadline, setNewDeadline]             = useState("");
+  const [timeLeft, setTimeLeft] = useState("");
+  const [isOverdue, setIsOverdue] = useState(false);
+  const [closing, setClosing] = useState(false);
+  const [extending, setExtending] = useState(false);
+  const [showCloseDialog, setShowCloseDialog] = useState(false);
+  const [showExtendDialog, setShowExtendDialog] = useState(false);
+  const [newDeadline, setNewDeadline] = useState("");
 
   useEffect(() => {
     if (!earliest?.deadline) { setIsOverdue(true); return; }
@@ -637,7 +637,7 @@ function SessionDeadlineBanner({ session, onRefresh }: { session: Session; onRef
 
 
 // ─── Session Card ──────────────────────────────────────────────────────────────
-function SessionCard({ session, onRefresh }: { session: Session; onRefresh: () => void }) {
+function SessionCard({ session, onRefresh }: { session: Session; onRefresh: () => void; }) {
   const [members, setMembers] = useState<Member[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState(false);
@@ -741,8 +741,8 @@ function SessionCard({ session, onRefresh }: { session: Session; onRefresh: () =
 // ─── Main Page ─────────────────────────────────────────────────────────────────
 export default function HomeworkManagementPage() {
   const [sessions, setSessions] = useState<Session[]>([]);
-  const [loading, setLoading]   = useState(true);
-  const [search, setSearch]     = useState("");
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
 
   const fetchData = useCallback(() => {
     setLoading(true);
@@ -760,8 +760,8 @@ export default function HomeworkManagementPage() {
     s.cluster.name.toLowerCase().includes(search.toLowerCase())
   );
 
-  const totalTasks     = sessions.reduce((s, ss) => s + ss.tasks.length, 0);
-  const pendingTasks   = sessions.reduce((s, ss) => s + ss.tasks.filter(t => t.status === "PENDING").length, 0);
+  const totalTasks = sessions.reduce((s, ss) => s + ss.tasks.length, 0);
+  const pendingTasks = sessions.reduce((s, ss) => s + ss.tasks.filter(t => t.status === "PENDING").length, 0);
   const submittedTasks = sessions.reduce((s, ss) => s + ss.tasks.filter(t => t.status === "SUBMITTED").length, 0);
 
   return (
@@ -785,14 +785,14 @@ export default function HomeworkManagementPage() {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4">
         {[
-          { label: "Total tasks",  value: totalTasks,     accent: "teal"   },
-          { label: "Pending",      value: pendingTasks,   accent: "amber"  },
-          { label: "Submitted",    value: submittedTasks, accent: "violet" },
+          { label: "Total tasks", value: totalTasks, accent: "teal" },
+          { label: "Pending", value: pendingTasks, accent: "amber" },
+          { label: "Submitted", value: submittedTasks, accent: "violet" },
         ].map(card => {
           const a = {
-            teal:   { i: "text-teal-600 dark:text-teal-400",   b: "bg-teal-100/70 dark:bg-teal-950/50",   br: "border-teal-200/70 dark:border-teal-800/50" },
-            amber:  { i: "text-amber-600 dark:text-amber-400", b: "bg-amber-100/70 dark:bg-amber-950/50", br: "border-amber-200/70 dark:border-amber-800/50" },
-            violet: { i: "text-violet-600 dark:text-violet-400",b: "bg-violet-100/70 dark:bg-violet-950/50",br: "border-violet-200/70 dark:border-violet-800/50" },
+            teal: { i: "text-teal-600 dark:text-teal-400", b: "bg-teal-100/70 dark:bg-teal-950/50", br: "border-teal-200/70 dark:border-teal-800/50" },
+            amber: { i: "text-amber-600 dark:text-amber-400", b: "bg-amber-100/70 dark:bg-amber-950/50", br: "border-amber-200/70 dark:border-amber-800/50" },
+            violet: { i: "text-violet-600 dark:text-violet-400", b: "bg-violet-100/70 dark:bg-violet-950/50", br: "border-violet-200/70 dark:border-violet-800/50" },
           }[card.accent]!;
           return (
             <div key={card.label} className="rounded-2xl border border-border bg-card p-4">

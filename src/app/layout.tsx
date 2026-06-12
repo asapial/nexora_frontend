@@ -1,24 +1,8 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Inter } from "next/font/google";
 import "./globals.css";
-import { cn } from "@/lib/utils";
-import { NavBar } from "@/components/shared/NavBar";
 import { ThemeProvider } from "@/provider/theme-provider";
-import FooterSection from "@/components/shared/footer";
 
-import { Toaster } from "@/components/ui/sonner"
-
-const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+import { Toaster } from "@/components/ui/sonner";
 
 export const metadata: Metadata = {
   title: "Nexora",
@@ -31,10 +15,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={cn("font-sans", inter.variable)} suppressHydrationWarning={true}>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+    <html lang="en" className="font-sans" suppressHydrationWarning={true}>
+      <body className="antialiased">
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"
@@ -44,7 +26,7 @@ export default function RootLayout({
 
 
           {children}
-        <Toaster />
+          <Toaster />
 
         </ThemeProvider>
       </body>
