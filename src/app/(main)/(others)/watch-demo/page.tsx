@@ -20,17 +20,6 @@ import { toast } from "sonner";
 type DemoRole = "teacher" | "student";
 
 // ─── Config from env vars ─────────────────────────────────
-const DEMO_CREDENTIALS = {
-  teacher: {
-    email: process.env.NEXT_PUBLIC_DEMO_TEACHER_EMAIL!,
-    password: process.env.NEXT_PUBLIC_DEMO_TEACHER_PASSWORD!,
-  },
-  student: {
-    email: process.env.NEXT_PUBLIC_DEMO_STUDENT_EMAIL!,
-    password: process.env.NEXT_PUBLIC_DEMO_STUDENT_PASSWORD!,
-  },
-};
-
 // ─── Feature list ─────────────────────────────────────────
 const TEACHER_FEATURES = [
   "Create & manage learning clusters",
@@ -150,20 +139,19 @@ export default function WatchDemoPage() {
 
   const handleDemoLogin = async (role: DemoRole) => {
     setLoadingRole(role);
-    const creds = DEMO_CREDENTIALS[role];
     try {
-      const res = await fetch("/api/auth/login", {
+      const res = await fetch("/api/auth/demo-login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ email: creds.email, password: creds.password }),
+        body: JSON.stringify({ role }),
       });
       const data = await res.json();
       if (!data.success) throw new Error(data.message || "Login failed");
       toast.success(`Logged in as demo ${role}!`);
       router.push("/dashboard");
-    } catch (err: any) {
-      toast.error(err.message || "Demo login failed. Please try again.");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Demo login failed. Please try again.");
     } finally {
       setLoadingRole(null);
     }

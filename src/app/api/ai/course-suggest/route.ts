@@ -38,13 +38,12 @@ export async function GET() {
 
 const SYSTEM = `You are an expert online course assistant.
 Look at the image carefully and suggest ONLY what you can actually see.
-Generate 4 DISTINCT variations for each field — each variation must be meaningfully different in angle, tone, or emphasis.
 Respond with ONLY a JSON object — no markdown, no text, no code fences.
 JSON schema:
 {
   "titles": ["4 compelling course titles, each ≤100 chars, all different in approach"],
-  "descriptions": ["4 course descriptions, each 10-12 sentences ≤1200 chars, each with a different focus angle"],
-  "tagSets": [["set1: 8-10 specific topic tags"], ["set2: 8-10 tags with different emphasis"], ["set3: 8-10 tags with different tone"], ["set4: 8-10 tags with different emphasis"]]
+  "descriptions": ["2 course descriptions, each 10-12 sentences ≤2000 chars, each with a different focus angle"],
+  "tagSets": [["8 specific topic tags based on the image"]]
 }`;
 
 function sleep(ms: number) {
@@ -80,7 +79,7 @@ async function callOpenRouter(model: string, imageBase64: string): Promise<strin
               },
               {
                 type: "text",
-                text: "Based on what you see in this thumbnail image, generate 4 distinct variations for course titles, descriptions, and tag sets. Return only JSON matching the schema.",
+                text: "Based on what you see in this thumbnail image, generate 4 distinct variations for course titles,  2 distinct variations for descriptions, and  1 distinct variations for tag sets. Return only JSON matching the schema.",
               },
             ],
           },

@@ -10,10 +10,12 @@ import { toast } from "sonner";
 
 type Visibility = "PUBLIC" | "CLUSTER" | "PRIVATE";
 
+interface Cluster { id: string; name: string; _count?: { members: number } }
+
 interface FormState {
   title: string; description: string; authors: string[];
   year: string; tags: string[]; visibility: Visibility;
-  categoryId: string;
+  categoryId: string; clusterIds: string[];
 }
 
 interface AiSuggestions {
@@ -25,9 +27,9 @@ interface AiSuggestions {
 }
 
 const VISIBILITY_OPTIONS: { value: Visibility; label: string; desc: string; cls: string }[] = [
-  { value: "PUBLIC",  label: "Public",  desc: "Visible to everyone",       cls: "border-teal-400/60 bg-teal-50 dark:bg-teal-950/20 text-teal-700 dark:text-teal-400" },
-  { value: "CLUSTER", label: "Cluster", desc: "Cluster members only",      cls: "border-amber-400/60 bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400" },
-  { value: "PRIVATE", label: "Private", desc: "Only you",                   cls: "border-border bg-muted/30 text-muted-foreground" },
+  { value: "PUBLIC",  label: "Public",  desc: "Available to all users on Nexora",    cls: "border-teal-400/60 bg-teal-50 dark:bg-teal-950/20 text-teal-700 dark:text-teal-400" },
+  { value: "CLUSTER", label: "Cluster", desc: "Visible to a specific cluster only",  cls: "border-amber-400/60 bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400" },
+  { value: "PRIVATE", label: "Private", desc: "Only visible to you",                 cls: "border-border bg-muted/30 text-muted-foreground" },
 ];
 
 const LABEL = "text-[12px] font-semibold text-muted-foreground mb-1.5 block";
@@ -166,11 +168,19 @@ export default function TeacherResourceUploadPage() {
       } catch { /* ignore */ }
       finally { if (!cancelled) setCategoriesLoading(false); }
     })();
+    // Fetch teacher's clusters
+    setClustersLoading(true);
+    fetch("/api/teacher/announcements/clusters", { credentials: "include" })
+      .then(r => r.json())
+      .then(json => { if (!cancelled && json.success && Array.isArray(json.data)) setClusters(json.data); })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setClustersLoading(false); });
     return () => { cancelled = true; };
   }, []);
 
   const [form, setForm] = useState<FormState>({
-    title: "", description: "", authors: [], year: "", tags: [], visibility: "PUBLIC", categoryId: "",
+    title: "", description: "", authors: [], year: "", tags: [],
+    visibility: "PUBLIC", categoryId: "", clusterIds: [],
   });
   const [file, setFile]               = useState<File | null>(null);
   const [dragging, setDragging]       = useState(false);
@@ -179,6 +189,10 @@ export default function TeacherResourceUploadPage() {
   const [suggestions, setSuggestions] = useState<AiSuggestions | null>(null);
   const [success, setSuccess]         = useState(false);
   const [error, setError]             = useState<string | null>(null);
+
+  // Clusters owned by this teacher
+  const [clusters, setClusters]         = useState<Cluster[]>([]);
+  const [clustersLoading, setClustersLoading] = useState(false);
 
   // Track which suggestion index is selected for array-type fields
   const [selAuthorIdx, setSelAuthorIdx] = useState<number | null>(null);
@@ -242,6 +256,18 @@ export default function TeacherResourceUploadPage() {
 
   const set = (k: keyof FormState, v: unknown) => setForm(f => ({ ...f, [k]: v }));
 
+  // When switching visibility, clear clusterIds unless CLUSTER is selected
+  const setVisibility = (v: Visibility) => setForm(f => ({ ...f, visibility: v, clusterIds: v === "CLUSTER" ? f.clusterIds : [] }));
+
+  // Toggle a cluster in/out of multi-select
+  const toggleCluster = (id: string) =>
+    setForm(f => ({
+      ...f,
+      clusterIds: f.clusterIds.includes(id)
+        ? f.clusterIds.filter(c => c !== id)
+        : [...f.clusterIds, id],
+    }));
+
   const handleSuggest = async () => {
     if (!file) return;
     setIsSuggesting(true);
@@ -292,12 +318,16 @@ export default function TeacherResourceUploadPage() {
       if (form.year) fd.append("year", form.year);
       fd.append("visibility", form.visibility);
       if (form.categoryId) fd.append("categoryId", form.categoryId);
+      // Send all selected cluster IDs
+      if (form.visibility === "CLUSTER") {
+        form.clusterIds.forEach(id => fd.append("clusterIds[]", id));
+      }
 
       const res = await fetch("/api/resource", { method: "POST", credentials: "include", body: fd });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Upload failed");
       setSuccess(true);
-      setForm({ title: "", description: "", authors: [], year: "", tags: [], visibility: "PUBLIC", categoryId: "" });
+      setForm({ title: "", description: "", authors: [], year: "", tags: [], visibility: "PUBLIC", categoryId: "", clusterIds: [] });
       setFile(null);
       setSuggestions(null);
     } catch (err: unknown) { setError(err instanceof Error ? err.message : "Upload failed"); }
@@ -520,7 +550,7 @@ export default function TeacherResourceUploadPage() {
           <label className={LABEL}>Visibility</label>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
             {VISIBILITY_OPTIONS.map(opt => (
-              <button key={opt.value} type="button" onClick={() => set("visibility", opt.value)}
+              <button key={opt.value} type="button" onClick={() => setVisibility(opt.value)}
                 className={cn("flex flex-col gap-1 p-3.5 rounded-xl border-2 text-left transition-all",
                   form.visibility === opt.value ? opt.cls : "border-border text-muted-foreground hover:bg-muted/30")}>
                 <span className="text-[13px] font-bold">{opt.label}</span>
@@ -528,6 +558,73 @@ export default function TeacherResourceUploadPage() {
               </button>
             ))}
           </div>
+
+          {/* Cluster picker — shown only when CLUSTER is selected */}
+          {form.visibility === "CLUSTER" && (
+            <div className="mt-3 rounded-xl border border-amber-300/60 dark:border-amber-700/50 bg-amber-50/50 dark:bg-amber-950/10 p-3.5">
+              <p className="text-[11.5px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 mb-2.5">
+                Select clusters <span className="font-normal normal-case text-muted-foreground">(can select multiple)</span>
+              </p>
+              {clustersLoading ? (
+                <div className="flex items-center gap-2 py-2">
+                  <span className="w-3.5 h-3.5 rounded-full border-2 border-amber-400/40 border-t-amber-500 animate-spin" />
+                  <span className="text-[12px] text-muted-foreground">Loading your clusters…</span>
+                </div>
+              ) : clusters.length === 0 ? (
+                <div className="py-3 text-center">
+                  <p className="text-[12.5px] text-muted-foreground">You have no clusters yet.</p>
+                  <a href="/dashboard/teacher/cluster/create"
+                    className="text-[12px] font-semibold text-amber-600 dark:text-amber-400 underline underline-offset-2 hover:no-underline">
+                    Create your first cluster →
+                  </a>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {clusters.map(c => {
+                    const isSelected = form.clusterIds.includes(c.id);
+                    return (
+                      <button key={c.id} type="button" onClick={() => toggleCluster(c.id)}
+                        className={cn(
+                          "flex items-center gap-3 w-full text-left px-3.5 py-3 rounded-xl border-2 transition-all",
+                          isSelected
+                            ? "border-amber-400/70 bg-amber-50 dark:bg-amber-950/30 shadow-sm"
+                            : "border-border bg-card hover:border-amber-300/60 hover:bg-amber-50/30 dark:hover:bg-amber-950/10"
+                        )}>
+                        {/* Checkbox style indicator */}
+                        <span className={cn(
+                          "w-4 h-4 rounded border-2 flex-shrink-0 flex items-center justify-center transition-all",
+                          isSelected ? "border-amber-500 bg-amber-500" : "border-border"
+                        )}>
+                          {isSelected && (
+                            <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 10 8" fill="none">
+                              <path d="M1 4l3 3 5-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                          )}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[13px] font-semibold text-foreground">{c.name}</p>
+                          {c._count && (
+                            <p className="text-[11px] text-muted-foreground">{c._count.members} member{c._count.members !== 1 ? "s" : ""}</p>
+                          )}
+                        </div>
+                        {isSelected && (
+                          <span className="flex-shrink-0 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-200 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300">✓ Selected</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                  {form.clusterIds.length > 0 && (
+                    <p className="text-[11.5px] text-amber-600 dark:text-amber-400 font-medium pt-1">
+                      {form.clusterIds.length} cluster{form.clusterIds.length > 1 ? "s" : ""} selected
+                    </p>
+                  )}
+                </div>
+              )}
+              {form.clusterIds.length === 0 && clusters.length > 0 && (
+                <p className="mt-2 text-[11.5px] text-amber-600/70 dark:text-amber-400/60">⚠ Select at least one cluster to continue.</p>
+              )}
+            </div>
+          )}
         </div>
 
         {error && <p className="text-[12.5px] text-red-500 border border-red-200/70 dark:border-red-800/50 bg-red-50 dark:bg-red-950/30 px-4 py-2.5 rounded-xl">{error}</p>}
