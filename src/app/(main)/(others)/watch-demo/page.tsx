@@ -144,10 +144,12 @@ export default function WatchDemoPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ role }),
+        body: JSON.stringify({ role: role.toUpperCase() }),
       });
       const data = await res.json();
-      if (!data.success) throw new Error(data.message || "Login failed");
+      if (!data.success) {
+        throw new Error(data.message || data.error?.message || "Login failed");
+      }
       toast.success(`Logged in as demo ${role}!`);
       router.push("/dashboard");
     } catch (err: unknown) {

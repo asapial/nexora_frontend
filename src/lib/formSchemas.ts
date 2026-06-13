@@ -29,13 +29,19 @@ export const teacherApplicationFormSchema = z.object({
 
 const examQuestionSchema = z.object({
   type: z.enum(["MCQ", "CQ"]),
-  prompt: z.string().trim().min(1),
+  prompt: z.string().trim().min(1, "Question text is required"),
   marks: z.coerce.number().positive(),
-  explanation: z.string().max(3000),
-  options: z.array(z.object({ text: z.string(), isCorrect: z.boolean() })),
+  explanation: z.string().trim().max(3000),
+  options: z.array(z.object({
+    text: z.string().trim().min(1, "Option text cannot be empty"),
+    isCorrect: z.boolean(),
+  })).max(6),
 }).superRefine((question, ctx) => {
-  if (question.type === "MCQ" && (question.options.filter((item) => item.text.trim()).length < 2 || question.options.filter((item) => item.isCorrect).length !== 1)) {
+  if (question.type === "MCQ" && (question.options.length < 2 || question.options.filter((item) => item.isCorrect).length !== 1)) {
     ctx.addIssue({ code: "custom", message: "Each MCQ needs two options and one correct answer" });
+  }
+  if (question.type === "CQ" && question.options.length) {
+    ctx.addIssue({ code: "custom", message: "Creative questions cannot contain options" });
   }
 });
 
@@ -53,6 +59,16 @@ export const examFormSchema = z.object({
   const end = new Date(value.endTime);
   if (Number.isNaN(start.getTime()) || start.getTime() - Date.now() < 24 * 60 * 60 * 1000) ctx.addIssue({ code: "custom", message: "Start time must be at least 24 hours away", path: ["startTime"] });
   if (Number.isNaN(end.getTime()) || end <= start) ctx.addIssue({ code: "custom", message: "End time must be after start time", path: ["endTime"] });
+});
+
+export const normalizeExamFormInput = (value: z.input<typeof examFormSchema>) => ({
+  ...value,
+  questions: value.questions.map((question) => ({
+    ...question,
+    options: question.type === "MCQ"
+      ? question.options.filter((option) => option.text.trim().length > 0)
+      : [],
+  })),
 });
 
 export const courseImageRequestSchema = z.object({

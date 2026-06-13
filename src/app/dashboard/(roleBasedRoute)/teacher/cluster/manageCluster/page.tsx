@@ -15,7 +15,7 @@ import { toast } from "sonner";
 import RefreshIcon from "@/components/shared/RefreshIcon";
 
 // ─── Types ────────────────────────────────────────────────
-type MemberSubtype = "EMERGING" | "ACTIVE" | "GRADUATED" | "ALUMNI" | "RUNNING";
+type MemberSubtype = "EMERGING" | "ALUMNI" | "RUNNING";
 type ClusterStatus = "healthy" | "at-risk" | "inactive";
 
 interface Member {
@@ -79,16 +79,12 @@ const HEALTH_BAR = (h: number) =>
 
 const SUBTYPE_LABELS: Record<MemberSubtype, string> = {
   EMERGING: "Emerging",
-  ACTIVE: "Active",
-  GRADUATED: "Graduated",
   ALUMNI: "Alumni",
   RUNNING: "Running",
 };
 
 const SUBTYPE_COLORS: Record<MemberSubtype, string> = {
   EMERGING: "bg-sky-100/80 dark:bg-sky-950/50 text-sky-700 dark:text-sky-400 border-sky-200/70 dark:border-sky-800/50",
-  ACTIVE: "bg-teal-100/80 dark:bg-teal-950/50 text-teal-700 dark:text-teal-400 border-teal-200/70 dark:border-teal-800/50",
-  GRADUATED: "bg-violet-100/80 dark:bg-violet-950/40 text-violet-700 dark:text-violet-400 border-violet-200/70 dark:border-violet-800/50",
   ALUMNI: "bg-zinc-100/80 dark:bg-zinc-800/50 text-zinc-600 dark:text-zinc-400 border-zinc-200/70 dark:border-zinc-700/50",
   RUNNING: "bg-orange-100/80 dark:bg-orange-950/50 text-orange-700 dark:text-orange-400 border-orange-200/70 dark:border-orange-800/50",
 };
@@ -391,7 +387,7 @@ function AddMemberInput({
   onAdd,
   cluster,
 }: {
-  onAdd: (clusterId: string, email: string) => Promise<void>;
+  onAdd: (clusterId: string, email: string) => Promise<boolean>;
   cluster: Cluster;
 }) {
   const [input, setInput] = useState("");
@@ -406,9 +402,11 @@ function AddMemberInput({
     if (!isValid(email)) { setError("Enter a valid email address"); return; }
     setError("");
     setLoading(true);
-    await onAdd(cluster.id, email);
-    setInput("");
-    setLoading(false);
+    try {
+      if (await onAdd(cluster.id, email)) setInput("");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
@@ -732,7 +730,7 @@ function DeleteModal({
           <div>
             <h3 className="text-[15px] font-bold text-foreground mb-1">Delete cluster?</h3>
             <p className="text-[13px] text-muted-foreground leading-relaxed">
-              <strong className="text-foreground">"{clusterName}"</strong> will be soft-deleted.
+              <strong className="text-foreground">&ldquo;{clusterName}&rdquo;</strong> will be soft-deleted.
               All sessions, tasks, and member data are preserved and can be restored by an admin.
             </p>
           </div>
@@ -765,7 +763,7 @@ export default function ManageClustersPage() {
   const [listLoading, setListLoading] = useState(true);
   const [members, setMembers] = useState<Member[]>([]);
   const [selectedCluster, setSelectedCluster] = useState<Cluster | null>(null);
-  const [search, setSearch] = useState("");
+  const [search] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<Cluster | null>(null);
   // ── Edit state ──────────────────────────────────────────
   const [editTarget, setEditTarget] = useState<Cluster | null>(null);
@@ -842,7 +840,7 @@ export default function ManageClustersPage() {
     }
   };
 
-  const handleAddMember = async (clusterId: string, email: string) => {
+  const handleAddMember = async (clusterId: string, email: string): Promise<boolean> => {
     try {
       const res = await fetch(`/api/cluster/${clusterId}/member`, {
         method: "POST",
@@ -852,23 +850,25 @@ export default function ManageClustersPage() {
       });
       const data = await res.json();
       if (data.success) {
-        toast.success("Member added successfully", { position: "top-right" });
-        const newMember: Member = {
-          id: `m-${Date.now()}`,
-          name: email.split("@")[0].replace(/[._]/g, " ").replace(/\b\w/g, l => l.toUpperCase()),
-          email,
-          subtype: "EMERGING",
-          joinedAt: "Just now",
-        };
-        setMembers(m => [...m, newMember]);
-        setClusters(cs => cs.map(c =>
-          c.id === clusterId ? { ...c, memberCount: c.memberCount + 1 } : c
-        ));
+        const result = data.data as { added?: string[]; invited?: string[]; alreadyMember?: string[]; };
+        if (result.alreadyMember?.includes(email)) {
+          toast.info("This student is already a member", { position: "top-right" });
+        } else {
+          toast.success(result.invited?.includes(email) ? "Student invited and credentials emailed" : "Student added successfully", { position: "top-right" });
+        }
+        if (selectedCluster?.id === clusterId) await handleManageCluster(selectedCluster);
+        await fetchClusters();
+        return true;
       } else {
-        toast.error(data.message ?? "Failed to add member", { position: "top-right" });
+        const validationMessage = Array.isArray(data.errorSources)
+          ? data.errorSources.map((item: { message?: string; }) => item.message).filter(Boolean).join("; ")
+          : "";
+        toast.error(validationMessage || data.message || "Failed to add member", { position: "top-right" });
+        return false;
       }
-    } catch {
-      toast.error("Something went wrong", { position: "top-right" });
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "Something went wrong", { position: "top-right" });
+      return false;
     }
   };
 
@@ -891,11 +891,35 @@ export default function ManageClustersPage() {
   };
 
   const handleSubtypeChange = async (id: string, subtype: MemberSubtype) => {
-    setMembers(m => m.map(m => m.id === id ? { ...m, subtype } : m));
+    if (!selectedCluster) return;
+    try {
+      const res = await fetch(`/api/cluster/${selectedCluster.id}/members/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ subtype }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.message || "Could not update member type");
+      setMembers(m => m.map(member => member.id === id ? { ...member, subtype } : member));
+      toast.success("Member type updated", { position: "top-right" });
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "Could not update member type", { position: "top-right" });
+    }
   };
 
   const handleResendCredentials = async (clusterId: string, memberId: string): Promise<void> => {
-    // API call placeholder
+    try {
+      const res = await fetch(`/api/cluster/${clusterId}/members/${memberId}/resend-credentials`, {
+        method: "POST",
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.message || "Could not resend credentials");
+      toast.success(data.message || "Password-reset email sent", { position: "top-right" });
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "Could not resend credentials", { position: "top-right" });
+    }
   };
 
   const filtered = clusters.filter(c =>

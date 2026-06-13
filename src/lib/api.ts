@@ -1,4 +1,9 @@
 // ─── Core fetch wrapper ───────────────────────────────────
+type ApiErrorSource = {
+  path?: string;
+  message?: string;
+};
+
 async function apiFetch<T>(url: string, options?: RequestInit): Promise<{ success: boolean; data: T; message: string; }> {
   const res = await fetch(url, {
     credentials: "include",
@@ -6,7 +11,15 @@ async function apiFetch<T>(url: string, options?: RequestInit): Promise<{ succes
     ...options,
   });
   const json = await res.json();
-  if (!res.ok || !json.success) throw new Error(json.message ?? "Request failed");
+  if (!res.ok || !json.success) {
+    const validationMessage = Array.isArray(json.errorSources)
+      ? json.errorSources
+        .filter((source: ApiErrorSource) => source?.message)
+        .map((source: ApiErrorSource) => `${source.path ? `${source.path}: ` : ""}${source.message}`)
+        .join("; ")
+      : "";
+    throw new Error(validationMessage || json.message || "Request failed");
+  }
   return json;
 }
 function qs(params?: Record<string, string | number | undefined>): string {
@@ -120,8 +133,11 @@ export const examApi = {
   update: (id: string, body: any) => apiFetch<any>(`/api/exams/teacher/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   setQuestions: (id: string, questions: any[]) => apiFetch<any>(`/api/exams/teacher/${id}/questions`, { method: "PUT", body: JSON.stringify({ questions }) }),
   gradeAttempt: (id: string, attemptId: string, grades: any[]) => apiFetch<any>(`/api/exams/teacher/${id}/attempts/${attemptId}/grade`, { method: "PATCH", body: JSON.stringify({ grades }) }),
+  publishResults: (id: string, body: { resultsPublished?: boolean; answerSheetPublished?: boolean; }) => apiFetch<any>(`/api/exams/teacher/${id}/publication`, { method: "PATCH", body: JSON.stringify(body) }),
+  emailResults: (id: string) => apiFetch<any>(`/api/exams/teacher/${id}/email-results`, { method: "POST" }),
+  emailStudentResult: (id: string, attemptId: string) => apiFetch<any>(`/api/exams/teacher/${id}/email-result`, { method: "POST", body: JSON.stringify({ attemptId }) }),
   pending: () => apiFetch<any[]>("/api/exams/admin/pending"),
-  analytics: () => apiFetch<any[]>("/api/exams/admin/analytics"),
+  analytics: () => apiFetch<any>("/api/exams/admin/analytics"),
   approve: (id: string) => apiFetch<any>(`/api/exams/admin/${id}/approve`, { method: "POST" }),
   reject: (id: string, reason: string) => apiFetch<any>(`/api/exams/admin/${id}/reject`, { method: "POST", body: JSON.stringify({ reason }) }),
   studentList: () => apiFetch<any[]>("/api/exams/student"),

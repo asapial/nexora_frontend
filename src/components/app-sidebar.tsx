@@ -7,7 +7,6 @@ import {
   RiDashboardLine,
   RiUserLine,
   RiSettings4Line,
-  RiQuestionLine,
   RiNotificationLine,
 
   // Teacher
@@ -90,7 +89,13 @@ const teacherNav: NavDocItem[] = [
     title: "ExamShield",
     url: "/dashboard/teacher/exams",
     icon: <RiShieldCheckLine />,
-    items: [{ title: "Exams & Proctoring", url: "/dashboard/teacher/exams" }],
+    items: [
+      { title: "Exam overview", url: "/dashboard/teacher/exams" },
+      { title: "Create exam", url: "/dashboard/teacher/exams/create" },
+      { title: "Live proctoring", url: "/dashboard/teacher/exams/proctoring" },
+      { title: "Publish results", url: "/dashboard/teacher/exams/results" },
+      { title: "Exam history & export", url: "/dashboard/teacher/exams/history" },
+    ],
   },
   {
     title: "Courses",
@@ -194,7 +199,10 @@ const studentNav: NavDocItem[] = [
     title: "ExamShield",
     url: "/dashboard/student/exams",
     icon: <RiShieldCheckLine />,
-    items: [{ title: "My Exams", url: "/dashboard/student/exams" }],
+    items: [
+      { title: "My Exams", url: "/dashboard/student/exams" },
+      { title: "Published results", url: "/dashboard/student/exams/results" },
+    ],
   },
   // {
   //   title: "Sessions",
