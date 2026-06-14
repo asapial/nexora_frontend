@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import {
   RiSparklingFill, RiUploadCloud2Line, RiFileAddLine, RiCloseLine, RiCheckLine,
-  RiRobot2Line, RiLoader4Line
+  RiRobot2Line, RiLoader4Line, RiAddLine, RiFolderLine
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -11,6 +11,7 @@ import { toast } from "sonner";
 type Visibility = "PUBLIC" | "CLUSTER" | "PRIVATE";
 
 interface Cluster { id: string; name: string; _count?: { members: number; }; }
+interface Category { id: string; name: string; color?: string; clusterId?: string | null; }
 
 interface FormState {
   title: string; description: string; authors: string[];
@@ -34,6 +35,7 @@ const VISIBILITY_OPTIONS: { value: Visibility; label: string; desc: string; cls:
 
 const LABEL = "text-[12px] font-semibold text-muted-foreground mb-1.5 block";
 const FIELD = "w-full rounded-xl border border-border bg-muted/30 px-3 py-2.5 text-[13px] text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-teal-500/50 focus:border-teal-400/60 transition-colors";
+const CATEGORY_COLORS = ["#14b8a6", "#0ea5e9", "#8b5cf6", "#f59e0b", "#f43f5e", "#10b981", "#6366f1", "#ec4899"];
 
 // ── Suggestion Chips Panel ───────────────────────────────────────────────────
 function SuggestionPanel({
@@ -152,9 +154,75 @@ function TagInput({ value, onChange }: { value: string[]; onChange: (v: string[]
   );
 }
 
+function InlineCategoryCreator({ clusters, onCancel, onCreated }: {
+  clusters: Cluster[];
+  onCancel: () => void;
+  onCreated: (category: Category) => void;
+}) {
+  const [name, setName] = useState("");
+  const [color, setColor] = useState(CATEGORY_COLORS[0]);
+  const [scope, setScope] = useState<"LIBRARY" | "CLUSTER">("LIBRARY");
+  const [clusterId, setClusterId] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [categoryError, setCategoryError] = useState("");
+
+  const createCategory = async () => {
+    const normalizedName = name.trim();
+    if (normalizedName.length < 2) return setCategoryError("Category name must contain at least 2 characters.");
+    if (scope === "CLUSTER" && !clusterId) return setCategoryError("Select a cluster for this category.");
+    setSaving(true);
+    setCategoryError("");
+    try {
+      const response = await fetch("/api/teacher/categories", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: normalizedName, color, isGlobal: false, ...(scope === "CLUSTER" ? { clusterId } : {}) }),
+      });
+      const json = await response.json();
+      if (!response.ok || !json.success) throw new Error(json.message || "Could not create category");
+      onCreated(json.data as Category);
+    } catch (error: unknown) {
+      setCategoryError(error instanceof Error ? error.message : "Could not create category");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="mt-3 overflow-hidden rounded-2xl border border-teal-500/30 bg-teal-500/[.04]">
+      <div className="flex items-center justify-between border-b border-teal-500/15 px-4 py-3">
+        <div className="flex items-center gap-2">
+          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-teal-500/10 text-teal-600"><RiFolderLine /></span>
+          <div><p className="text-[12px] font-bold">Create a new category</p><p className="text-[10px] text-muted-foreground">It will be selected automatically.</p></div>
+        </div>
+        <button type="button" onClick={onCancel} className="flex h-7 w-7 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"><RiCloseLine /></button>
+      </div>
+      <div className="space-y-4 p-4">
+        <div><label className={LABEL}>Category name *</label><input autoFocus value={name} onChange={(event) => { setName(event.target.value); setCategoryError(""); }} maxLength={100} placeholder="e.g. Research papers" className={FIELD} /></div>
+        <div>
+          <label className={LABEL}>Availability</label>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <button type="button" onClick={() => setScope("LIBRARY")} className={cn("rounded-xl border p-3 text-left transition-colors", scope === "LIBRARY" ? "border-teal-500/40 bg-teal-500/10" : "border-border hover:bg-muted/30")}><p className="text-[11px] font-bold">My teacher library</p><p className="mt-1 text-[9px] text-muted-foreground">Available for any resource you upload.</p></button>
+            <button type="button" onClick={() => setScope("CLUSTER")} className={cn("rounded-xl border p-3 text-left transition-colors", scope === "CLUSTER" ? "border-amber-500/40 bg-amber-500/10" : "border-border hover:bg-muted/30")}><p className="text-[11px] font-bold">One cluster only</p><p className="mt-1 text-[9px] text-muted-foreground">Organize resources for a specific cluster.</p></button>
+          </div>
+        </div>
+        {scope === "CLUSTER" && <div><label className={LABEL}>Cluster *</label><select value={clusterId} onChange={(event) => { setClusterId(event.target.value); setCategoryError(""); }} className={cn(FIELD, "cursor-pointer")}><option value="">Select one of your clusters</option>{clusters.map((cluster) => <option key={cluster.id} value={cluster.id}>{cluster.name}</option>)}</select></div>}
+        <div><label className={LABEL}>Color tag</label><div className="flex flex-wrap gap-2">{CATEGORY_COLORS.map((option) => <button key={option} type="button" onClick={() => setColor(option)} aria-label={`Use color ${option}`} className={cn("h-8 w-8 rounded-lg border-2 transition-transform", color === option ? "scale-110 border-foreground" : "border-transparent opacity-70 hover:opacity-100")} style={{ backgroundColor: option }} />)}</div></div>
+        {categoryError && <p className="rounded-xl border border-red-500/20 bg-red-500/10 px-3 py-2 text-[11px] font-medium text-red-600">{categoryError}</p>}
+        <div className="flex justify-end gap-2 border-t border-border pt-3">
+          <button type="button" onClick={onCancel} className="h-9 rounded-xl border border-border px-4 text-[11px] font-bold text-muted-foreground hover:bg-muted">Cancel</button>
+          <button type="button" onClick={createCategory} disabled={saving} className="flex h-9 items-center gap-2 rounded-xl bg-teal-600 px-4 text-[11px] font-bold text-white hover:bg-teal-700 disabled:opacity-50">{saving ? <RiLoader4Line className="animate-spin" /> : <RiAddLine />}{saving ? "Creating..." : "Create and select"}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function TeacherResourceUploadPage() {
-  const [categories, setCategories] = useState<{ id: string; name: string; }[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [showCategoryCreator, setShowCategoryCreator] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -163,7 +231,7 @@ export default function TeacherResourceUploadPage() {
         const res = await fetch("/api/resource/categories", { credentials: "include" });
         const json = await res.json();
         if (!cancelled && json.success && Array.isArray(json.data)) {
-          setCategories(json.data.map((c: { id: string; name: string; }) => ({ id: c.id, name: c.name })));
+          setCategories(json.data.map((c: Category) => ({ id: c.id, name: c.name, color: c.color, clusterId: c.clusterId })));
         }
       } catch { /* ignore */ }
       finally { if (!cancelled) setCategoriesLoading(false); }
@@ -283,7 +351,7 @@ export default function TeacherResourceUploadPage() {
       let json;
       try {
         json = await res.json();
-      } catch (parseError) {
+      } catch {
         throw new Error("The server encountered an unexpected error. Please try again later.");
       }
 
@@ -425,12 +493,24 @@ export default function TeacherResourceUploadPage() {
 
         {/* ── Category ──────────────────────────────────────────────────── */}
         <div>
-          <label className={LABEL}>Category</label>
-          <p className="text-[11px] text-muted-foreground/80 mb-1.5">Includes global (admin) categories and any you created under Library.</p>
-          <select value={form.categoryId} onChange={e => set("categoryId", e.target.value)} disabled={categoriesLoading} className={cn(FIELD, "cursor-pointer")}>
-            <option value="">{categoriesLoading ? "Loading categories…" : "Optional — select a category"}</option>
-            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
+          <div className="mb-1.5 flex items-center justify-between gap-3">
+            <label className={cn(LABEL, "mb-0")}>Category</label>
+            <button type="button" onClick={() => setShowCategoryCreator((value) => !value)} className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-[10px] font-bold text-teal-600 hover:bg-teal-500/10"><RiAddLine />{showCategoryCreator ? "Close creator" : "Add new category"}</button>
+          </div>
+          <p className="mb-1.5 text-[11px] text-muted-foreground/80">Choose an existing category or create one without leaving this upload.</p>
+          <div className="relative">
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"><RiFolderLine /></span>
+            <select value={form.categoryId} onChange={e => set("categoryId", e.target.value)} disabled={categoriesLoading} className={cn(FIELD, "cursor-pointer pl-9")}>
+              <option value="">{categoriesLoading ? "Loading categories..." : "Optional - select a category"}</option>
+              {categories.map(c => <option key={c.id} value={c.id}>{c.name}{c.clusterId ? ` - ${clusters.find((cluster) => cluster.id === c.clusterId)?.name ?? "Cluster"}` : ""}</option>)}
+            </select>
+          </div>
+          {showCategoryCreator && <InlineCategoryCreator clusters={clusters} onCancel={() => setShowCategoryCreator(false)} onCreated={(category) => {
+            setCategories((current) => [...current, category].sort((a, b) => a.name.localeCompare(b.name)));
+            set("categoryId", category.id);
+            setShowCategoryCreator(false);
+            toast.success(`Category "${category.name}" created and selected`);
+          }} />}
         </div>
 
         {/* ── Abstract / Description ────────────────────────────────────── */}

@@ -1,11 +1,24 @@
 export type ExamStatus = "DRAFT" | "PENDING_APPROVAL" | "APPROVED" | "REJECTED" | "CANCELLED";
 export type ExamType = "MCQ" | "CQ" | "MIXED";
+export type ExamMode = "REGULAR" | "PRO";
+export type ProctorSensitivity = "RELAXED" | "STANDARD" | "STRICT";
+
+export interface ProctorPolicy {
+  cameraRequired: boolean;
+  snapshotEnabled: boolean;
+  sensitivity: ProctorSensitivity;
+  studentWarnings: boolean;
+  roughPaperAllowed: boolean;
+  evidenceRetentionDays: number;
+}
 
 export interface ExamSummary {
   id: string;
   title: string;
   description?: string | null;
   type: ExamType;
+  examMode: ExamMode;
+  proctorPolicy?: ProctorPolicy | null;
   status: ExamStatus;
   startTime: string;
   endTime: string;
@@ -22,6 +35,12 @@ export interface ProctorEvent {
   id: string;
   type: string;
   occurredAt: string;
+  durationMs?: number | null;
+  confidence?: number | null;
+  evidenceUrl?: string | null;
+  metadata?: Record<string, unknown> | null;
+  reviewDecision?: "PENDING" | "DISMISSED" | "CONFIRMED_CONCERN" | "NEEDS_FOLLOW_UP";
+  reviewNote?: string | null;
 }
 
 export interface ExamAttempt {
@@ -35,6 +54,7 @@ export interface ExamAttempt {
   startedAt: string;
   submittedAt?: string | null;
   resultEmailSentAt?: string | null;
+  proctorFeedClearedAt?: string | null;
   user: { id: string; name: string; email: string };
   proctorEvents: ProctorEvent[];
   answers?: Array<{ id: string; awardedMarks: number }>;

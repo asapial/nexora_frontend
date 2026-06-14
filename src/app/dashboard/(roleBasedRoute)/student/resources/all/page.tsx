@@ -1,12 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import {
   RiSparklingFill, RiBook2Line, RiDownloadLine, RiBookmarkLine, RiBookmarkFill,
   RiFilePdfLine, RiVideoLine, RiFileTextLine, RiFileLine, RiUser3Line,
   RiEyeLine, RiCalendarLine, RiPriceTag3Line, RiDeleteBinLine,
   RiUploadCloud2Line, RiFilterLine, RiCloseLine, RiSearchLine,
-  RiGlobalLine, RiGroupLine, RiEditLine, RiCheckLine, RiAddLine,
+  RiGlobalLine, RiGroupLine, RiEditLine, RiCheckLine, RiAddLine, RiExternalLinkLine,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
@@ -24,7 +25,18 @@ interface Resource {
   category: { id: string; name: string; } | null;
   cluster: { id: string; name: string; } | null;
 }
-interface Meta { page: number; limit: number; total: number; totalPages: number; }
+interface Meta {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  sourceSummary?: {
+    total: number;
+    public: number;
+    cluster: number;
+    privateUploads: number;
+  };
+}
 
 const VIS_CLS: Record<Visibility, string> = {
   PUBLIC: "bg-teal-100/80 dark:bg-teal-950/50 text-teal-700 dark:text-teal-400 border-teal-200/70 dark:border-teal-800/50",
@@ -37,15 +49,12 @@ function FilePreview({ fileUrl, fileType }: { fileUrl: string; fileType: string;
   const isImg = fileType.startsWith("image/") || /\.(png|jpe?g|webp|gif)$/i.test(fileUrl);
   const isVid = fileType.startsWith("video/");
   if (isPdf) return (
-    <div className="relative w-full h-48 bg-gradient-to-br from-red-50 to-red-100/60 dark:from-red-950/30 dark:to-red-900/20 flex flex-col items-center justify-center gap-2 overflow-hidden">
-      <div className="absolute inset-0 flex flex-col justify-center px-8 gap-2 opacity-10 pointer-events-none">
-        {Array.from({ length: 8 }).map((_, i) => <div key={i} className="h-px bg-red-600 rounded" style={{ width: `${55 + i * 5}%` }} />)}
-      </div>
-      <RiFilePdfLine className="text-5xl text-red-500/80 drop-shadow-sm relative z-10" />
-      <span className="text-[10px] font-bold tracking-widest uppercase text-red-500/60 relative z-10">PDF Document</span>
+    <div className="relative h-48 w-full overflow-hidden bg-zinc-100 dark:bg-zinc-900">
+      <iframe src={`${viewUrl(fileUrl)}#page=1&toolbar=0&navpanes=0&scrollbar=0`} title="PDF first-page preview" tabIndex={-1} className="pointer-events-none h-[150%] w-full origin-top scale-[.68] border-0 bg-white" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-zinc-950/90 to-transparent px-3 pb-2 pt-8 text-white"><span className="text-[9px] font-black uppercase tracking-wider">First page preview</span><RiFilePdfLine className="text-lg text-rose-400" /></div>
     </div>
   );
-  if (isImg) return <img src={fileUrl} alt="" className="w-full h-48 object-cover" />;
+  if (isImg) return <Image src={fileUrl} alt="" width={640} height={360} unoptimized className="h-48 w-full object-cover" />;
   if (isVid) return (
     <div className="w-full h-48 bg-gradient-to-br from-violet-50 to-violet-100/60 dark:from-violet-950/30 dark:to-violet-900/20 flex flex-col items-center justify-center gap-2">
       <RiVideoLine className="text-5xl text-violet-400/80" />
@@ -260,7 +269,6 @@ export default function StudentAllResourcesPage() {
   const [categories, setCategories] = useState<{ id: string; name: string ;}[]>([]);
   const [clusters, setClusters] = useState<Cluster[]>([]);
   const [myUserId, setMyUserId] = useState<string | null>(null);
-  const [downloading, setDownloading] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [editResource, setEditResource] = useState<Resource | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
@@ -271,7 +279,7 @@ export default function StudentAllResourcesPage() {
   useEffect(() => {
     fetch("/api/resource/categories", { credentials: "include" }).then(r => r.json()).then(d => { if (d.success) setCategories(d.data ?? []); });
     fetch("/api/teacher/announcements/clusters", { credentials: "include" }).then(r => r.json()).then(d => { if (d.success) setClusters(d.data ?? []); });
-    fetch("/api/settings/account", { credentials: "include" }).then(r => r.json()).then(d => { if (d.success && d.data?.id) setMyUserId(d.data.id); });
+    fetch("/api/settings/account", { credentials: "include" }).then(r => r.json()).then(d => { if (d.success && d.data?.user?.id) setMyUserId(d.data.user.id); });
   }, []);
 
   const fetchResources = useCallback(() => {
@@ -286,7 +294,13 @@ export default function StudentAllResourcesPage() {
     if (filters.bookmarked) p.set("bookmarked", filters.bookmarked);
     // Use /browse — enforces PUBLIC + CLUSTER-member visibility gate on the backend
     fetch(`/api/resource/browse?${p}`, { credentials: "include" })
-      .then(r => r.json()).then(d => { if (d.success) { setResources(d.data ?? []); if (d.meta) setMeta(d.meta); } })
+      .then(async r => {
+        const d = await r.json();
+        if (!r.ok || !d.success) throw new Error(d.message || "Could not load accessible resources");
+        setResources(d.data ?? []);
+        if (d.meta) setMeta(d.meta);
+      })
+      .catch((error: unknown) => toast.error(error instanceof Error ? error.message : "Could not load accessible resources"))
       .finally(() => setLoading(false));
   }, [filters, page, limit]);
 
@@ -348,7 +362,7 @@ export default function StudentAllResourcesPage() {
           }} />
       )}
       {/* Header */}
-      <div className="flex items-end justify-between">
+      <div className="flex flex-wrap items-end justify-between gap-4 rounded-3xl border border-teal-500/20 bg-gradient-to-br from-teal-500/10 via-card to-sky-500/[.06] p-6 shadow-sm">
         <div>
           <div className="flex items-center gap-1.5 mb-1">
             <RiSparklingFill className="text-teal-500 dark:text-teal-400 text-sm animate-pulse" />
@@ -361,6 +375,13 @@ export default function StudentAllResourcesPage() {
           <RiUploadCloud2Line /> Upload Resource
         </Link>
       </div>
+
+      {!loading && <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <LibraryMetric label="Accessible resources" value={meta.sourceSummary?.total ?? meta.total} note="Everything currently available to you" tone="teal" />
+        <LibraryMetric label="Public library" value={meta.sourceSummary?.public ?? 0} note="Available to everyone" tone="sky" />
+        <LibraryMetric label="Your clusters" value={meta.sourceSummary?.cluster ?? 0} note="Shared through your classes" tone="amber" />
+        <LibraryMetric label="Your private uploads" value={meta.sourceSummary?.privateUploads ?? 0} note="Only you can access these" tone="violet" />
+      </div>}
 
       {/* Filter Bar */}
       <FilterBar filters={filters} onChange={f => { setFilters(f); setPage(1); }} categories={categories} allTags={allTags} allAuthors={allAuthors} />
@@ -399,8 +420,8 @@ export default function StudentAllResourcesPage() {
         <div className="flex flex-col items-center justify-center py-24 text-center">
           <div className="w-16 h-16 rounded-2xl bg-muted/50 border border-border flex items-center justify-center mb-4"><RiBook2Line className="text-2xl text-muted-foreground/40" /></div>
           <p className="text-[14px] font-semibold text-foreground mb-1">No resources found</p>
-          <p className="text-[12.5px] text-muted-foreground mb-4">No public or cluster-shared resources found yet.</p>
-          <Link href="/dashboard/teacher/resource/upload" className="flex items-center gap-2 px-4 py-2 rounded-xl bg-teal-600 text-white text-[12.5px] font-bold hover:bg-teal-700 transition-colors"><RiUploadCloud2Line className="text-sm" /> Upload resource</Link>
+          <p className="text-[12.5px] text-muted-foreground mb-4">No public, cluster-shared, or personal resources match these filters.</p>
+          <Link href="/dashboard/student/resources/upload" className="flex items-center gap-2 px-4 py-2 rounded-xl bg-teal-600 text-white text-[12.5px] font-bold hover:bg-teal-700 transition-colors"><RiUploadCloud2Line className="text-sm" /> Upload resource</Link>
         </div>
       ) : (
         <div ref={gridRef} className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
@@ -499,6 +520,9 @@ export default function StudentAllResourcesPage() {
                     <button onClick={() => handleBookmark(r.id, r.isBookmarked)} className={cn("p-1.5 rounded-lg transition-colors", r.isBookmarked ? "text-amber-500 hover:text-amber-400" : "text-muted-foreground/40 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/20")} title={r.isBookmarked ? "Remove bookmark" : "Bookmark"}>
                       {r.isBookmarked ? <RiBookmarkFill className="text-[15px]" /> : <RiBookmarkLine className="text-[15px]" />}
                     </button>
+                    <Link href={`/dashboard/student/resource-annotation?resourceId=${r.id}`} className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-[10.5px] font-bold text-sky-600 transition-colors hover:bg-sky-50 dark:text-sky-400 dark:hover:bg-sky-950/20" title="Read and annotate">
+                      <RiExternalLinkLine className="text-[14px]" /> Read
+                    </Link>
                     {/* Own resource actions */}
                     {myUserId && r.uploaderId === myUserId && (
                       <>
@@ -512,9 +536,8 @@ export default function StudentAllResourcesPage() {
                         </button>
                       </>
                     )}
-                    <button onClick={() => handleDownload(r)} disabled={downloading === r.id} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-600 text-white text-[11px] font-bold hover:bg-teal-700 transition-colors disabled:opacity-50" title="Download">
-                      <RiDownloadLine className={cn("text-[12px]", downloading === r.id && "animate-bounce")} />
-                      {downloading === r.id ? "…" : "Download"}
+                    <button onClick={() => handleDownload(r)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-600 text-white text-[11px] font-bold hover:bg-teal-700 transition-colors" title="Download">
+                      <RiDownloadLine className="text-[12px]" />Download
                     </button>
                   </div>
                 </div>
@@ -559,4 +582,9 @@ export default function StudentAllResourcesPage() {
       )}
     </div>
   );
+}
+
+function LibraryMetric({ label, value, note, tone }: { label: string; value: number; note: string; tone: "teal" | "sky" | "amber" | "violet" }) {
+  const tones = { teal: "text-teal-600 bg-teal-500/10", sky: "text-sky-600 bg-sky-500/10", amber: "text-amber-600 bg-amber-500/10", violet: "text-violet-600 bg-violet-500/10" };
+  return <div className="rounded-2xl border border-border bg-card p-4 shadow-sm"><p className="text-[9px] font-black uppercase tracking-wider text-muted-foreground">{label}</p><p className={cn("mt-2 inline-flex rounded-xl px-2.5 py-1 text-xl font-black", tones[tone])}>{value}</p><p className="mt-2 text-[9px] leading-4 text-muted-foreground">{note}</p></div>;
 }

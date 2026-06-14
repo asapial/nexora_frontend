@@ -93,6 +93,7 @@ const teacherNav: NavDocItem[] = [
       { title: "Exam overview", url: "/dashboard/teacher/exams" },
       { title: "Create exam", url: "/dashboard/teacher/exams/create" },
       { title: "Live proctoring", url: "/dashboard/teacher/exams/proctoring" },
+      { title: "Snapshot wall", url: "/dashboard/teacher/exams/monitoring" },
       { title: "Publish results", url: "/dashboard/teacher/exams/results" },
       { title: "Exam history & export", url: "/dashboard/teacher/exams/history" },
     ],
@@ -279,6 +280,7 @@ const adminNav: NavDocItem[] = [
       { title: "Mission Approvals", url: "/dashboard/admin/approvals/missions" },
       { title: "Price Requests", url: "/dashboard/admin/approvals/price-requests" },
       { title: "Exam Approvals", url: "/dashboard/admin/exams" },
+      { title: "Pro Mode detection lab", url: "/dashboard/admin/examshield-lab" },
     ],
   },
   {

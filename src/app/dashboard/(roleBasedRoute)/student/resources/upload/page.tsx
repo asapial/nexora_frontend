@@ -9,11 +9,12 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 type Visibility = "PUBLIC" | "CLUSTER" | "PRIVATE";
+interface Cluster { id: string; name: string; memberCount?: number; }
 
 interface FormState {
   title: string; description: string; authors: string[];
   year: string; tags: string[]; visibility: Visibility;
-  categoryId: string;
+  categoryId: string; clusterIds: string[];
 }
 
 interface AiSuggestions {
@@ -153,6 +154,8 @@ function TagInput({ value, onChange }: { value: string[]; onChange: (v: string[]
 export default function TeacherResourceUploadPage() {
   const [categories, setCategories] = useState<{ id: string; name: string; }[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [clusters, setClusters] = useState<Cluster[]>([]);
+  const [clustersLoading, setClustersLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -166,11 +169,16 @@ export default function TeacherResourceUploadPage() {
       } catch { /* ignore */ }
       finally { if (!cancelled) setCategoriesLoading(false); }
     })();
+    fetch("/api/student/clusters", { credentials: "include" })
+      .then((response) => response.json())
+      .then((json) => { if (!cancelled && json.success && Array.isArray(json.data)) setClusters(json.data); })
+      .catch(() => { })
+      .finally(() => { if (!cancelled) setClustersLoading(false); });
     return () => { cancelled = true; };
   }, []);
 
   const [form, setForm] = useState<FormState>({
-    title: "", description: "", authors: [], year: "", tags: [], visibility: "PUBLIC", categoryId: "",
+    title: "", description: "", authors: [], year: "", tags: [], visibility: "PUBLIC", categoryId: "", clusterIds: [],
   });
   const [file, setFile] = useState<File | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -241,6 +249,8 @@ export default function TeacherResourceUploadPage() {
   }, [isSuggesting]);
 
   const set = (k: keyof FormState, v: unknown) => setForm(f => ({ ...f, [k]: v }));
+  const setVisibility = (visibility: Visibility) => setForm((current) => ({ ...current, visibility, clusterIds: visibility === "CLUSTER" ? current.clusterIds : [] }));
+  const toggleCluster = (id: string) => setForm((current) => ({ ...current, clusterIds: current.clusterIds.includes(id) ? current.clusterIds.filter((clusterId) => clusterId !== id) : [...current.clusterIds, id] }));
 
   const handleSuggest = async () => {
     if (!file) return;
@@ -257,7 +267,7 @@ export default function TeacherResourceUploadPage() {
       let json;
       try {
         json = await res.json();
-      } catch (parseError) {
+      } catch {
         throw new Error("The server encountered an unexpected error. Please try again later.");
       }
 
@@ -281,6 +291,7 @@ export default function TeacherResourceUploadPage() {
     e.preventDefault();
     if (!form.title.trim()) { setError("Title is required."); return; }
     if (!file) { setError("Please attach a file."); return; }
+    if (form.visibility === "CLUSTER" && form.clusterIds.length === 0) { setError("Select at least one cluster."); return; }
     setSubmitting(true); setError(null);
     try {
       const fd = new FormData();
@@ -292,12 +303,13 @@ export default function TeacherResourceUploadPage() {
       if (form.year) fd.append("year", form.year);
       fd.append("visibility", form.visibility);
       if (form.categoryId) fd.append("categoryId", form.categoryId);
+      if (form.visibility === "CLUSTER") form.clusterIds.forEach((id) => fd.append("clusterIds[]", id));
 
       const res = await fetch("/api/resource", { method: "POST", credentials: "include", body: fd });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Upload failed");
       setSuccess(true);
-      setForm({ title: "", description: "", authors: [], year: "", tags: [], visibility: "PUBLIC", categoryId: "" });
+      setForm({ title: "", description: "", authors: [], year: "", tags: [], visibility: "PUBLIC", categoryId: "", clusterIds: [] });
       setFile(null);
       setSuggestions(null);
     } catch (err: unknown) { setError(err instanceof Error ? err.message : "Upload failed"); }
@@ -520,7 +532,7 @@ export default function TeacherResourceUploadPage() {
           <label className={LABEL}>Visibility</label>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
             {VISIBILITY_OPTIONS.map(opt => (
-              <button key={opt.value} type="button" onClick={() => set("visibility", opt.value)}
+              <button key={opt.value} type="button" onClick={() => setVisibility(opt.value)}
                 className={cn("flex flex-col gap-1 p-3.5 rounded-xl border-2 text-left transition-all",
                   form.visibility === opt.value ? opt.cls : "border-border text-muted-foreground hover:bg-muted/30")}>
                 <span className="text-[13px] font-bold">{opt.label}</span>
@@ -528,6 +540,14 @@ export default function TeacherResourceUploadPage() {
               </button>
             ))}
           </div>
+          {form.visibility === "CLUSTER" && <div className="mt-3 rounded-2xl border border-amber-500/30 bg-amber-500/[.05] p-4">
+            <p className="text-[11px] font-black uppercase tracking-wider text-amber-600">Choose clusters</p>
+            <p className="mt-1 text-[10px] text-muted-foreground">Only members of the selected clusters can access this resource.</p>
+            {clustersLoading ? <div className="mt-3 h-16 animate-pulse rounded-xl bg-muted" /> : clusters.length === 0 ? <p className="mt-3 rounded-xl border border-dashed border-border p-4 text-center text-[11px] text-muted-foreground">You are not a member of any cluster.</p> : <div className="mt-3 grid gap-2 sm:grid-cols-2">{clusters.map((cluster) => {
+              const selected = form.clusterIds.includes(cluster.id);
+              return <button key={cluster.id} type="button" onClick={() => toggleCluster(cluster.id)} className={cn("flex items-center gap-3 rounded-xl border p-3 text-left transition-colors", selected ? "border-amber-500/40 bg-amber-500/10" : "border-border bg-card hover:bg-muted/30")}><span className={cn("flex h-4 w-4 items-center justify-center rounded border", selected ? "border-amber-500 bg-amber-500 text-white" : "border-border")}>{selected && <RiCheckLine className="text-[10px]" />}</span><div><p className="text-[11px] font-bold">{cluster.name}</p><p className="text-[9px] text-muted-foreground">{cluster.memberCount ?? 0} members</p></div></button>;
+            })}</div>}
+          </div>}
         </div>
 
         {error && <p className="text-[12.5px] text-red-500 border border-red-200/70 dark:border-red-800/50 bg-red-50 dark:bg-red-950/30 px-4 py-2.5 rounded-xl">{error}</p>}

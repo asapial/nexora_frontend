@@ -6,6 +6,7 @@ import {
   RiArrowRightLine,
   RiBarChartBoxLine,
   RiBookOpenLine,
+  RiCameraLine,
   RiCalendarCheckLine,
   RiCheckDoubleLine,
   RiCheckLine,
@@ -45,6 +46,13 @@ type PendingExam = {
   title: string;
   description?: string | null;
   type: "MCQ" | "CQ" | "MIXED";
+  examMode?: "REGULAR" | "PRO";
+  proctorPolicy?: {
+    sensitivity: "RELAXED" | "STANDARD" | "STRICT";
+    studentWarnings: boolean;
+    roughPaperAllowed: boolean;
+    evidenceRetentionDays: number;
+  } | null;
   status: string;
   startTime: string;
   endTime: string;
@@ -84,6 +92,21 @@ type ExamAnalytics = {
 };
 
 const emptyAnalytics: ExamAnalytics = { exams: [], clusters: [], upcoming: [] };
+type Workspace = "APPROVALS" | "SCHEDULE" | "ANALYTICS";
+type ModeFilter = "ALL" | "REGULAR" | "PRO";
+type TypeFilter = "ALL" | "MCQ" | "CQ" | "MIXED";
+
+const timeToStart = (value: string) => {
+  const difference = new Date(value).getTime() - Date.now();
+  if (difference <= 0) return "Start time passed";
+  const hours = Math.floor(difference / 3_600_000);
+  if (hours < 24) return `Starts in ${Math.max(1, hours)}h`;
+  return `Starts in ${Math.ceil(hours / 24)}d`;
+};
+
+function ModeBadge({ mode = "REGULAR" }: { mode?: "REGULAR" | "PRO" }) {
+  return <span className={cn("inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-wider", mode === "PRO" ? "border-violet-500/25 bg-violet-500/10 text-violet-700 dark:text-violet-300" : "border-sky-500/25 bg-sky-500/10 text-sky-700 dark:text-sky-300")}>{mode === "PRO" ? <RiCameraLine /> : <RiShieldCheckLine />}{mode} Mode</span>;
+}
 
 function LoadingCard() {
   return <div className="h-36 animate-pulse rounded-2xl border border-border bg-muted/50" />;
@@ -125,6 +148,7 @@ function ReviewPanel({
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <ExamStatusBadge value={exam.status} />
+                <ModeBadge mode={exam.examMode} />
                 <span className="text-[10px] font-extrabold uppercase tracking-widest text-teal-600">{exam.type}</span>
               </div>
               <h2 className="mt-3 text-xl font-black tracking-tight sm:text-2xl">{exam.title}</h2>
@@ -163,6 +187,18 @@ function ReviewPanel({
               <p className="flex items-center gap-2"><RiShieldCheckLine className="text-teal-600" /> {exam.durationMinutes ?? "Window-based"} minute duration</p>
             </div>
           </div>
+
+          {exam.examMode === "PRO" && exam.proctorPolicy && (
+            <div className="mt-4 rounded-2xl border border-violet-500/20 bg-violet-500/5 p-4">
+              <div className="flex items-center gap-2"><RiCameraLine className="text-violet-600" /><p className="text-[11px] font-black text-violet-700 dark:text-violet-300">Pro Mode integrity policy</p></div>
+              <div className="mt-3 grid grid-cols-2 gap-2 text-[10px] sm:grid-cols-4">
+                <ReviewFact label="Sensitivity" value={exam.proctorPolicy.sensitivity} />
+                <ReviewFact label="Warnings" value={exam.proctorPolicy.studentWarnings ? "Enabled" : "Silent"} />
+                <ReviewFact label="Rough paper" value={exam.proctorPolicy.roughPaperAllowed ? "Allowed" : "Not allowed"} />
+                <ReviewFact label="Retention" value={`${exam.proctorPolicy.evidenceRetentionDays} days`} />
+              </div>
+            </div>
+          )}
 
           <div className="mt-7 flex items-center justify-between gap-3">
             <div>
@@ -230,6 +266,10 @@ function ReviewPanel({
   );
 }
 
+function ReviewFact({ label, value }: { label: string; value: string }) {
+  return <div className="rounded-xl border border-violet-500/15 bg-card/70 p-2.5"><p className="text-[8px] font-extrabold uppercase tracking-wider text-muted-foreground">{label}</p><p className="mt-1 font-black">{value}</p></div>;
+}
+
 function RejectDialog({
   exam,
   submitting,
@@ -274,6 +314,9 @@ export default function AdminExamsPage() {
   const [selectedExam, setSelectedExam] = useState<PendingExam | null>(null);
   const [rejectingExam, setRejectingExam] = useState<PendingExam | null>(null);
   const [busyAction, setBusyAction] = useState<string | null>(null);
+  const [workspace, setWorkspace] = useState<Workspace>("APPROVALS");
+  const [modeFilter, setModeFilter] = useState<ModeFilter>("ALL");
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>("ALL");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -294,13 +337,14 @@ export default function AdminExamsPage() {
 
   const filteredPending = useMemo(() => {
     const query = search.trim().toLowerCase();
-    if (!query) return pending;
-    return pending.filter((exam) =>
-      [exam.title, exam.cluster?.name, exam.teacher.user.name, exam.teacher.user.email]
+    return pending
+      .filter((exam) => modeFilter === "ALL" || (exam.examMode ?? "REGULAR") === modeFilter)
+      .filter((exam) => typeFilter === "ALL" || exam.type === typeFilter)
+      .filter((exam) => !query || [exam.title, exam.cluster?.name, exam.teacher.user.name, exam.teacher.user.email]
         .filter(Boolean)
-        .some((value) => value!.toLowerCase().includes(query)),
-    );
-  }, [pending, search]);
+        .some((value) => value!.toLowerCase().includes(query)))
+      .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+  }, [modeFilter, pending, search, typeFilter]);
 
   const approve = async (exam: PendingExam) => {
     setBusyAction("approve");
@@ -347,6 +391,18 @@ export default function AdminExamsPage() {
             <RiRefreshLine className={cn(loading && "animate-spin")} /> Refresh data
           </button>
         </div>
+        <div className="mt-7 grid gap-3 rounded-2xl border border-teal-500/15 bg-card/65 p-3 backdrop-blur sm:grid-cols-3">
+          {([
+            ["APPROVALS", "Approval queue", `${pending.length} waiting`, RiFileList3Line],
+            ["SCHEDULE", "Approved schedule", `${analytics.upcoming.length} upcoming`, RiCalendarCheckLine],
+            ["ANALYTICS", "Integrity overview", `${analytics.clusters.length} clusters`, RiBarChartBoxLine],
+          ] as const).map(([value, label, note, Icon]) => (
+            <button key={value} onClick={() => setWorkspace(value)} className={cn("flex items-center gap-3 rounded-xl border p-3 text-left transition", workspace === value ? "border-teal-500/30 bg-teal-500/10 text-teal-700 dark:text-teal-300" : "border-transparent hover:border-border hover:bg-muted/30")}>
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-card shadow-sm"><Icon /></span>
+              <span><span className="block text-[11px] font-black">{label}</span><span className="mt-0.5 block text-[9px] text-muted-foreground">{note}</span></span>
+            </button>
+          ))}
+        </div>
       </header>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -356,7 +412,7 @@ export default function AdminExamsPage() {
         <MetricCard label="Integrity events" value={totalViolations} note="Recorded violations" icon={<RiAlertLine />} accent="rose" />
       </div>
 
-      <section className="rounded-3xl border border-border bg-card/90 shadow-sm">
+      {workspace === "APPROVALS" && <section className="rounded-3xl border border-border bg-card/90 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border px-5 py-5 sm:px-6">
           <div>
             <div className="flex items-center gap-2">
@@ -365,10 +421,14 @@ export default function AdminExamsPage() {
             </div>
             <p className="mt-1 text-[11px] text-muted-foreground">Open an exam to inspect questions and correct answers before deciding.</p>
           </div>
-          <label className="flex h-10 w-full items-center gap-2 rounded-xl border border-border bg-muted/20 px-3 sm:w-72">
-            <RiSearchLine className="text-muted-foreground" />
-            <input value={search} onChange={(event) => setSearch(event.target.value)} className="min-w-0 flex-1 bg-transparent text-[12px] outline-none" placeholder="Search exam, cluster, teacher..." />
-          </label>
+          <div className="flex w-full flex-wrap gap-2 lg:w-auto">
+            <label className="flex h-10 min-w-52 flex-1 items-center gap-2 rounded-xl border border-border bg-muted/20 px-3 lg:w-64">
+              <RiSearchLine className="text-muted-foreground" />
+              <input value={search} onChange={(event) => setSearch(event.target.value)} className="min-w-0 flex-1 bg-transparent text-[12px] outline-none" placeholder="Search approvals..." />
+            </label>
+            <select value={modeFilter} onChange={(event) => setModeFilter(event.target.value as ModeFilter)} className="h-10 rounded-xl border border-border bg-muted/20 px-3 text-[10px] font-bold outline-none"><option value="ALL">All modes</option><option value="REGULAR">Regular</option><option value="PRO">Pro Mode</option></select>
+            <select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value as TypeFilter)} className="h-10 rounded-xl border border-border bg-muted/20 px-3 text-[10px] font-bold outline-none"><option value="ALL">All formats</option><option value="MCQ">MCQ</option><option value="CQ">CQ</option><option value="MIXED">Mixed</option></select>
+          </div>
         </div>
         <div className="p-4 sm:p-5">
           {loading ? (
@@ -381,11 +441,11 @@ export default function AdminExamsPage() {
                   <article key={exam.id} className="group rounded-2xl border border-border bg-background p-5 transition hover:border-teal-500/30 hover:shadow-lg hover:shadow-teal-500/5">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2"><ExamStatusBadge value={exam.status} /><span className="text-[10px] font-extrabold text-muted-foreground">{exam.type}</span></div>
+                        <div className="flex flex-wrap items-center gap-2"><ModeBadge mode={exam.examMode} /><span className="text-[10px] font-extrabold text-muted-foreground">{exam.type}</span></div>
                         <h3 className="mt-3 truncate text-[15px] font-black">{exam.title}</h3>
                         <p className="mt-1 text-[11px] text-muted-foreground">{exam.cluster?.name ?? "No cluster"} · by {exam.teacher.user.name}</p>
                       </div>
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600"><RiTimeLine /></div>
+                      <div className="rounded-xl bg-amber-500/10 px-3 py-2 text-right text-amber-700 dark:text-amber-300"><p className="text-[9px] font-extrabold uppercase tracking-wider">Priority</p><p className="mt-0.5 text-[10px] font-black">{timeToStart(exam.startTime)}</p></div>
                     </div>
                     <div className="mt-4 grid grid-cols-3 gap-2">
                       {[
@@ -397,9 +457,10 @@ export default function AdminExamsPage() {
                       ))}
                     </div>
                     <p className="mt-4 flex items-center gap-2 text-[10px] text-muted-foreground"><RiCalendarCheckLine className="text-teal-600" /> Starts {formatExamDate(exam.startTime)}</p>
-                    <button onClick={() => setSelectedExam(exam)} className="mt-4 flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-teal-600 text-[12px] font-bold text-white transition hover:bg-teal-700">
-                      Review questions & answers <RiArrowRightLine />
-                    </button>
+                    <div className="mt-4 grid grid-cols-[1fr_auto] gap-2">
+                      <button onClick={() => setSelectedExam(exam)} className="flex h-10 items-center justify-center gap-2 rounded-xl bg-teal-600 px-3 text-[11px] font-bold text-white transition hover:bg-teal-700">Review & decide <RiArrowRightLine /></button>
+                      <button onClick={() => setRejectingExam(exam)} title="Return to teacher with a reason" className="flex h-10 items-center justify-center gap-2 rounded-xl border border-rose-500/25 px-3 text-[10px] font-bold text-rose-600 transition hover:bg-rose-500/10"><RiCloseLine /> Return</button>
+                    </div>
                   </article>
                 );
               })}
@@ -408,9 +469,9 @@ export default function AdminExamsPage() {
             <EmptyState title={search ? "No matching approvals" : "Approval queue is clear"} description={search ? "Try a different exam, teacher, or cluster name." : "New teacher submissions will appear here for review."} />
           )}
         </div>
-      </section>
+      </section>}
 
-      <section>
+      {workspace === "SCHEDULE" && <section>
         <div className="mb-4 flex items-center gap-2"><RiCalendarCheckLine className="text-teal-600" /><h2 className="text-[15px] font-black">Upcoming approved exams</h2></div>
         {loading ? <div className="grid gap-4 md:grid-cols-3"><LoadingCard /><LoadingCard /><LoadingCard /></div> : analytics.upcoming.length ? (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -423,9 +484,9 @@ export default function AdminExamsPage() {
             ))}
           </div>
         ) : <EmptyState title="No upcoming exams" description="Approved future exams will appear here." />}
-      </section>
+      </section>}
 
-      <section>
+      {workspace === "ANALYTICS" && <section>
         <div className="mb-4 flex items-center gap-2"><RiBarChartBoxLine className="text-teal-600" /><h2 className="text-[15px] font-black">Cluster integrity overview</h2></div>
         {loading ? <div className="grid gap-4 md:grid-cols-3"><LoadingCard /><LoadingCard /><LoadingCard /></div> : analytics.clusters.length ? (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -441,7 +502,7 @@ export default function AdminExamsPage() {
             ))}
           </div>
         ) : <EmptyState title="No cluster analytics yet" description="Analytics appear after students begin taking exams." />}
-      </section>
+      </section>}
 
       {selectedExam && (
         <ReviewPanel

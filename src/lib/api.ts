@@ -129,6 +129,7 @@ export const studentApi = {
 export const examApi = {
   teacherList: () => apiFetch<any[]>("/api/exams/teacher"),
   teacherDetail: (id: string) => apiFetch<any>(`/api/exams/teacher/${id}`),
+  proctorSocketTicket: (id: string) => apiFetch<{ socketUrl: string; expiresInSeconds: number; }>(`/api/exams/teacher/${id}/proctor-socket-ticket`, { method: "POST" }),
   create: (body: any) => apiFetch<any>("/api/exams/teacher", { method: "POST", body: JSON.stringify(body) }),
   update: (id: string, body: any) => apiFetch<any>(`/api/exams/teacher/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   setQuestions: (id: string, questions: any[]) => apiFetch<any>(`/api/exams/teacher/${id}/questions`, { method: "PUT", body: JSON.stringify({ questions }) }),
@@ -141,9 +142,13 @@ export const examApi = {
   approve: (id: string) => apiFetch<any>(`/api/exams/admin/${id}/approve`, { method: "POST" }),
   reject: (id: string, reason: string) => apiFetch<any>(`/api/exams/admin/${id}/reject`, { method: "POST", body: JSON.stringify({ reason }) }),
   studentList: () => apiFetch<any[]>("/api/exams/student"),
-  start: (id: string) => apiFetch<any>(`/api/exams/student/${id}/start`, { method: "POST" }),
+  studentAccess: (id: string) => apiFetch<any>(`/api/exams/student/${id}/access`),
+  proctorPreflight: (id: string, body: any) => apiFetch<any>(`/api/exams/student/${id}/proctor-preflight`, { method: "POST", body: JSON.stringify(body) }),
+  start: (id: string, preflightToken?: string) => apiFetch<any>(`/api/exams/student/${id}/start`, { method: "POST", body: JSON.stringify({ preflightToken }) }),
   submit: (id: string, answers: any[], autoSubmit = false) => apiFetch<any>(`/api/exams/student/${id}/submit`, { method: "POST", body: JSON.stringify({ answers, autoSubmit }) }),
   violation: (id: string, body: any) => apiFetch<any>(`/api/exams/student/${id}/violations`, { method: "POST", body: JSON.stringify(body) }),
+  reviewProctorEvent: (id: string, eventId: string, body: { decision: "DISMISSED" | "CONFIRMED_CONCERN" | "NEEDS_FOLLOW_UP"; note?: string; }) => apiFetch<any>(`/api/exams/teacher/${id}/proctor-events/${eventId}/review`, { method: "PATCH", body: JSON.stringify(body) }),
+  clearProctorFeed: (id: string, attemptId: string) => apiFetch<any>(`/api/exams/teacher/${id}/proctor-feed/clear`, { method: "POST", body: JSON.stringify({ attemptId }) }),
   result: (id: string) => apiFetch<any>(`/api/exams/student/${id}/result`),
 };
 

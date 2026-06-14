@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import {
   RiSparklingFill, RiBook2Line, RiDownloadLine, RiBookmarkLine, RiBookmarkFill,
   RiFilePdfLine, RiVideoLine, RiFileTextLine, RiFileLine, RiUser3Line,
@@ -37,15 +38,12 @@ function FilePreview({ fileUrl, fileType }: { fileUrl: string; fileType: string;
   const isImg = fileType.startsWith("image/") || /\.(png|jpe?g|webp|gif)$/i.test(fileUrl);
   const isVid = fileType.startsWith("video/");
   if (isPdf) return (
-    <div className="relative w-full h-48 bg-gradient-to-br from-red-50 to-red-100/60 dark:from-red-950/30 dark:to-red-900/20 flex flex-col items-center justify-center gap-2 overflow-hidden">
-      <div className="absolute inset-0 flex flex-col justify-center px-8 gap-2 opacity-10 pointer-events-none">
-        {Array.from({ length: 8 }).map((_, i) => <div key={i} className="h-px bg-red-600 rounded" style={{ width: `${55 + i * 5}%` }} />)}
-      </div>
-      <RiFilePdfLine className="text-5xl text-red-500/80 drop-shadow-sm relative z-10" />
-      <span className="text-[10px] font-bold tracking-widest uppercase text-red-500/60 relative z-10">PDF Document</span>
+    <div className="relative h-48 w-full overflow-hidden bg-zinc-100 dark:bg-zinc-900">
+      <iframe src={`${viewUrl(fileUrl)}#page=1&toolbar=0&navpanes=0&scrollbar=0`} title="PDF first-page preview" tabIndex={-1} className="pointer-events-none h-[150%] w-full origin-top scale-[.68] border-0 bg-white" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-zinc-950/90 to-transparent px-3 pb-2 pt-8 text-white"><span className="text-[9px] font-black uppercase tracking-wider">First page preview</span><RiFilePdfLine className="text-lg text-rose-400" /></div>
     </div>
   );
-  if (isImg) return <img src={fileUrl} alt="" className="w-full h-48 object-cover" />;
+  if (isImg) return <Image src={fileUrl} alt="" width={640} height={360} unoptimized className="h-48 w-full object-cover" />;
   if (isVid) return (
     <div className="w-full h-48 bg-gradient-to-br from-violet-50 to-violet-100/60 dark:from-violet-950/30 dark:to-violet-900/20 flex flex-col items-center justify-center gap-2">
       <RiVideoLine className="text-5xl text-violet-400/80" />
@@ -369,7 +367,6 @@ export default function TeacherMyResourcesPage() {
   const [categories, setCategories] = useState<{ id: string; name: string ;}[]>([]);
   const [clusters, setClusters] = useState<Cluster[]>([]);
   const [deleting, setDeleting] = useState<string | null>(null);
-  const [downloading, setDownloading] = useState<string | null>(null);
   // Edit modal state
   const [editResource, setEditResource] = useState<Resource | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
@@ -467,7 +464,7 @@ export default function TeacherMyResourcesPage() {
         />
       )}
       {/* Header */}
-      <div className="flex items-end justify-between">
+      <div className="flex flex-wrap items-end justify-between gap-4 rounded-3xl border border-teal-500/20 bg-gradient-to-br from-teal-500/10 via-card to-violet-500/[.06] p-6 shadow-sm">
         <div>
           <div className="flex items-center gap-1.5 mb-1">
             <RiSparklingFill className="text-teal-500 dark:text-teal-400 text-sm animate-pulse" />
@@ -480,6 +477,13 @@ export default function TeacherMyResourcesPage() {
           <RiUploadCloud2Line /> Upload New
         </Link>
       </div>
+
+      {!loading && <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <LibraryMetric label="Total resources" value={meta.total} note="Across your complete library" tone="teal" />
+        <LibraryMetric label="Public" value={resources.filter((resource) => resource.visibility === "PUBLIC").length} note="Visible across Nexora on this page" tone="sky" />
+        <LibraryMetric label="Cluster shared" value={resources.filter((resource) => resource.visibility === "CLUSTER").length} note="Shared with your classes" tone="amber" />
+        <LibraryMetric label="Private" value={resources.filter((resource) => resource.visibility === "PRIVATE").length} note="Only visible to you" tone="violet" />
+      </div>}
 
       {/* Filter Bar */}
       <FilterBar filters={filters} onChange={f => { setFilters(f); setPage(1); }} categories={categories} allTags={allTags} allAuthors={allAuthors} />
@@ -628,9 +632,9 @@ export default function TeacherMyResourcesPage() {
                       className="p-1.5 rounded-lg text-muted-foreground/40 hover:text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-950/20 transition-colors" title="Edit">
                       <RiEditLine className="text-[15px]" />
                     </button>
-                    <button onClick={() => handleDownload(r)} disabled={downloading === r.id} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-600 text-white text-[11px] font-bold hover:bg-teal-700 transition-colors disabled:opacity-50" title="Download">
-                      <RiDownloadLine className={cn("text-[12px]", downloading === r.id && "animate-bounce")} />
-                      {downloading === r.id ? "…" : "Download"}
+                    <a href={viewUrl(r.fileUrl)} target="_blank" rel="noreferrer" className="p-1.5 rounded-lg text-muted-foreground/40 hover:text-sky-600 hover:bg-sky-50 dark:hover:bg-sky-950/20 transition-colors" title="Read document"><RiExternalLinkLine className="text-[15px]" /></a>
+                    <button onClick={() => handleDownload(r)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-600 text-white text-[11px] font-bold hover:bg-teal-700 transition-colors" title="Download">
+                      <RiDownloadLine className="text-[12px]" />Download
                     </button>
                     <button onClick={() => handleDelete(r.id)} disabled={deleting === r.id} className="p-1.5 rounded-lg text-muted-foreground/40 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors disabled:opacity-50" title="Delete">
                       <RiDeleteBinLine className="text-[15px]" />
@@ -695,4 +699,9 @@ export default function TeacherMyResourcesPage() {
       )}
     </div>
   );
+}
+
+function LibraryMetric({ label, value, note, tone }: { label: string; value: number; note: string; tone: "teal" | "sky" | "amber" | "violet" }) {
+  const tones = { teal: "text-teal-600 bg-teal-500/10", sky: "text-sky-600 bg-sky-500/10", amber: "text-amber-600 bg-amber-500/10", violet: "text-violet-600 bg-violet-500/10" };
+  return <div className="rounded-2xl border border-border bg-card p-4 shadow-sm"><p className="text-[9px] font-black uppercase tracking-wider text-muted-foreground">{label}</p><p className={cn("mt-2 inline-flex rounded-xl px-2.5 py-1 text-xl font-black", tones[tone])}>{value}</p><p className="mt-2 text-[9px] leading-4 text-muted-foreground">{note}</p></div>;
 }

@@ -34,6 +34,7 @@ type StudentExam = {
   title: string;
   description?: string | null;
   type: "MCQ" | "CQ" | "MIXED";
+  examMode?: "REGULAR" | "PRO";
   startTime: string;
   endTime: string;
   durationMinutes?: number | null;
@@ -130,7 +131,7 @@ function ExamCard({
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <ExamStatusBadge value={phase} />
-            <span className="text-[10px] font-extrabold text-muted-foreground">{exam.type}</span>
+            <span className="text-[10px] font-extrabold text-muted-foreground">{exam.type} · {exam.examMode ?? "REGULAR"} Mode</span>
           </div>
           <h3 className="mt-3 truncate text-[15px] font-black">{exam.title}</h3>
           <p className="mt-1 text-[11px] text-muted-foreground">{exam.cluster.name}</p>

@@ -50,6 +50,15 @@ export const examFormSchema = z.object({
   description: z.string().trim().max(2000),
   clusterId: z.string().min(1, "Select a cluster"),
   type: z.enum(["MCQ", "CQ", "MIXED"]),
+  examMode: z.enum(["REGULAR", "PRO"]),
+  proctorPolicy: z.object({
+    cameraRequired: z.boolean(),
+    snapshotEnabled: z.boolean(),
+    sensitivity: z.enum(["RELAXED", "STANDARD", "STRICT"]),
+    studentWarnings: z.boolean(),
+    roughPaperAllowed: z.boolean(),
+    evidenceRetentionDays: z.union([z.literal(7), z.literal(30), z.literal(90)]),
+  }).strict().optional(),
   startTime: z.string().min(1),
   endTime: z.string().min(1),
   durationMinutes: z.coerce.number().int().min(1).max(1440),
@@ -59,6 +68,8 @@ export const examFormSchema = z.object({
   const end = new Date(value.endTime);
   if (Number.isNaN(start.getTime()) || start.getTime() - Date.now() < 24 * 60 * 60 * 1000) ctx.addIssue({ code: "custom", message: "Start time must be at least 24 hours away", path: ["startTime"] });
   if (Number.isNaN(end.getTime()) || end <= start) ctx.addIssue({ code: "custom", message: "End time must be after start time", path: ["endTime"] });
+  if (value.examMode === "PRO" && !value.proctorPolicy) ctx.addIssue({ code: "custom", message: "Choose Pro Mode integrity settings", path: ["proctorPolicy"] });
+  if (value.examMode === "REGULAR" && value.proctorPolicy) ctx.addIssue({ code: "custom", message: "Regular Mode cannot contain Pro settings", path: ["proctorPolicy"] });
 });
 
 export const normalizeExamFormInput = (value: z.input<typeof examFormSchema>) => ({

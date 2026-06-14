@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   RiAddLine, RiArrowLeftLine, RiCheckLine, RiCloseLine, RiFileList3Line,
-  RiInformationLine, RiLoader4Line, RiQuestionLine, RiShieldCheckLine,
+  RiCameraLine, RiInformationLine, RiLoader4Line, RiQuestionLine, RiShieldCheckLine,
   RiSparklingFill, RiTimeLine,
 } from "react-icons/ri";
 import { toast } from "sonner";
@@ -27,6 +27,7 @@ type FormState = {
   description: string;
   clusterId: string;
   type: "MCQ" | "CQ" | "MIXED";
+  examMode: "REGULAR" | "PRO";
   startTime: string;
   endTime: string;
   durationMinutes: number;
@@ -75,11 +76,20 @@ export default function CreateExamPage() {
     description: "",
     clusterId: "",
     type: "MCQ",
+    examMode: "REGULAR",
     startTime: "",
     endTime: "",
     durationMinutes: 60,
   });
   const [questions, setQuestions] = useState<Question[]>([emptyQuestion()]);
+  const [proctorPolicy, setProctorPolicy] = useState({
+    cameraRequired: true,
+    snapshotEnabled: true,
+    sensitivity: "STANDARD" as "RELAXED" | "STANDARD" | "STRICT",
+    studentWarnings: true,
+    roughPaperAllowed: true,
+    evidenceRetentionDays: 30 as 7 | 30 | 90,
+  });
 
   useEffect(() => {
     fetch("/api/cluster", { credentials: "include" })
@@ -141,7 +151,11 @@ export default function CreateExamPage() {
   };
 
   const submit = async () => {
-    const parsed = examFormSchema.safeParse(normalizeExamFormInput({ ...form, questions }));
+    const parsed = examFormSchema.safeParse(normalizeExamFormInput({
+      ...form,
+      proctorPolicy: form.examMode === "PRO" ? proctorPolicy : undefined,
+      questions,
+    }));
     if (!parsed.success) {
       const issue = parsed.error.issues[0];
       const questionIndex = typeof issue?.path[1] === "number" && issue.path[0] === "questions"
@@ -208,6 +222,36 @@ export default function CreateExamPage() {
               <label className="space-y-2"><span className="text-[11px] font-bold">Ends at</span><input type="datetime-local" className={inputClass} value={form.endTime} onChange={(event) => setForm({ ...form, endTime: event.target.value })} /></label>
               <label className="space-y-2"><span className="text-[11px] font-bold">Duration (minutes)</span><input type="number" min={1} max={1440} className={inputClass} value={form.durationMinutes} onChange={(event) => setForm({ ...form, durationMinutes: Number(event.target.value) })} /></label>
             </div>
+          </Section>
+
+          <Section icon={<RiCameraLine />} title="ExamShield mode" description="Regular Mode uses the current browser integrity checks. Pro Mode adds consent, camera preflight, and local face-presence monitoring.">
+            <div className="grid gap-3 md:grid-cols-2">
+              {(["REGULAR", "PRO"] as const).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => setForm({ ...form, examMode: mode })}
+                  className={cn("rounded-2xl border p-4 text-left transition", form.examMode === mode ? "border-teal-500/50 bg-teal-500/10 shadow-sm" : "border-border bg-muted/15 hover:bg-muted/30")}
+                >
+                  <div className="flex items-center justify-between gap-3"><p className="text-[12px] font-black">{mode === "REGULAR" ? "Regular Mode" : "Pro Mode"}</p>{form.examMode === mode && <RiCheckLine className="text-teal-600" />}</div>
+                  <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">{mode === "REGULAR" ? "No camera permission. Keeps fullscreen, tab, copy, paste, and page-exit monitoring." : "Requires informed consent and camera preflight. Camera frames stay on the student's device."}</p>
+                </button>
+              ))}
+            </div>
+            {form.examMode === "PRO" && (
+              <div className="mt-4 rounded-2xl border border-teal-500/20 bg-teal-500/5 p-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <label className="space-y-2"><span className="text-[11px] font-bold">Sensitivity</span><select className={inputClass} value={proctorPolicy.sensitivity} onChange={(event) => setProctorPolicy({ ...proctorPolicy, sensitivity: event.target.value as typeof proctorPolicy.sensitivity })}><option value="RELAXED">Relaxed</option><option value="STANDARD">Standard</option><option value="STRICT">Strict</option></select></label>
+                  <label className="space-y-2"><span className="text-[11px] font-bold">Evidence retention</span><select className={inputClass} value={proctorPolicy.evidenceRetentionDays} onChange={(event) => setProctorPolicy({ ...proctorPolicy, evidenceRetentionDays: Number(event.target.value) as 7 | 30 | 90 })}><option value={7}>7 days</option><option value={30}>30 days</option><option value={90}>90 days</option></select></label>
+                </div>
+                <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                  <PolicyToggle label="Student warnings" checked={proctorPolicy.studentWarnings} onChange={(checked) => setProctorPolicy({ ...proctorPolicy, studentWarnings: checked })} />
+                  <PolicyToggle label="Snapshot evidence" checked={proctorPolicy.snapshotEnabled} onChange={(checked) => setProctorPolicy({ ...proctorPolicy, snapshotEnabled: checked })} />
+                  <PolicyToggle label="Rough paper allowed" checked={proctorPolicy.roughPaperAllowed} onChange={(checked) => setProctorPolicy({ ...proctorPolicy, roughPaperAllowed: checked })} />
+                </div>
+                <p className="mt-4 text-[10px] leading-relaxed text-muted-foreground">Pro Mode signals require teacher review and never automatically label a student as cheating. When enabled, sustained suspicious camera signals capture a compressed snapshot and store it as authenticated evidence for proctor review.</p>
+              </div>
+            )}
           </Section>
 
           <Section icon={<RiQuestionLine />} title="Question builder" description="Move between questions without losing context. Correct MCQ answers stay private.">
@@ -277,4 +321,8 @@ export default function CreateExamPage() {
       </div>
     </div>
   );
+}
+
+function PolicyToggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (checked: boolean) => void }) {
+  return <label className="flex cursor-pointer items-center justify-between rounded-xl border border-border bg-card px-3 py-3 text-[10px] font-bold"><span>{label}</span><input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} className="h-4 w-4 accent-teal-600" /></label>;
 }

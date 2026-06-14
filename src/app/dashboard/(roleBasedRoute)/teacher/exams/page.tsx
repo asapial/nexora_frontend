@@ -24,6 +24,13 @@ const workspaces = [
     accent: "from-rose-500/15 to-orange-500/5 text-rose-600",
   },
   {
+    title: "Snapshot wall",
+    description: "Observe recent evidence snapshots across active students with suspicion-focused filters.",
+    href: "/dashboard/teacher/exams/monitoring",
+    icon: <RiTeamLine />,
+    accent: "from-sky-500/15 to-teal-500/5 text-sky-600",
+  },
+  {
     title: "Exam history",
     description: "Review completed exams, participation, performance, violations, and export reports.",
     href: "/dashboard/teacher/exams/history",
@@ -66,7 +73,7 @@ export default function TeacherExamsPage() {
         <MetricCard label="Student assignments" value={stats.students} note="Across all exams" icon={<RiTeamLine />} />
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {workspaces.map((item) => (
           <Link key={item.title} href={item.href} className="group rounded-2xl border border-border bg-card/90 p-5 shadow-sm transition hover:-translate-y-1 hover:border-teal-500/30 hover:shadow-xl">
             <div className={`mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br text-xl ${item.accent}`}>{item.icon}</div>
