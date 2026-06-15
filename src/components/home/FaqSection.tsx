@@ -51,7 +51,7 @@ function getCategoryStyle(cat: string) {
 }
 
 // ─── Default data ──────────────────────────────────────────
-const DEFAULT_DATA: FaqSectionData = {
+export const DEFAULT_DATA: FaqSectionData = {
   eyebrow: "FAQ",
   headline: "Got questions?",
   subtext:
@@ -60,7 +60,7 @@ const DEFAULT_DATA: FaqSectionData = {
   contactLink: "#contact",
 };
 
-const DEFAULT_ITEMS: FaqItem[] = [
+export const DEFAULT_ITEMS: FaqItem[] = [
   {
     id: "f1",
     question: "How do I create my first cluster?",

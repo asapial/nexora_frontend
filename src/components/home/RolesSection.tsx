@@ -24,6 +24,14 @@ export interface RoleCard {
   ctaLink: string;
 }
 
+export interface RolesSectionData {
+  eyebrow: string;
+  headline: string;
+  highlightedText: string;
+  subtext: string;
+  roles: Array<Partial<RoleCard> & { id: string; badge: string; title: string; description: string; features: string[]; ctaText: string; ctaLink: string }>;
+}
+
 // ─── Gradient presets (index matches card index) ──────────
 const ROLE_GRADIENTS: string[] = [
   "linear-gradient(135deg, #0f766e 0%, #0d9488 40%, #0891b2 100%)", // teal → sky
@@ -142,10 +150,14 @@ function RoleCardItem({ role, idx }: { role: RoleCard; idx: number; }) {
 
 // ─── Section ───────────────────────────────────────────────
 export default function RolesSection({
-  roles = DEFAULT_ROLES,
+  data,
 }: {
-  roles?: RoleCard[];
+  data: RolesSectionData;
 }) {
+  const roles = data.roles.map((role, index) => ({
+    ...DEFAULT_ROLES[index % DEFAULT_ROLES.length],
+    ...role,
+  })) as RoleCard[];
   return (
     <section className="relative py-24 lg:py-32 bg-zinc-50 dark:bg-zinc-950 overflow-hidden">
 
@@ -158,11 +170,11 @@ export default function RolesSection({
         <div className="text-center mb-14">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-semibold border bg-teal-50 dark:bg-teal-950/40 text-teal-700 dark:text-teal-400 border-teal-200/60 dark:border-teal-800/60 mb-5">
             <RiSparklingFill className="animate-pulse" />
-            Choose your path
+            {data.eyebrow}
           </div>
 
           <h2 className="text-[clamp(2rem,4vw,3rem)] font-bold tracking-tight leading-[1.1] text-zinc-900 dark:text-zinc-50 mb-4">
-            One platform,{" "}
+            {data.headline}{" "}
             <span
               style={{
                 background:
@@ -172,12 +184,12 @@ export default function RolesSection({
                 backgroundClip: "text",
               }}
             >
-              two powerful roles
+              {data.highlightedText}
             </span>
           </h2>
 
           <p className="text-zinc-500 dark:text-zinc-400 text-[clamp(1rem,1.8vw,1.15rem)] max-w-lg mx-auto leading-relaxed">
-            Whether you lead or learn, Nexora adapts fully to how you work.
+            {data.subtext}
           </p>
         </div>
 

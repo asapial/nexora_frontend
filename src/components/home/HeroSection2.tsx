@@ -33,6 +33,29 @@ interface FeaturedTeacher {
   };
 }
 
+export interface HeroSectionData {
+  badge: string;
+  headlineStart: string;
+  primaryWords: string[];
+  joiner: string;
+  secondaryWords: string[];
+  headlineEnd: string;
+  subtext: string;
+  buttons: Array<{ text: string; link: string; variant: string }>;
+  trustItems: string[];
+  floatingCards: Array<{ label: string; value: string }>;
+  profileLabels: {
+    neuralMatch: string;
+    researchGraph: string;
+    recentPublications: string;
+    publications: string[];
+    fallbackDesignation: string;
+    fallbackName: string;
+    fallbackImage: string;
+  };
+  stats: Array<{ label: string; value: string }>;
+}
+
 // ─── Types ────────────────────────────────────────────────
 interface Particle {
   x: number;
@@ -313,7 +336,7 @@ const FLOATING_CARDS: FloatingCard[] = [
 ];
 
 // ─── HERO SECTION (main export) ───────────────────────────
-export default function HeroSection2() {
+export default function HeroSection2({ data }: { data: HeroSectionData; }) {
   const [loaded, setLoaded] = useState(false);
   const [teachers, setTeachers] = useState<FeaturedTeacher[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -347,6 +370,17 @@ export default function HeroSection2() {
   }, [teachers.length]);
 
   const currentTeacher = teachers.length > 0 ? teachers[currentIndex] : null;
+  const floatingCards = FLOATING_CARDS.map((card, index) => ({
+    ...card,
+    ...(data.floatingCards[index] ?? {}),
+  }));
+  const stats = STATS.map((stat, index) => ({
+    ...stat,
+    ...(data.stats[index] ?? {}),
+  }));
+  const primaryButton = data.buttons[0];
+  const secondaryButton = data.buttons[1];
+  const profile = data.profileLabels;
 
   return (
     <div>
@@ -472,7 +506,7 @@ export default function HeroSection2() {
 
         {/* ── Floating cards ── */}
         <div className="hide-mobile">
-          {FLOATING_CARDS.map((card) => (
+          {floatingCards.map((card) => (
             <FloatingCard key={card.id} card={card} />
           ))}
         </div>
@@ -486,7 +520,7 @@ export default function HeroSection2() {
             <div className={cn("mb-7", loaded && "hero-reveal hero-reveal-1")}>
               <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium border teal-ring bg-white/70 dark:bg-zinc-900/70 backdrop-blur-sm text-teal-700 dark:text-teal-300 border-teal-200/60 dark:border-teal-800/60">
                 <RiSparklingFill className="text-teal-500 dark:text-teal-400 animate-glow-pulse text-base" />
-                <span>Introducing Nexora — Knowledge meets Mentorship</span>
+                <span>{data.badge}</span>
 
               </div>
             </div>
@@ -499,21 +533,21 @@ export default function HeroSection2() {
               )}
             >
               <span className="block text-zinc-900 dark:text-zinc-50">
-                The Platform Where
+                {data.headlineStart}
               </span>
               <span className="block mt-1">
                 <KineticWord
-                  words={["Researchers", "Teachers", "Mentors", "Educators"]}
+                  words={data.primaryWords}
                   className="text-gradient-teal"
                 />
-                <span className="text-zinc-900 dark:text-zinc-50"> &amp; </span>
+                <span className="text-zinc-900 dark:text-zinc-50"> {data.joiner} </span>
                 <KineticWord
-                  words={["Students", "Learners", "Scholars", "Members"]}
+                  words={data.secondaryWords}
                   className="text-gradient-teal"
                 />
               </span>
               <span className="block text-zinc-900 dark:text-zinc-50 mt-1">
-                Grow Together
+                {data.headlineEnd}
               </span>
             </h1>
 
@@ -524,8 +558,7 @@ export default function HeroSection2() {
                 loaded && "hero-reveal hero-reveal-3"
               )}
             >
-              Create clusters, schedule sessions, assign tasks, share resources, and
-              track every members progress — all in one beautifully unified workspace.
+              {data.subtext}
             </p>
 
             {/* CTA Buttons */}
@@ -535,7 +568,8 @@ export default function HeroSection2() {
                 loaded && "hero-reveal hero-reveal-4"
               )}
             >
-              <Button
+              <Link href={primaryButton?.link ?? "/auth/signup"}>
+                <Button
                 size="lg"
                 className={cn(
                   "h-12 px-7 rounded-xl font-semibold text-base gap-2",
@@ -544,11 +578,12 @@ export default function HeroSection2() {
                   "transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
                 )}
               >
-                Start for Free
+                {primaryButton?.text ?? "Start for Free"}
                 <RiArrowRightLine className="text-lg transition-transform duration-200 group-hover:translate-x-0.5" />
-              </Button>
+                </Button>
+              </Link>
 
-              <Link href="/watch-demo">
+              <Link href={secondaryButton?.link ?? "/watch-demo"}>
                 <Button
                   variant="outline"
                   size="lg"
@@ -562,7 +597,7 @@ export default function HeroSection2() {
                   )}
                 >
                   <RiPlayCircleLine className="text-lg text-teal-600 dark:text-teal-400" />
-                  Watch Demo
+                  {secondaryButton?.text ?? "Watch Demo"}
                 </Button>
               </Link>
             </div>
@@ -574,7 +609,7 @@ export default function HeroSection2() {
                 loaded && "hero-reveal hero-reveal-5"
               )}
             >
-              {["No credit card required", "Free forever plan", "GDPR compliant"].map(
+              {data.trustItems.map(
                 (item, i) => (
                   <span key={item} className="flex items-center gap-2">
                     {i > 0 && (
@@ -604,7 +639,7 @@ export default function HeroSection2() {
                 <div className="relative w-full h-full rounded-[26px] overflow-hidden bg-zinc-200 dark:bg-zinc-800 shadow-inner">
                   <Image
                     key={currentTeacher?.id || "default"}
-                    src={currentTeacher?.image || "/images/senior_professor.png"}
+                    src={currentTeacher?.image || profile.fallbackImage}
                     alt={currentTeacher?.name || "Senior Professor"}
                     fill
                     className="object-cover transition-transform duration-700 group-hover:scale-105"
@@ -622,7 +657,7 @@ export default function HeroSection2() {
                     <RiBrainLine className="text-xl text-teal-600 dark:text-teal-400" />
                   </div>
                   <div className="pr-2">
-                    <div className="text-[10px] font-bold text-teal-600 dark:text-teal-400 uppercase tracking-wider mb-1">Neural Match</div>
+                    <div className="text-[10px] font-bold text-teal-600 dark:text-teal-400 uppercase tracking-wider mb-1">{profile.neuralMatch}</div>
                     <div className="flex gap-1.5">
                       <div className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-glow-pulse" />
                       <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-glow-pulse" style={{ animationDelay: '0.4s' }} />
@@ -637,7 +672,7 @@ export default function HeroSection2() {
                 <div className="flex flex-col gap-2 p-3.5 rounded-2xl bg-white/70 dark:bg-zinc-900/70 backdrop-blur-xl border border-white/50 dark:border-zinc-700/50 shadow-xl shadow-blue-900/5 dark:shadow-blue-900/20 group-hover:-translate-y-1 transition-transform duration-300">
                   <div className="text-[11px] font-semibold text-zinc-600 dark:text-zinc-300 flex items-center gap-1.5">
                     <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                    Research Graph
+                    {profile.researchGraph}
                   </div>
                   <svg width="80" height="30" viewBox="0 0 80 30" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M0 25C10 25 15 15 25 15C35 15 40 5 50 5C60 5 65 20 80 10" stroke="url(#paint0_linear)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -656,15 +691,15 @@ export default function HeroSection2() {
                 <div className="flex flex-col gap-2.5 p-3.5 rounded-2xl bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border border-white/40 dark:border-zinc-700/50 shadow-xl shadow-teal-900/10 dark:shadow-teal-900/30 w-[170px] group-hover:-translate-y-1 transition-transform duration-300">
                   <div className="flex items-center gap-2 mb-0.5">
                     <RiArticleLine className="text-teal-500 text-lg" />
-                    <div className="text-xs font-semibold text-zinc-700 dark:text-zinc-200">Recent Pubs</div>
+                    <div className="text-xs font-semibold text-zinc-700 dark:text-zinc-200">{profile.recentPublications}</div>
                   </div>
                   <div className="flex items-center gap-2.5 p-1.5 rounded-xl bg-zinc-50/80 dark:bg-zinc-800/80 border border-zinc-100 dark:border-zinc-700/50 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors cursor-pointer">
                     <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-cyan-400 to-blue-500 flex-shrink-0 shadow-sm" />
-                    <div className="text-[10px] font-medium text-zinc-600 dark:text-zinc-300 leading-tight">Quantum Computing</div>
+                    <div className="text-[10px] font-medium text-zinc-600 dark:text-zinc-300 leading-tight">{profile.publications[0]}</div>
                   </div>
                   <div className="flex items-center gap-2.5 p-1.5 rounded-xl bg-zinc-50/80 dark:bg-zinc-800/80 border border-zinc-100 dark:border-zinc-700/50 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors cursor-pointer">
                     <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-teal-400 to-emerald-500 flex-shrink-0 shadow-sm" />
-                    <div className="text-[10px] font-medium text-zinc-600 dark:text-zinc-300 leading-tight">Neural Research</div>
+                    <div className="text-[10px] font-medium text-zinc-600 dark:text-zinc-300 leading-tight">{profile.publications[1]}</div>
                   </div>
                 </div>
               </div>
@@ -677,10 +712,10 @@ export default function HeroSection2() {
                   </div>
                   <div className="flex flex-col max-w-[150px]">
                     <span className="text-[10px] text-zinc-500 dark:text-zinc-400 font-semibold uppercase tracking-wider mb-0.5 line-clamp-1">
-                      {currentTeacher?.teacherProfile?.designation || "Impact Factor"}
+                      {currentTeacher?.teacherProfile?.designation || profile.fallbackDesignation}
                     </span>
                     <span className="text-sm font-bold text-zinc-800 dark:text-zinc-100 flex items-center line-clamp-1">
-                      {currentTeacher?.name || "14.2"}
+                      {currentTeacher?.name || profile.fallbackName}
                       {!currentTeacher && (
                         <span className="text-cyan-500 text-[10px] ml-1.5 flex items-center bg-cyan-50 dark:bg-cyan-900/30 px-1 py-0.5 rounded font-medium">↑ 2.1</span>
                       )}
@@ -702,13 +737,13 @@ export default function HeroSection2() {
         >
           <div className="w-full mx-auto px-4 sm:px-6 lg:px-12 xl:px-24 2xl:px-32 py-6">
             <div className="grid grid-cols-2 lg:grid-cols-4 divide-x divide-zinc-200/80 dark:divide-zinc-800/80 max-w-[1600px] mx-auto">
-              {STATS.map((stat, i) => (
+              {stats.map((stat, i) => (
                 <div
                   key={stat.label}
                   className={cn(
                     "flex flex-col items-center justify-center gap-1 px-4 py-2",
                     i === 0 && "pl-0 sm:pl-4",
-                    i === STATS.length - 1 && "pr-0 sm:pr-4"
+                    i === stats.length - 1 && "pr-0 sm:pr-4"
                   )}
                 >
                   <div className="flex items-center gap-1.5">

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   RiMailLine,
@@ -10,7 +9,6 @@ import {
   RiEyeOffLine,
   RiGoogleLine,
   RiArrowRightLine,
-  RiSparklingFill,
   RiShieldCheckLine,
   RiShieldKeyholeLine,
   RiGroupLine,
@@ -26,6 +24,33 @@ import { toast } from "sonner";
 interface LoginForm {
   email: string;
   password: string;
+}
+
+export interface SignInPageData {
+  brandName: string;
+  heroTitle: string;
+  heroText: string;
+  floatingCards: Array<{ label: string; value: string }>;
+  stats: Array<{ value: string; label: string }>;
+  cardTitle: string;
+  cardPrompt: string;
+  cardPromptLinkText: string;
+  cardPromptLink: string;
+  googleText: string;
+  dividerText: string;
+  emailLabel: string;
+  emailPlaceholder: string;
+  passwordLabel: string;
+  passwordPlaceholder: string;
+  forgotPasswordText: string;
+  forgotPasswordLink: string;
+  submitText: string;
+  legalText: string;
+  twoFactorTitle: string;
+  twoFactorText: string;
+  twoFactorLabel: string;
+  twoFactorSubmitText: string;
+  twoFactorBackText: string;
 }
 
 // ─── Floating info card ────────────────────────────────────
@@ -127,8 +152,7 @@ function AuthInput({
 }
 
 // ─── Page ─────────────────────────────────────────────────
-export default function SignInPage() {
-  const router = useRouter();
+export default function SignInPage({ data }: { data: SignInPageData; }) {
   const [form, setForm] = useState<LoginForm>({ email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Partial<LoginForm>>({});
@@ -142,6 +166,7 @@ export default function SignInPage() {
   const [totpCode, setTotpCode] = useState("");
   const [totpLoading, setTotpLoading] = useState(false);
   const [totpError, setTotpError] = useState("");
+  const heroTitle = data.heroTitle.split("\n");
 
   const set = (k: keyof LoginForm) => (v: string) => {
     setForm((p) => ({ ...p, [k]: v }));
@@ -207,11 +232,11 @@ export default function SignInPage() {
       toast.success("User login successfully", { position: "top-right" });
       window.location.href = "/dashboard";
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       let msg = "Something went wrong. Please try again.";
       if (err instanceof TypeError && err.message === "Failed to fetch") {
         msg = "Unable to connect to the server. Please check your internet connection.";
-      } else if (err.message) {
+      } else if (err instanceof Error && err.message) {
         msg = err.message;
       }
       setServerError(msg);
@@ -246,8 +271,8 @@ export default function SignInPage() {
       }
       toast.success("Login successful!", { position: "top-right" });
       window.location.href = "/dashboard";
-    } catch (err: any) {
-      const msg = err?.message || "Failed to verify code. Please try again.";
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to verify code. Please try again.";
       setTotpError(msg);
       toast.error(msg, { position: "top-right" });
     } finally {
@@ -289,36 +314,36 @@ export default function SignInPage() {
           {/* Logo */}
           <div className="flex items-center gap-3 mb-14">
             <div className="w-10 h-10 rounded-xl bg-teal-500/15 border border-teal-500/25 flex items-center justify-center text-teal-400 text-lg">⬡</div>
-            <span className="text-[22px] font-extrabold tracking-tight text-white">Nexora</span>
+            <span className="text-[22px] font-extrabold tracking-tight text-white">{data.brandName}</span>
           </div>
 
           {/* Hero copy */}
           <h1 className="text-[clamp(2rem,3.5vw,2.8rem)] font-extrabold leading-[1.1] tracking-tight text-white mb-5">
-            Welcome<br />
+            {heroTitle[0]}<br />
             <span style={{ background: "linear-gradient(135deg,#2dd4bf,#5eead4,#99f6e4)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
-              back.
+              {heroTitle.slice(1).join(" ")}
             </span>
           </h1>
           <p className="text-[14.5px] text-zinc-400 leading-relaxed mb-12">
-            Sign in to manage your clusters, sessions, and members — all in one place.
+            {data.heroText}
           </p>
 
           {/* Floating cards */}
           <div className="relative h-[160px]">
-            <FloatingCard icon={<RiShieldCheckLine />} label="Task Reviewed" value="Excellent ✦"
+            <FloatingCard icon={<RiShieldCheckLine />} label={data.floatingCards[0]?.label} value={data.floatingCards[0]?.value}
               className="top-0 left-0 animate-[float_5s_ease-in-out_infinite]" />
-            <FloatingCard icon={<RiGroupLine />} label="Cluster Health" value="94 — Healthy"
+            <FloatingCard icon={<RiGroupLine />} label={data.floatingCards[1]?.label} value={data.floatingCards[1]?.value}
               className="top-12 right-0 animate-[float_7s_ease-in-out_infinite_.8s]" />
-            <FloatingCard icon={<RiBookOpenLine />} label="New Resource" value="Attention 2017"
+            <FloatingCard icon={<RiBookOpenLine />} label={data.floatingCards[2]?.label} value={data.floatingCards[2]?.value}
               className="bottom-0 left-6 animate-[float_6s_ease-in-out_infinite_1.4s]" />
           </div>
 
           {/* Stats */}
           <div className="mt-12 flex gap-6">
-            {[["12k+", "Clusters"], ["340k+", "Sessions"], ["28k+", "Certificates"]].map(([v, l]) => (
-              <div key={l}>
-                <p className="text-[19px] font-extrabold text-teal-400">{v}</p>
-                <p className="text-[11.5px] text-zinc-500">{l}</p>
+            {data.stats.map((stat) => (
+              <div key={stat.label}>
+                <p className="text-[19px] font-extrabold text-teal-400">{stat.value}</p>
+                <p className="text-[11.5px] text-zinc-500">{stat.label}</p>
               </div>
             ))}
           </div>
@@ -332,18 +357,18 @@ export default function SignInPage() {
           {/* Mobile logo */}
           <div className="flex items-center gap-2.5 mb-8 lg:hidden">
             <div className="w-9 h-9 rounded-xl bg-teal-500/10 dark:bg-teal-500/15 border border-teal-500/20 dark:border-teal-500/25 flex items-center justify-center text-teal-600 dark:text-teal-400 text-base">⬡</div>
-            <span className="text-[18px] font-extrabold tracking-tight text-zinc-900 dark:text-white">Nexora</span>
+            <span className="text-[18px] font-extrabold tracking-tight text-zinc-900 dark:text-white">{data.brandName}</span>
           </div>
 
           {/* Header */}
           <div className="mb-8">
             <h2 className="text-[26px] font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50 mb-1.5">
-              Sign in to your account
+              {data.cardTitle}
             </h2>
             <p className="text-sm text-zinc-500 dark:text-zinc-400">
-              Don't have an account?{" "}
-              <Link href="/auth/signup" className="font-semibold text-teal-600 dark:text-teal-400 hover:underline">
-                Create one free
+              {data.cardPrompt}{" "}
+              <Link href={data.cardPromptLink} className="font-semibold text-teal-600 dark:text-teal-400 hover:underline">
+                {data.cardPromptLinkText}
               </Link>
             </p>
           </div>
@@ -368,14 +393,14 @@ export default function SignInPage() {
             ) : (
               <RiGoogleLine className="text-base" />
             )}
-            Continue with Google
+            {data.googleText}
           </button>
 
           {/* Divider */}
           <div className="flex items-center gap-3 my-6">
             <div className="flex-1 h-px bg-zinc-200 dark:bg-zinc-800" />
             <span className="text-[11.5px] font-semibold text-zinc-400 dark:text-zinc-600 tracking-wider uppercase">
-              or
+              {data.dividerText}
             </span>
             <div className="flex-1 h-px bg-zinc-200 dark:bg-zinc-800" />
           </div>
@@ -385,20 +410,20 @@ export default function SignInPage() {
           {/* Form */}
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <AuthInput
-              label="Email address"
+              label={data.emailLabel}
               id="email"
               type="email"
-              placeholder="you@university.edu"
+              placeholder={data.emailPlaceholder}
               value={form.email}
               onChange={set("email")}
               icon={<RiMailLine />}
               error={errors.email}
             />
             <AuthInput
-              label="Password"
+              label={data.passwordLabel}
               id="password"
               type={showPassword ? "text" : "password"}
-              placeholder="••••••••"
+              placeholder={data.passwordPlaceholder}
               value={form.password}
               onChange={set("password")}
               icon={<RiLockPasswordLine />}
@@ -425,8 +450,8 @@ export default function SignInPage() {
 
             {/* Forgot password */}
             <div className="flex justify-end -mt-1">
-              <Link href="/auth/forgetPassword" className="text-[12.5px] font-semibold text-teal-600 dark:text-teal-400 hover:underline">
-                Forgot password?
+              <Link href={data.forgotPasswordLink} className="text-[12.5px] font-semibold text-teal-600 dark:text-teal-400 hover:underline">
+                {data.forgotPasswordText}
               </Link>
             </div>
 
@@ -446,17 +471,14 @@ export default function SignInPage() {
               {isLoading ? (
                 <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
               ) : (
-                <>Sign in <RiArrowRightLine className="text-base" /></>
+                <>{data.submitText} <RiArrowRightLine className="text-base" /></>
               )}
             </button>
           </form>
 
           {/* Footer note */}
           <p className="mt-7 text-[11.5px] text-zinc-400 dark:text-zinc-600 text-center leading-relaxed">
-            By signing in you agree to our{" "}
-            <Link href="/termsOfService" className="underline hover:text-zinc-600 dark:hover:text-zinc-400">Terms</Link>{" "}
-            and{" "}
-            <Link href="/privacyPolicy" className="underline hover:text-zinc-600 dark:hover:text-zinc-400">Privacy Policy</Link>.
+            {data.legalText}
           </p>
         </div>
       </div>
@@ -471,10 +493,10 @@ export default function SignInPage() {
                 <RiShieldKeyholeLine />
               </div>
               <h3 className="text-[20px] font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50 mb-1">
-                Two-Factor Authentication
+                {data.twoFactorTitle}
               </h3>
               <p className="text-[13px] text-zinc-500 dark:text-zinc-400">
-                Enter the 6-digit code from your authenticator app
+                {data.twoFactorText}
               </p>
             </div>
 
@@ -482,7 +504,7 @@ export default function SignInPage() {
             <form onSubmit={handleTOTPSubmit} className="flex flex-col gap-4">
               <div className="flex flex-col gap-1.5">
                 <label htmlFor="totp-code" className="text-[13px] font-semibold text-zinc-700 dark:text-zinc-300">
-                  Authenticator Code
+                  {data.twoFactorLabel}
                 </label>
                 <input
                   id="totp-code"
@@ -536,7 +558,7 @@ export default function SignInPage() {
                 {totpLoading ? (
                   <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
                 ) : (
-                  <>Verify & Sign in <RiArrowRightLine className="text-base" /></>
+                  <>{data.twoFactorSubmitText} <RiArrowRightLine className="text-base" /></>
                 )}
               </button>
 
@@ -545,7 +567,7 @@ export default function SignInPage() {
                 onClick={() => { setShowTOTP(false); setTotpCode(""); setTotpError(""); }}
                 className="text-[13px] font-semibold text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors text-center"
               >
-                ← Back to sign in
+                &larr; {data.twoFactorBackText}
               </button>
             </form>
           </div>

@@ -34,6 +34,15 @@ interface Step {
   nodeBorder: string;            // outer node ring on hover
 }
 
+export interface HowItWorksSectionData {
+  eyebrow: string;
+  headline: string;
+  highlightedText: string;
+  subtext: string;
+  endText: string;
+  steps: Array<Partial<Step> & { id: string; number: string; tag: string; title: string; description: string }>;
+}
+
 // ─── Step data ────────────────────────────────────────────
 const STEPS: Step[] = [
   {
@@ -367,7 +376,7 @@ function MobileSpine() {
 }
 
 // ─── Section header ───────────────────────────────────────
-function SectionHeader() {
+function SectionHeader({ data }: { data: HowItWorksSectionData; }) {
   const { ref, visible } = useReveal(0.1);
 
   return (
@@ -382,12 +391,12 @@ function SectionHeader() {
       {/* Eyebrow */}
       <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-semibold border bg-teal-50 dark:bg-teal-950/40 text-teal-700 dark:text-teal-400 border-teal-200/60 dark:border-teal-800/60">
         <RiSparklingFill className="text-teal-500 dark:text-teal-400 text-base animate-pulse" />
-        How It Works
+        {data.eyebrow}
       </div>
 
       {/* Headline */}
       <h2 className="text-[clamp(2rem,4vw,3rem)] font-bold tracking-tight leading-[1.1] text-zinc-900 dark:text-zinc-50">
-        Up and running{" "}
+        {data.headline}{" "}
         <span
           style={{
             background:
@@ -397,21 +406,20 @@ function SectionHeader() {
             backgroundClip: "text",
           }}
         >
-          in minutes
+          {data.highlightedText}
         </span>
       </h2>
 
       {/* Sub */}
       <p className="text-[clamp(1rem,1.8vw,1.15rem)] text-zinc-500 dark:text-zinc-400 max-w-xl mx-auto leading-relaxed">
-        From signup to your first scored session — Nexora guides every step of
-        the journey for teachers and members alike.
+        {data.subtext}
       </p>
     </div>
   );
 }
 
 // ─── End marker ───────────────────────────────────────────
-function EndMarker() {
+function EndMarker({ text }: { text: string; }) {
   const { ref, visible } = useReveal(0.2);
   return (
     <div
@@ -427,14 +435,18 @@ function EndMarker() {
         ✦
       </div>
       <p className="text-xs font-semibold text-zinc-400 dark:text-zinc-600 tracking-widest uppercase mt-1">
-        You're all set
+        {text}
       </p>
     </div>
   );
 }
 
 // ─── HOW IT WORKS SECTION (main export) ──────────────────
-export default function HowItWorksSection() {
+export default function HowItWorksSection({ data }: { data: HowItWorksSectionData; }) {
+  const steps = data.steps.map((step, index) => ({
+    ...STEPS[index % STEPS.length],
+    ...step,
+  })) as Step[];
   return (
     <SectionContainer className="relative py-24 lg:py-32 bg-white dark:bg-zinc-950 overflow-hidden">
 
@@ -448,7 +460,7 @@ export default function HowItWorksSection() {
       {/* ── Container ── */}
       <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
 
-        <SectionHeader />
+        <SectionHeader data={data} />
 
         {/* ── Desktop: spine runs behind the nodes ── */}
         <div className="relative">
@@ -464,13 +476,13 @@ export default function HowItWorksSection() {
 
           {/* Steps */}
           <div className="flex flex-col gap-10 lg:gap-8">
-            {STEPS.map((step, i) => (
+            {steps.map((step, i) => (
               <StepRow key={step.id} step={step} index={i} />
             ))}
           </div>
         </div>
 
-        <EndMarker />
+        <EndMarker text={data.endText} />
       </div>
     </SectionContainer>
   );

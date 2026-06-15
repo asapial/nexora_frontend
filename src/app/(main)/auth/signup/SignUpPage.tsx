@@ -20,6 +20,36 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { registerFormSchema } from "@/lib/formSchemas";
 
+export interface SignUpPageData {
+  brandName: string;
+  badge: string;
+  heroTitle: string;
+  heroText: string;
+  perks: string[];
+  socialProofTitle: string;
+  socialProofText: string;
+  cardTitle: string;
+  cardPrompt: string;
+  cardPromptLinkText: string;
+  cardPromptLink: string;
+  googleText: string;
+  dividerText: string;
+  photoLabel: string;
+  photoOptionalText: string;
+  photoUploadText: string;
+  photoHelpText: string;
+  nameLabel: string;
+  namePlaceholder: string;
+  emailLabel: string;
+  emailPlaceholder: string;
+  passwordLabel: string;
+  passwordPlaceholder: string;
+  confirmPasswordLabel: string;
+  confirmPasswordPlaceholder: string;
+  submitText: string;
+  legalText: string;
+}
+
 // ─── imgbb upload config ──────────────────────────────────
 const IMGBB_API_KEY = process.env.NEXT_PUBLIC_IMGBB_API_KEY ?? "";
 
@@ -144,11 +174,13 @@ function PhotoUpload({
   preview,
   onSelect,
   error,
+  labels,
 }: {
   file: File | null;
   preview: string | null;
   onSelect: (f: File) => void;
   error?: string;
+  labels: Pick<SignUpPageData, "photoLabel" | "photoOptionalText" | "photoUploadText" | "photoHelpText">;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -163,7 +195,7 @@ function PhotoUpload({
   return (
     <div className="flex flex-col gap-1.5">
       <label className="text-[13px] font-semibold text-zinc-700 dark:text-zinc-300">
-        Profile photo <span className="font-normal text-zinc-400">(optional)</span>
+        {labels.photoLabel} <span className="font-normal text-zinc-400">{labels.photoOptionalText}</span>
       </label>
       <div
         onClick={() => inputRef.current?.click()}
@@ -193,13 +225,13 @@ function PhotoUpload({
           <div className="flex items-center gap-1.5 mb-0.5">
             <RiUploadCloud2Line className="text-teal-600 dark:text-teal-400 text-base flex-shrink-0" />
             <span className="text-sm font-semibold text-zinc-700 dark:text-zinc-300 line-clamp-1 ">
-              {file ? file.name : "Click or drag to upload"}
+              {file ? file.name : labels.photoUploadText}
             </span>
           </div>
           <p className="text-[11.5px] text-zinc-400 dark:text-zinc-600 truncate">
             {file
               ? `${(file.size / 1024).toFixed(0)} KB · Will upload to cloud`
-              : "JPG, PNG, WebP · Max 5 MB"}
+              : labels.photoHelpText}
           </p>
         </div>
         {file && (
@@ -227,7 +259,7 @@ const PERKS = [
 ];
 
 // ─── Page ─────────────────────────────────────────────────
-export default function SignUpPage() {
+export default function SignUpPage({ data }: { data: SignUpPageData; }) {
   const [form, setForm] = useState<RegisterForm>({ name: "", email: "", password: "", confirmPassword: "" });
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
@@ -236,6 +268,8 @@ export default function SignUpPage() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const heroTitle = data.heroTitle.split("\n");
+  const perks = PERKS.map((perk, index) => ({ ...perk, text: data.perks[index] ?? perk.text }));
 
   const set = (k: keyof RegisterForm) => (v: string) => {
     setForm((p) => ({ ...p, [k]: v }));
@@ -352,27 +386,27 @@ export default function SignUpPage() {
           {/* Logo */}
           <div className="flex items-center gap-3 mb-12">
             <div className="w-10 h-10 rounded-xl bg-teal-500/15 border border-teal-500/25 flex items-center justify-center text-teal-400 text-lg">⬡</div>
-            <span className="text-[22px] font-extrabold tracking-tight text-white">Nexora</span>
+            <span className="text-[22px] font-extrabold tracking-tight text-white">{data.brandName}</span>
           </div>
 
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-teal-500/10 border border-teal-500/20 text-teal-400 text-[11.5px] font-bold tracking-wider uppercase mb-6">
             <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse" />
-            Join as a Student
+            {data.badge}
           </div>
 
           <h1 className="text-[clamp(1.9rem,3vw,2.6rem)] font-extrabold leading-[1.1] tracking-tight text-white mb-5">
-            Start your<br />learning{" "}
+            {heroTitle[0]}<br />
             <span style={{ background: "linear-gradient(135deg,#2dd4bf,#5eead4)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
-              journey.
+              {heroTitle.slice(1).join(" ")}
             </span>
           </h1>
           <p className="text-[14px] text-zinc-400 leading-relaxed mb-10">
-            Create your free account and join thousands of learners already growing on Nexora.
+            {data.heroText}
           </p>
 
           {/* Perk list */}
           <div className="flex flex-col gap-3.5">
-            {PERKS.map((perk, i) => (
+            {perks.map((perk, i) => (
               <div key={i} className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg bg-teal-500/12 border border-teal-500/20 flex items-center justify-center text-teal-400 text-base flex-shrink-0">
                   {perk.icon}
@@ -395,7 +429,7 @@ export default function SignUpPage() {
               </div>
             </div>
             <p className="text-[12.5px] text-zinc-400 leading-snug">
-              <span className="text-white font-semibold">8,000+ students</span> already enrolled in clusters this month.
+              <span className="text-white font-semibold">{data.socialProofTitle}</span> {data.socialProofText}
             </p>
           </div>
         </div>
@@ -408,17 +442,17 @@ export default function SignUpPage() {
           {/* Mobile logo */}
           <div className="flex items-center gap-2.5 mb-7 lg:hidden">
             <div className="w-9 h-9 rounded-xl bg-teal-500/10 dark:bg-teal-500/15 border border-teal-500/20 flex items-center justify-center text-teal-600 dark:text-teal-400 text-base">⬡</div>
-            <span className="text-[18px] font-extrabold tracking-tight text-zinc-900 dark:text-white">Nexora</span>
+            <span className="text-[18px] font-extrabold tracking-tight text-zinc-900 dark:text-white">{data.brandName}</span>
           </div>
 
           {/* Header */}
           <div className="mb-7">
             <h2 className="text-[24px] font-extrabold tracking-tight text-zinc-900 dark:text-zinc-50 mb-1.5">
-              Create your account
+              {data.cardTitle}
             </h2>
             <p className="text-sm text-zinc-500 dark:text-zinc-400">
-              Already have an account?{" "}
-              <Link href="/auth/signin" className="font-semibold text-teal-600 dark:text-teal-400 hover:underline">Sign in</Link>
+              {data.cardPrompt}{" "}
+              <Link href={data.cardPromptLink} className="font-semibold text-teal-600 dark:text-teal-400 hover:underline">{data.cardPromptLinkText}</Link>
             </p>
           </div>
 
@@ -439,28 +473,28 @@ export default function SignUpPage() {
             {isGoogleLoading ? (
               <span className="w-4 h-4 border-2 border-zinc-300 border-t-teal-500 rounded-full animate-spin" />
             ) : <RiGoogleLine className="text-base" />}
-            Continue with Google
+            {data.googleText}
           </button>
 
           {/* Divider */}
           <div className="flex items-center gap-3 my-5">
             <div className="flex-1 h-px bg-zinc-200 dark:bg-zinc-800" />
-            <span className="text-[11.5px] font-semibold text-zinc-400 dark:text-zinc-600 tracking-wider uppercase">or</span>
+            <span className="text-[11.5px] font-semibold text-zinc-400 dark:text-zinc-600 tracking-wider uppercase">{data.dividerText}</span>
             <div className="flex-1 h-px bg-zinc-200 dark:bg-zinc-800" />
           </div>
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            <PhotoUpload file={photoFile} preview={photoPreview} onSelect={handlePhoto} error={errors.photo} />
+            <PhotoUpload file={photoFile} preview={photoPreview} onSelect={handlePhoto} error={errors.photo} labels={data} />
 
-            <AuthInput label="Full name" id="name" placeholder="Dr. Jane Smith" value={form.name} onChange={set("name")} icon={<RiUserLine />} error={errors.name} />
-            <AuthInput label="Email address" id="email" type="email" placeholder="you@university.edu" value={form.email} onChange={set("email")} icon={<RiMailLine />} error={errors.email} />
+            <AuthInput label={data.nameLabel} id="name" placeholder={data.namePlaceholder} value={form.name} onChange={set("name")} icon={<RiUserLine />} error={errors.name} />
+            <AuthInput label={data.emailLabel} id="email" type="email" placeholder={data.emailPlaceholder} value={form.email} onChange={set("email")} icon={<RiMailLine />} error={errors.email} />
 
             <div>
               <AuthInput
-                label="Password" id="password"
+                label={data.passwordLabel} id="password"
                 type={showPass ? "text" : "password"}
-                placeholder="Create a strong password"
+                placeholder={data.passwordPlaceholder}
                 value={form.password} onChange={set("password")}
                 icon={<RiLockPasswordLine />}
                 error={errors.password}
@@ -474,9 +508,9 @@ export default function SignUpPage() {
             </div>
 
             <AuthInput
-              label="Confirm password" id="confirmPassword"
+              label={data.confirmPasswordLabel} id="confirmPassword"
               type={showConfirm ? "text" : "password"}
-              placeholder="Re-enter your password"
+              placeholder={data.confirmPasswordPlaceholder}
               value={form.confirmPassword} onChange={set("confirmPassword")}
               icon={<RiLockPasswordLine />}
               error={errors.confirmPassword}
@@ -502,16 +536,13 @@ export default function SignUpPage() {
               {isLoading ? (
                 <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
               ) : (
-                <>Create account <RiArrowRightLine className="text-base" /></>
+                <>{data.submitText} <RiArrowRightLine className="text-base" /></>
               )}
             </button>
           </form>
 
           <p className="mt-6 text-[11.5px] text-zinc-400 dark:text-zinc-600 text-center leading-relaxed">
-            By creating an account you agree to our{" "}
-            <Link href="/termsOfService" className="underline hover:text-zinc-600 dark:hover:text-zinc-400">Terms</Link>{" "}
-            and{" "}
-            <Link href="/privacyPolicy" className="underline hover:text-zinc-600 dark:hover:text-zinc-400">Privacy Policy</Link>.
+            {data.legalText}
           </p>
         </div>
       </div>
