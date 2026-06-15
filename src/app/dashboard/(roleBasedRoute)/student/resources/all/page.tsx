@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import {
   RiSparklingFill, RiBook2Line, RiDownloadLine, RiBookmarkLine, RiBookmarkFill,
-  RiFilePdfLine, RiVideoLine, RiFileTextLine, RiFileLine, RiUser3Line,
+  RiVideoLine, RiFileTextLine, RiFileLine, RiUser3Line,
   RiEyeLine, RiCalendarLine, RiPriceTag3Line, RiDeleteBinLine,
   RiUploadCloud2Line, RiFilterLine, RiCloseLine, RiSearchLine,
   RiGlobalLine, RiGroupLine, RiEditLine, RiCheckLine, RiAddLine, RiExternalLinkLine,
@@ -12,6 +12,7 @@ import {
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { toast } from "sonner";
+import PdfFirstPageThumbnail from "@/components/resource/PdfFirstPageThumbnail";
 
 type Visibility = "PUBLIC" | "CLUSTER" | "PRIVATE";
 interface Cluster { id: string; name: string; _count?: { members: number; }; }
@@ -34,6 +35,7 @@ interface Meta {
     total: number;
     public: number;
     cluster: number;
+    ownUploads: number;
     privateUploads: number;
   };
 }
@@ -44,16 +46,11 @@ const VIS_CLS: Record<Visibility, string> = {
   PRIVATE: "bg-zinc-100 dark:bg-zinc-800/60 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700",
 };
 
-function FilePreview({ fileUrl, fileType }: { fileUrl: string; fileType: string; }) {
+function FilePreview({ fileUrl, fileType, title }: { fileUrl: string; fileType: string; title: string; }) {
   const isPdf = fileType.includes("pdf") || fileUrl.endsWith(".pdf");
   const isImg = fileType.startsWith("image/") || /\.(png|jpe?g|webp|gif)$/i.test(fileUrl);
   const isVid = fileType.startsWith("video/");
-  if (isPdf) return (
-    <div className="relative h-48 w-full overflow-hidden bg-zinc-100 dark:bg-zinc-900">
-      <iframe src={`${viewUrl(fileUrl)}#page=1&toolbar=0&navpanes=0&scrollbar=0`} title="PDF first-page preview" tabIndex={-1} className="pointer-events-none h-[150%] w-full origin-top scale-[.68] border-0 bg-white" />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-zinc-950/90 to-transparent px-3 pb-2 pt-8 text-white"><span className="text-[9px] font-black uppercase tracking-wider">First page preview</span><RiFilePdfLine className="text-lg text-rose-400" /></div>
-    </div>
-  );
+  if (isPdf) return <PdfFirstPageThumbnail fileUrl={fileUrl} title={title} />;
   if (isImg) return <Image src={fileUrl} alt="" width={640} height={360} unoptimized className="h-48 w-full object-cover" />;
   if (isVid) return (
     <div className="w-full h-48 bg-gradient-to-br from-violet-50 to-violet-100/60 dark:from-violet-950/30 dark:to-violet-900/20 flex flex-col items-center justify-center gap-2">
@@ -80,10 +77,6 @@ function signedUrl(fileUrl: string, opts: { inline?: boolean; filename?: string;
   if (opts.inline) p.set("inline", "true");
   if (opts.filename) p.set("filename", opts.filename);
   return `/api/resource/cloudinary-sign?${p.toString()}`;
-}
-
-function viewUrl(url: string): string {
-  return signedUrl(url, { inline: true });
 }
 
 function downloadFile(fileUrl: string, filename: string) {
@@ -368,8 +361,8 @@ export default function StudentAllResourcesPage() {
             <RiSparklingFill className="text-teal-500 dark:text-teal-400 text-sm animate-pulse" />
             <span className="text-[10.5px] font-bold tracking-[.12em] uppercase text-muted-foreground">Library</span>
           </div>
-          <h1 className="text-[1.55rem] font-extrabold tracking-tight leading-none text-foreground">Resource Library</h1>
-          <p className="text-[13px] text-muted-foreground mt-1">Browse public resources and cluster-shared content</p>
+          <h1 className="text-[1.55rem] font-extrabold tracking-tight leading-none text-foreground">Student Resource Library</h1>
+          <p className="text-[13px] text-muted-foreground mt-1">Public resources, your cluster materials, and every file you uploaded</p>
         </div>
         <Link href="/dashboard/student/resources/upload" className="flex items-center gap-2 px-4 py-2 rounded-xl bg-teal-600 text-white text-[12.5px] font-bold hover:bg-teal-700 transition-colors shadow-sm shadow-teal-500/20">
           <RiUploadCloud2Line /> Upload Resource
@@ -380,7 +373,7 @@ export default function StudentAllResourcesPage() {
         <LibraryMetric label="Accessible resources" value={meta.sourceSummary?.total ?? meta.total} note="Everything currently available to you" tone="teal" />
         <LibraryMetric label="Public library" value={meta.sourceSummary?.public ?? 0} note="Available to everyone" tone="sky" />
         <LibraryMetric label="Your clusters" value={meta.sourceSummary?.cluster ?? 0} note="Shared through your classes" tone="amber" />
-        <LibraryMetric label="Your private uploads" value={meta.sourceSummary?.privateUploads ?? 0} note="Only you can access these" tone="violet" />
+        <LibraryMetric label="Your uploads" value={meta.sourceSummary?.ownUploads ?? 0} note={`${meta.sourceSummary?.privateUploads ?? 0} private file${(meta.sourceSummary?.privateUploads ?? 0) === 1 ? "" : "s"} included`} tone="violet" />
       </div>}
 
       {/* Filter Bar */}
@@ -429,7 +422,7 @@ export default function StudentAllResourcesPage() {
             <div key={r.id} className="group rounded-2xl border border-border bg-card overflow-hidden hover:shadow-lg hover:shadow-black/[0.06] dark:hover:shadow-black/30 hover:border-border/80 transition-all duration-200 flex flex-col">
               {/* Thumbnail */}
               <div className="relative overflow-hidden">
-                <FilePreview fileUrl={r.fileUrl} fileType={r.fileType} />
+                <FilePreview fileUrl={r.fileUrl} fileType={r.fileType} title={r.title} />
                 <div className="absolute top-3 left-3 flex items-center gap-1.5">
                   <span className={cn("text-[9px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-full border backdrop-blur-sm flex items-center gap-0.5", VIS_CLS[r.visibility])}>
                     {r.visibility === "PUBLIC" && <RiGlobalLine className="text-[8px]" />}

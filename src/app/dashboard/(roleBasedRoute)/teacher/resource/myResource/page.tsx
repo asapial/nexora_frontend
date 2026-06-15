@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import {
   RiSparklingFill, RiBook2Line, RiDownloadLine, RiBookmarkLine, RiBookmarkFill,
-  RiFilePdfLine, RiVideoLine, RiFileTextLine, RiFileLine, RiUser3Line,
+  RiVideoLine, RiFileTextLine, RiFileLine, RiUser3Line,
   RiDeleteBinLine, RiEyeLine, RiCalendarLine, RiPriceTag3Line,
   RiExternalLinkLine, RiUploadCloud2Line, RiFilterLine, RiCloseLine, RiSearchLine,
   RiEditLine, RiCheckLine, RiAddLine,
@@ -12,6 +12,7 @@ import {
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { toast } from "sonner";
+import PdfFirstPageThumbnail from "@/components/resource/PdfFirstPageThumbnail";
 
 type Visibility = "PUBLIC" | "CLUSTER" | "PRIVATE";
 interface Cluster { id: string; name: string; _count?: { members: number; }; }
@@ -25,7 +26,13 @@ interface Resource {
   category: { id: string; name: string; } | null;
   cluster: { id: string; name: string; } | null;
 }
-interface Meta { page: number; limit: number; total: number; totalPages: number; }
+interface Meta {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  sourceSummary?: { total: number; public: number; ownUploads: number; privateUploads: number; };
+}
 
 const VIS_CLS: Record<Visibility, string> = {
   PUBLIC: "bg-teal-100/80 dark:bg-teal-950/50 text-teal-700 dark:text-teal-400 border-teal-200/70 dark:border-teal-800/50",
@@ -33,16 +40,11 @@ const VIS_CLS: Record<Visibility, string> = {
   PRIVATE: "bg-zinc-100 dark:bg-zinc-800/60 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700",
 };
 
-function FilePreview({ fileUrl, fileType }: { fileUrl: string; fileType: string; }) {
+function FilePreview({ fileUrl, fileType, title }: { fileUrl: string; fileType: string; title: string; }) {
   const isPdf = fileType.includes("pdf") || fileUrl.endsWith(".pdf");
   const isImg = fileType.startsWith("image/") || /\.(png|jpe?g|webp|gif)$/i.test(fileUrl);
   const isVid = fileType.startsWith("video/");
-  if (isPdf) return (
-    <div className="relative h-48 w-full overflow-hidden bg-zinc-100 dark:bg-zinc-900">
-      <iframe src={`${viewUrl(fileUrl)}#page=1&toolbar=0&navpanes=0&scrollbar=0`} title="PDF first-page preview" tabIndex={-1} className="pointer-events-none h-[150%] w-full origin-top scale-[.68] border-0 bg-white" />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-zinc-950/90 to-transparent px-3 pb-2 pt-8 text-white"><span className="text-[9px] font-black uppercase tracking-wider">First page preview</span><RiFilePdfLine className="text-lg text-rose-400" /></div>
-    </div>
-  );
+  if (isPdf) return <PdfFirstPageThumbnail fileUrl={fileUrl} title={title} />;
   if (isImg) return <Image src={fileUrl} alt="" width={640} height={360} unoptimized className="h-48 w-full object-cover" />;
   if (isVid) return (
     <div className="w-full h-48 bg-gradient-to-br from-violet-50 to-violet-100/60 dark:from-violet-950/30 dark:to-violet-900/20 flex flex-col items-center justify-center gap-2">
@@ -69,10 +71,6 @@ function signedUrl(fileUrl: string, opts: { inline?: boolean; filename?: string;
   if (opts.inline) p.set("inline", "true");
   if (opts.filename) p.set("filename", opts.filename);
   return `/api/resource/cloudinary-sign?${p.toString()}`;
-}
-
-function viewUrl(url: string): string {
-  return signedUrl(url, { inline: true });
 }
 
 function downloadFile(fileUrl: string, filename: string) {
@@ -367,6 +365,7 @@ export default function TeacherMyResourcesPage() {
   const [categories, setCategories] = useState<{ id: string; name: string ;}[]>([]);
   const [clusters, setClusters] = useState<Cluster[]>([]);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [myUserId, setMyUserId] = useState("");
   // Edit modal state
   const [editResource, setEditResource] = useState<Resource | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
@@ -379,6 +378,7 @@ export default function TeacherMyResourcesPage() {
   useEffect(() => {
     fetch("/api/resource/categories", { credentials: "include" }).then(r => r.json()).then(d => { if (d.success) setCategories(d.data ?? []); });
     fetch("/api/teacher/announcements/clusters", { credentials: "include" }).then(r => r.json()).then(d => { if (d.success) setClusters(d.data ?? []); });
+    fetch("/api/settings/account", { credentials: "include" }).then(r => r.json()).then(d => { if (d.success && d.data?.user?.id) setMyUserId(d.data.user.id); });
   }, []);
 
   const fetchResources = useCallback(() => {
@@ -391,7 +391,7 @@ export default function TeacherMyResourcesPage() {
     if (filters.tag) p.set("tags", filters.tag);
     if (filters.fileType) p.set("fileType", filters.fileType);
     if (filters.bookmarked) p.set("bookmarked", filters.bookmarked);
-    fetch(`/api/resource/my?${p}`, { credentials: "include" })
+    fetch(`/api/resource/teacher-library?${p}`, { credentials: "include" })
       .then(r => r.json()).then(d => { if (d.success) { setResources(d.data ?? []); if (d.meta) setMeta(d.meta); } })
       .finally(() => setLoading(false));
   }, [filters, page, limit]);
@@ -470,8 +470,8 @@ export default function TeacherMyResourcesPage() {
             <RiSparklingFill className="text-teal-500 dark:text-teal-400 text-sm animate-pulse" />
             <span className="text-[10.5px] font-bold tracking-[.12em] uppercase text-muted-foreground">Library</span>
           </div>
-          <h1 className="text-[1.55rem] font-extrabold tracking-tight leading-none text-foreground">My Resources</h1>
-          <p className="text-[13px] text-muted-foreground mt-1">Resources you have uploaded to the platform</p>
+          <h1 className="text-[1.55rem] font-extrabold tracking-tight leading-none text-foreground">Resource Library</h1>
+          <p className="text-[13px] text-muted-foreground mt-1">Explore public resources and manage everything you have uploaded</p>
         </div>
         <Link href="/dashboard/teacher/resource/upload" className="flex items-center gap-2 px-4 py-2 rounded-xl bg-teal-600 text-white text-[12.5px] font-bold hover:bg-teal-700 transition-colors shadow-sm shadow-teal-500/20">
           <RiUploadCloud2Line /> Upload New
@@ -479,10 +479,10 @@ export default function TeacherMyResourcesPage() {
       </div>
 
       {!loading && <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <LibraryMetric label="Total resources" value={meta.total} note="Across your complete library" tone="teal" />
-        <LibraryMetric label="Public" value={resources.filter((resource) => resource.visibility === "PUBLIC").length} note="Visible across Nexora on this page" tone="sky" />
-        <LibraryMetric label="Cluster shared" value={resources.filter((resource) => resource.visibility === "CLUSTER").length} note="Shared with your classes" tone="amber" />
-        <LibraryMetric label="Private" value={resources.filter((resource) => resource.visibility === "PRIVATE").length} note="Only visible to you" tone="violet" />
+        <LibraryMetric label="Accessible resources" value={meta.sourceSummary?.total ?? meta.total} note="All public resources and your uploads" tone="teal" />
+        <LibraryMetric label="Public library" value={meta.sourceSummary?.public ?? 0} note="Available across Nexora" tone="sky" />
+        <LibraryMetric label="Your uploads" value={meta.sourceSummary?.ownUploads ?? 0} note="Public, cluster, and private uploads" tone="amber" />
+        <LibraryMetric label="Your private files" value={meta.sourceSummary?.privateUploads ?? 0} note="Visible only to you" tone="violet" />
       </div>}
 
       {/* Filter Bar */}
@@ -536,7 +536,7 @@ export default function TeacherMyResourcesPage() {
             <div key={r.id} className="group rounded-2xl border border-border bg-card overflow-hidden hover:shadow-lg hover:shadow-black/[0.06] dark:hover:shadow-black/30 hover:border-border/80 transition-all duration-200 flex flex-col">
               {/* Thumbnail */}
               <div className="relative overflow-hidden">
-                <FilePreview fileUrl={r.fileUrl} fileType={r.fileType} />
+                <FilePreview fileUrl={r.fileUrl} fileType={r.fileType} title={r.title} />
                 <div className="absolute top-3 left-3">
                   <span className={cn("text-[9px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-full border backdrop-blur-sm", VIS_CLS[r.visibility])}>
                     {r.visibility}
@@ -628,17 +628,17 @@ export default function TeacherMyResourcesPage() {
                     <button onClick={() => handleBookmark(r.id, r.isBookmarked)} className={cn("p-1.5 rounded-lg transition-colors", r.isBookmarked ? "text-amber-500 hover:text-amber-400" : "text-muted-foreground/40 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/20")} title={r.isBookmarked ? "Remove bookmark" : "Bookmark"}>
                       {r.isBookmarked ? <RiBookmarkFill className="text-[15px]" /> : <RiBookmarkLine className="text-[15px]" />}
                     </button>
-                    <button onClick={() => setEditResource(r)}
+                    {r.uploaderId === myUserId && <button onClick={() => setEditResource(r)}
                       className="p-1.5 rounded-lg text-muted-foreground/40 hover:text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-950/20 transition-colors" title="Edit">
                       <RiEditLine className="text-[15px]" />
-                    </button>
-                    <a href={viewUrl(r.fileUrl)} target="_blank" rel="noreferrer" className="p-1.5 rounded-lg text-muted-foreground/40 hover:text-sky-600 hover:bg-sky-50 dark:hover:bg-sky-950/20 transition-colors" title="Read document"><RiExternalLinkLine className="text-[15px]" /></a>
+                    </button>}
+                    <Link href={`/dashboard/teacher/resource-annotation?resourceId=${r.id}`} className="flex items-center gap-1.5 rounded-lg bg-sky-500/10 px-2.5 py-1.5 text-[10px] font-bold text-sky-600 transition-colors hover:bg-sky-500/20" title="Read and annotate"><RiExternalLinkLine className="text-[13px]" />Read</Link>
                     <button onClick={() => handleDownload(r)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-600 text-white text-[11px] font-bold hover:bg-teal-700 transition-colors" title="Download">
                       <RiDownloadLine className="text-[12px]" />Download
                     </button>
-                    <button onClick={() => handleDelete(r.id)} disabled={deleting === r.id} className="p-1.5 rounded-lg text-muted-foreground/40 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors disabled:opacity-50" title="Delete">
+                    {r.uploaderId === myUserId && <button onClick={() => handleDelete(r.id)} disabled={deleting === r.id} className="p-1.5 rounded-lg text-muted-foreground/40 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors disabled:opacity-50" title="Delete">
                       <RiDeleteBinLine className="text-[15px]" />
-                    </button>
+                    </button>}
                   </div>
                 </div>
               </div>

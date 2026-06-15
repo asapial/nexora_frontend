@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   RiAddLine,
   RiBookOpenLine,
@@ -14,6 +14,8 @@ import {
   RiFileTextLine,
   RiFocus3Line,
   RiInformationLine,
+  RiLayoutLeftLine,
+  RiLayoutRightLine,
   RiLoader4Line,
   RiRefreshLine,
   RiSearchLine,
@@ -66,8 +68,19 @@ const isPdf = (resource: Resource) =>
   resource.fileType.toLowerCase().includes("pdf") || resource.fileUrl.toLowerCase().endsWith(".pdf");
 
 export default function ResourceAnnotationPage() {
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const initialResourceId = searchParams.get("resourceId");
+  const teacherMode = pathname.startsWith("/dashboard/teacher");
+  const libraryHref = teacherMode
+    ? "/dashboard/teacher/resource/myResource"
+    : "/dashboard/student/resources/all";
+  const uploadHref = teacherMode
+    ? "/dashboard/teacher/resource/upload"
+    : "/dashboard/student/resources/upload";
+  const annotationPath = teacherMode
+    ? "/dashboard/teacher/resource-annotation"
+    : "/dashboard/student/resource-annotation";
   const [resources, setResources] = useState<Resource[]>([]);
   const [selected, setSelected] = useState<Resource | null>(null);
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
@@ -86,6 +99,8 @@ export default function ResourceAnnotationPage() {
   const [readerLoading, setReaderLoading] = useState(false);
   const [readerError, setReaderError] = useState(false);
   const [showReaderHelp, setShowReaderHelp] = useState(false);
+  const [documentsOpen, setDocumentsOpen] = useState(true);
+  const [notesOpen, setNotesOpen] = useState(true);
 
   const loadAnnotations = useCallback(async (resource: Resource) => {
     setLoadingAnnotations(true);
@@ -238,14 +253,23 @@ export default function ResourceAnnotationPage() {
             <p className="mt-1 text-[11px] text-muted-foreground">A focused PDF reader with private notes, shared insights, and remembered progress.</p>
           </div>
           <div className="flex gap-2">
-            <Link href="/dashboard/student/resources/all" className="flex h-10 items-center gap-2 rounded-xl border border-border bg-card px-4 text-[10px] font-bold hover:bg-muted"><RiBookOpenLine />Resource library</Link>
-            <Link href="/dashboard/student/resources/upload" className="flex h-10 items-center gap-2 rounded-xl bg-teal-600 px-4 text-[10px] font-bold text-white hover:bg-teal-700"><RiAddLine />Add related document</Link>
+            <Link href={libraryHref} className="flex h-10 items-center gap-2 rounded-xl border border-border bg-card px-4 text-[10px] font-bold hover:bg-muted"><RiBookOpenLine />Resource library</Link>
+            <Link href={uploadHref} className="flex h-10 items-center gap-2 rounded-xl bg-teal-600 px-4 text-[10px] font-bold text-white hover:bg-teal-700"><RiAddLine />Add related document</Link>
           </div>
         </div>
       </header>
 
-      <div className={cn("grid min-h-[760px] flex-1 gap-4", focusMode ? "grid-cols-1" : "xl:grid-cols-[280px_minmax(0,1fr)_320px]")}>
-        {!focusMode && <DocumentLibrary resources={visibleResources} selected={selected} search={search} loading={loadingResources} onSearch={setSearch} onChoose={chooseResource} />}
+      <div className={cn(
+        "grid min-h-[760px] flex-1 gap-4",
+        focusMode || (!documentsOpen && !notesOpen)
+          ? "grid-cols-1"
+          : documentsOpen && notesOpen
+            ? "xl:grid-cols-[280px_minmax(0,1fr)_320px]"
+            : documentsOpen
+              ? "xl:grid-cols-[280px_minmax(0,1fr)]"
+              : "xl:grid-cols-[minmax(0,1fr)_320px]",
+      )}>
+        {!focusMode && documentsOpen && <DocumentLibrary resources={visibleResources} selected={selected} search={search} loading={loadingResources} onSearch={setSearch} onChoose={chooseResource} />}
 
         <main className="flex min-h-0 flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
           {selected ? <ReaderWorkspace
@@ -258,11 +282,15 @@ export default function ResourceAnnotationPage() {
             rotation={rotation}
             focusMode={focusMode}
             showHelp={showReaderHelp}
+            documentsOpen={documentsOpen}
+            notesOpen={notesOpen}
             onGoToPage={goToPage}
             onZoom={setZoom}
             onRotate={() => setRotation((value) => (value + 90) % 360)}
             onToggleFocus={() => setFocusMode((value) => !value)}
             onToggleHelp={() => setShowReaderHelp((value) => !value)}
+            onToggleDocuments={() => setDocumentsOpen((value) => !value)}
+            onToggleNotes={() => setNotesOpen((value) => !value)}
             onLoaded={() => setReaderLoading(false)}
             onError={() => { setReaderLoading(false); setReaderError(true); }}
             onRetry={retryReader}
@@ -270,7 +298,7 @@ export default function ResourceAnnotationPage() {
           /> : <EmptyState />}
         </main>
 
-        {!focusMode && <NotesPanel
+        {!focusMode && notesOpen && <NotesPanel
           activeTab={activeTab}
           annotations={annotations}
           sharedAnnotations={sharedAnnotations}
@@ -283,7 +311,7 @@ export default function ResourceAnnotationPage() {
         />}
       </div>
 
-      {showNote && selected && <NoteModal resource={selected} resources={resources} defaultPage={currentPage} onClose={() => setShowNote(false)} onSaved={async () => { setShowNote(false); await loadAnnotations(selected); }} />}
+      {showNote && selected && <NoteModal resource={selected} resources={resources} annotationPath={annotationPath} defaultPage={currentPage} onClose={() => setShowNote(false)} onSaved={async () => { setShowNote(false); await loadAnnotations(selected); }} />}
     </div>
   );
 }
@@ -313,7 +341,7 @@ function DocumentLibrary({ resources, selected, search, loading, onSearch, onCho
   </aside>;
 }
 
-function ReaderWorkspace({ resource, readerUrl, readerLoading, readerError, currentPage, zoom, rotation, focusMode, showHelp, onGoToPage, onZoom, onRotate, onToggleFocus, onToggleHelp, onLoaded, onError, onRetry, onAddNote }: {
+function ReaderWorkspace({ resource, readerUrl, readerLoading, readerError, currentPage, zoom, rotation, focusMode, showHelp, documentsOpen, notesOpen, onGoToPage, onZoom, onRotate, onToggleFocus, onToggleHelp, onToggleDocuments, onToggleNotes, onLoaded, onError, onRetry, onAddNote }: {
   resource: Resource;
   readerUrl: string;
   readerLoading: boolean;
@@ -323,11 +351,15 @@ function ReaderWorkspace({ resource, readerUrl, readerLoading, readerError, curr
   rotation: number;
   focusMode: boolean;
   showHelp: boolean;
+  documentsOpen: boolean;
+  notesOpen: boolean;
   onGoToPage: (page: number) => void;
   onZoom: React.Dispatch<React.SetStateAction<number>>;
   onRotate: () => void;
   onToggleFocus: () => void;
   onToggleHelp: () => void;
+  onToggleDocuments: () => void;
+  onToggleNotes: () => void;
   onLoaded: () => void;
   onError: () => void;
   onRetry: () => void;
@@ -338,6 +370,8 @@ function ReaderWorkspace({ resource, readerUrl, readerLoading, readerError, curr
     <div className="flex flex-wrap items-center gap-2 border-b border-border p-3">
       <div className="min-w-[180px] flex-1"><h2 className="truncate text-[12px] font-black">{resource.title}</h2><p className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground">{resource.fileType} · {resource.visibility ?? "Accessible"}</p></div>
       {pdf && <span className="rounded-xl border border-teal-500/20 bg-teal-500/10 px-3 py-2 text-[8px] font-black uppercase tracking-wider text-teal-600">Nexora native PDF reader</span>}
+      <ToolbarButton title={documentsOpen ? "Collapse accessible documents" : "Show accessible documents"} active={documentsOpen} onClick={onToggleDocuments}><RiLayoutLeftLine /></ToolbarButton>
+      <ToolbarButton title={notesOpen ? "Collapse notes" : "Show notes"} active={notesOpen} onClick={onToggleNotes}><RiLayoutRightLine /></ToolbarButton>
       <ToolbarButton title="Focus reading mode (F)" active={focusMode} onClick={onToggleFocus}><RiFocus3Line /></ToolbarButton>
       <ToolbarButton title="Reader shortcuts" active={showHelp} onClick={onToggleHelp}><RiInformationLine /></ToolbarButton>
       <a href={signedUrl(resource, false)} className="flex h-9 items-center gap-1.5 rounded-xl border border-border px-3 text-[9px] font-bold hover:bg-muted"><RiDownloadLine />Download</a>
@@ -393,7 +427,7 @@ function NoteCard({ annotation, owned, onDelete, onToggleShare, onGoToPage }: { 
   return <article className="rounded-2xl border border-border bg-muted/[.12] p-3"><div className="flex items-start justify-between gap-2"><span className={cn("rounded-full px-2 py-1 text-[7px] font-black uppercase", annotation.isShared ? "bg-teal-500/10 text-teal-600" : "bg-violet-500/10 text-violet-600")}>{annotation.isShared ? "Shared note" : "Private note"}</span>{annotation.page && <button onClick={() => onGoToPage(annotation.page!)} className="rounded-lg bg-sky-500/10 px-2 py-1 text-[8px] font-bold text-sky-600 hover:bg-sky-500/20">Go to page {annotation.page}</button>}</div>{annotation.highlight && <blockquote className="mt-3 border-l-2 border-amber-400 bg-amber-500/5 px-3 py-2 text-[9px] italic leading-4 text-amber-700 dark:text-amber-300">{annotation.highlight}</blockquote>}{annotation.note && <p className="mt-3 whitespace-pre-wrap text-[10px] leading-5">{annotation.note}</p>}{annotation.user && <p className="mt-3 text-[8px] font-bold text-muted-foreground">Shared by {annotation.user.name}</p>}{owned && <div className="mt-3 flex justify-end gap-1 border-t border-border pt-2"><button onClick={() => onToggleShare(annotation)} className="flex h-7 items-center gap-1 rounded-lg px-2 text-[8px] font-bold text-muted-foreground hover:bg-muted"><RiShareLine />{annotation.isShared ? "Make private" : "Share"}</button><button onClick={() => onDelete(annotation.id)} className="flex h-7 items-center gap-1 rounded-lg px-2 text-[8px] font-bold text-rose-600 hover:bg-rose-500/10"><RiDeleteBinLine />Delete</button></div>}</article>;
 }
 
-function NoteModal({ resource, resources, defaultPage, onClose, onSaved }: { resource: Resource; resources: Resource[]; defaultPage: number; onClose: () => void; onSaved: () => void }) {
+function NoteModal({ resource, resources, annotationPath, defaultPage, onClose, onSaved }: { resource: Resource; resources: Resource[]; annotationPath: string; defaultPage: number; onClose: () => void; onSaved: () => void }) {
   const [highlight, setHighlight] = useState("");
   const [note, setNote] = useState("");
   const [page, setPage] = useState(String(defaultPage));
@@ -402,7 +436,7 @@ function NoteModal({ resource, resources, defaultPage, onClose, onSaved }: { res
   const [saving, setSaving] = useState(false);
   const save = async () => {
     const related = resources.find((item) => item.id === relatedId);
-    const relatedText = related ? `\n\nRelated document: ${related.title}\n/dashboard/student/resource-annotation?resourceId=${related.id}` : "";
+    const relatedText = related ? `\n\nRelated document: ${related.title}\n${annotationPath}?resourceId=${related.id}` : "";
     if (!highlight.trim() && !note.trim() && !related) return;
     setSaving(true);
     try {

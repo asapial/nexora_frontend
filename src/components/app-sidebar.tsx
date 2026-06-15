@@ -116,6 +116,7 @@ const teacherNav: NavDocItem[] = [
     items: [
       { title: "Upload Resource", url: "/dashboard/teacher/resource/upload" },
       { title: "My Resources", url: "/dashboard/teacher/resource/myResource" },
+      { title: "Read & Annotate", url: "/dashboard/teacher/resource-annotation" },
     ],
   },
   {

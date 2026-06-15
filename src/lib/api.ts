@@ -261,9 +261,11 @@ export const leaderboardApi = {
 export const studyPlannerApi = {
   getGoals: () => apiFetch<any[]>(`${S}/study-planner`),
   getStreak: () => apiFetch<any>(`${S}/study-planner/streak`),
+  getSummary: () => apiFetch<any>(`${S}/study-planner/summary`),
   createGoal: (body: any) => apiFetch<any>(`${S}/study-planner`, { method: "POST", body: JSON.stringify(body) }),
   updateGoal: (id: string, body: any) => apiFetch<any>(`${S}/study-planner/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   deleteGoal: (id: string) => apiFetch<any>(`${S}/study-planner/${id}`, { method: "DELETE" }),
+  logFocus: (id: string, minutes: number) => apiFetch<any>(`${S}/study-planner/${id}/focus`, { method: "POST", body: JSON.stringify({ minutes }) }),
 };
 
 export const annotationApi = {
