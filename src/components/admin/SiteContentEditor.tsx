@@ -261,7 +261,18 @@ export default function SiteContentEditor({ section }: { section: SiteContentSec
       const payload = await response.json();
       if (!response.ok || !payload.success) throw new Error(payload.message || "Could not save");
       setBaseline({ content: structuredClone(content), isVisible, order });
-      toast.success(`${section.label} saved`);
+
+      // Purge the Next.js ISR cache so the home / public pages reflect
+      // the new content immediately instead of waiting up to 10 minutes.
+      await fetch("/api/revalidate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tag: "site-content" }),
+      }).catch(() => {
+        // Non-critical — page will still update on next ISR cycle if this fails.
+      });
+
+      toast.success(`${section.label} saved — live in a few seconds`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not save content");
     } finally {

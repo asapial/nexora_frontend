@@ -27,6 +27,8 @@ export async function getSiteContent(): Promise<SiteContentSection[]> {
         revalidate: SITE_CONTENT_REVALIDATE_SECONDS,
         tags: ["site-content"],
       },
+      // Abort after 10 s so a cold/slow backend never hangs the build.
+      signal: AbortSignal.timeout(10_000),
     });
 
     if (!response.ok) throw new Error("Could not load site content");

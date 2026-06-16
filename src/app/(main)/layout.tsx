@@ -2,6 +2,10 @@ import type { FooterData } from "@/components/shared/footer";
 import MainShell, { type NavbarContent } from "@/components/shared/MainShell";
 import { getSiteContent } from "@/lib/site-content.server";
 
+// Next.js statically analyzes segment config exports — must be a literal.
+// Keep in sync with SITE_CONTENT_REVALIDATE_SECONDS (600) in site-content.server.ts
+export const revalidate = 600;
+
 export default async function RootLayout({
   children,
 }: Readonly<{

@@ -8,7 +8,10 @@ import RolesSection, { type RolesSectionData } from "@/components/home/RolesSect
 import TestimonialsSection, { type TestimonialsSectionData } from "@/components/home/TestimonialsSection";
 import { getSiteContent } from "@/lib/site-content.server";
 
-export const revalidate = 600;
+// Safety-net background refresh every 30 s.
+// Primary invalidation is on-demand via /api/revalidate → revalidateTag("site-content")
+// triggered by the admin editor immediately after each save.
+export const revalidate = 30;
 
 export default async function HomePage() {
   const sections = (await getSiteContent()).filter(
