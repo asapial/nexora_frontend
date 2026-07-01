@@ -12,7 +12,7 @@ import {
 import { cn } from "@/lib/utils";
 import { courseApi } from "../../../../../../lib/api";
 import { toast } from "sonner";
-import type {  CoursePriceRequest} from "../../../../../../types/course.type";
+import type { CoursePriceRequest } from "../../../../../../types/course.type";
 import RefreshIcon from "@/components/shared/RefreshIcon";
 
 function AmbientBg() {
@@ -29,15 +29,15 @@ const fmtDate = (d: string) => new Date(d).toLocaleDateString("en-GB", { day: "n
 
 
 const PRICE_CFG = {
-  PENDING:  { label: "Pending",  badge: "text-amber-600 dark:text-amber-400 bg-amber-50/60 dark:bg-amber-950/30 border-amber-200/60 dark:border-amber-800/50", dot: "bg-amber-500 animate-pulse" },
-  APPROVED: { label: "Approved", badge: "text-teal-600 dark:text-teal-400 bg-teal-50/60 dark:bg-teal-950/30 border-teal-200/60 dark:border-teal-800/50",     dot: "bg-teal-500" },
-  REJECTED: { label: "Rejected", badge: "text-red-600 dark:text-red-400 bg-red-50/40 dark:bg-red-950/20 border-red-200/60 dark:border-red-800/50",             dot: "bg-red-500" },
+  PENDING: { label: "Pending", badge: "text-amber-600 dark:text-amber-400 bg-amber-50/60 dark:bg-amber-950/30 border-amber-200/60 dark:border-amber-800/50", dot: "bg-amber-500 animate-pulse" },
+  APPROVED: { label: "Approved", badge: "text-teal-600 dark:text-teal-400 bg-teal-50/60 dark:bg-teal-950/30 border-teal-200/60 dark:border-teal-800/50", dot: "bg-teal-500" },
+  REJECTED: { label: "Rejected", badge: "text-red-600 dark:text-red-400 bg-red-50/40 dark:bg-red-950/20 border-red-200/60 dark:border-red-800/50", dot: "bg-red-500" },
 };
 
 const iCls = "w-full h-10 px-3.5 rounded-xl text-[13px] font-medium bg-muted/40 border border-border text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-teal-400/20 focus:border-teal-400/70 transition-all";
 
 // ─── New Price Request Modal ──────────────────────────────
-function NewPriceRequestModal({ courseId, onClose, onCreated }: { courseId: string; onClose: () => void; onCreated: (r: CoursePriceRequest) => void }) {
+function NewPriceRequestModal({ courseId, onClose, onCreated }: { courseId: string; onClose: () => void; onCreated: (r: CoursePriceRequest) => void; }) {
   const [price, setPrice] = useState("");
   const [note, setNote] = useState("");
   const [error, setError] = useState("");
@@ -116,15 +116,15 @@ export default function PriceRequestsPage() {
   useEffect(() => {
     courseApi.list()
       .then((r) => {
-    const data = r.data as any;
-    const list = Array.isArray(data) ? data : (data?.courses ?? []);
+        const data = r.data as any;
+        const list = Array.isArray(data) ? data : (data?.courses ?? []);
         setCourses(list);
         if (list.length > 0) setCourseId(list[0].id);
       })
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setLoadingCourses(false));
   }, []);
-  
+
   useEffect(() => {
     if (courseId) return;
     fetch("/api/courses", { credentials: "include" })
@@ -134,7 +134,7 @@ export default function PriceRequestsPage() {
         setCourses(list);
         if (list.length > 0) setCourseId(list[0].id);
       })
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setLoadingCourses(false));
   }, []);
 
@@ -201,49 +201,49 @@ export default function PriceRequestsPage() {
         {loading
           ? <div className="flex flex-col gap-3 animate-pulse">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-28 rounded-2xl bg-muted/40" />)}</div>
           : loadingCourses ? null
-          : requests.length === 0
-            ? (
-              <div className="rounded-2xl border border-border bg-card/80 py-16 flex flex-col items-center gap-4 text-center">
-                <div className="w-12 h-12 rounded-2xl bg-muted/40 border border-border flex items-center justify-center text-xl text-muted-foreground/30"><RiPriceTag3Line /></div>
-                <p className="text-[14px] font-bold text-muted-foreground">No price requests yet</p>
-                <p className="text-[13px] text-muted-foreground/60">Submit a request to have admin set the course price.</p>
-              </div>
-            )
-            : (
-              <div className="flex flex-col gap-3">
-                {requests.map((req, i) => {
-                  const cfg = PRICE_CFG[req.status];
-                  return (
-                    <div key={req.id} className={cn("rounded-2xl border bg-card/90 backdrop-blur-sm px-5 py-5 flex flex-col gap-3 transition-all",
-                      i === 0 && req.status === "PENDING" ? "border-amber-200/60 dark:border-amber-800/50 shadow-md shadow-amber-500/5" : "border-border")}>
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center bg-teal-100/60 dark:bg-teal-950/40 border border-teal-200/60 dark:border-teal-800/50 text-teal-600 dark:text-teal-400 text-lg"><RiPriceTag3Line /></div>
-                          <div>
-                            <p className="text-[22px] font-extrabold text-foreground leading-none tabular-nums">${req.requestedPrice.toFixed(2)}</p>
-                            <p className="text-[12px] text-muted-foreground mt-0.5">Submitted {fmtDate(req.createdAt)}</p>
+            : requests.length === 0
+              ? (
+                <div className="rounded-2xl border border-border bg-card/80 py-16 flex flex-col items-center gap-4 text-center">
+                  <div className="w-12 h-12 rounded-2xl bg-muted/40 border border-border flex items-center justify-center text-xl text-muted-foreground/30"><RiPriceTag3Line /></div>
+                  <p className="text-[14px] font-bold text-muted-foreground">No price requests yet</p>
+                  <p className="text-[13px] text-muted-foreground/60">Submit a request to have admin set the course price.</p>
+                </div>
+              )
+              : (
+                <div className="flex flex-col gap-3">
+                  {requests.map((req, i) => {
+                    const cfg = PRICE_CFG[req.status];
+                    return (
+                      <div key={req.id} className={cn("rounded-2xl border bg-card/90 backdrop-blur-sm px-5 py-5 flex flex-col gap-3 transition-all",
+                        i === 0 && req.status === "PENDING" ? "border-amber-200/60 dark:border-amber-800/50 shadow-md shadow-amber-500/5" : "border-border")}>
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center bg-teal-100/60 dark:bg-teal-950/40 border border-teal-200/60 dark:border-teal-800/50 text-teal-600 dark:text-teal-400 text-lg"><RiPriceTag3Line /></div>
+                            <div>
+                              <p className="text-[22px] font-extrabold text-foreground leading-none tabular-nums">${req.requestedPrice.toFixed(2)}</p>
+                              <p className="text-[12px] text-muted-foreground mt-0.5">Submitted {fmtDate(req.createdAt)}</p>
+                            </div>
                           </div>
+                          <span className={cn("inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border", cfg.badge)}>
+                            <span className={cn("w-1.5 h-1.5 rounded-full flex-shrink-0", cfg.dot)} />{cfg.label}
+                          </span>
                         </div>
-                        <span className={cn("inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border", cfg.badge)}>
-                          <span className={cn("w-1.5 h-1.5 rounded-full flex-shrink-0", cfg.dot)} />{cfg.label}
-                        </span>
+                        {req.note && <div><p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground mb-1">Your note</p><p className="text-[13px] text-foreground/80 leading-relaxed">{req.note}</p></div>}
+                        {req.adminNote && (
+                          <div className={cn("flex items-start gap-2.5 px-4 py-3 rounded-xl border",
+                            req.status === "APPROVED" ? "bg-teal-50/40 dark:bg-teal-950/20 border-teal-200/60 dark:border-teal-800/50" : "bg-red-50/40 dark:bg-red-950/20 border-red-200/60 dark:border-red-800/50")}>
+                            <RiShieldCheckLine className={cn("text-sm mt-0.5 flex-shrink-0", req.status === "APPROVED" ? "text-teal-600 dark:text-teal-400" : "text-red-500")} />
+                            <div>
+                              <p className="text-[11.5px] font-bold text-muted-foreground">Admin · {req.reviewedAt ? fmtDate(req.reviewedAt) : ""}</p>
+                              <p className="text-[13px] text-foreground/80 mt-0.5">{req.adminNote}</p>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                      {req.note && <div><p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground mb-1">Your note</p><p className="text-[13px] text-foreground/80 leading-relaxed">{req.note}</p></div>}
-                      {req.adminNote && (
-                        <div className={cn("flex items-start gap-2.5 px-4 py-3 rounded-xl border",
-                          req.status === "APPROVED" ? "bg-teal-50/40 dark:bg-teal-950/20 border-teal-200/60 dark:border-teal-800/50" : "bg-red-50/40 dark:bg-red-950/20 border-red-200/60 dark:border-red-800/50")}>
-                          <RiShieldCheckLine className={cn("text-sm mt-0.5 flex-shrink-0", req.status === "APPROVED" ? "text-teal-600 dark:text-teal-400" : "text-red-500")} />
-                          <div>
-                            <p className="text-[11.5px] font-bold text-muted-foreground">Admin · {req.reviewedAt ? fmtDate(req.reviewedAt) : ""}</p>
-                            <p className="text-[13px] text-foreground/80 mt-0.5">{req.adminNote}</p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )
+                    );
+                  })}
+                </div>
+              )
         }
       </div>
     </>

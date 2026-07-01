@@ -172,7 +172,7 @@ function Orb({
 }
 
 // ─── Floating Stat Card ───────────────────────────────────
-function FloatingCard({ card }: { card: FloatingCard }) {
+function FloatingCard({ card }: { card: FloatingCard; }) {
   return (
     <div
       className={cn(

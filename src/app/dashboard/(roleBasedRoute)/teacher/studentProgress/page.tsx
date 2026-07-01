@@ -13,27 +13,27 @@ import RefreshIcon from "@/components/shared/RefreshIcon";
 type MemberSubtype = "EMERGING" | "ACTIVE" | "GRADUATED" | "ALUMNI";
 
 interface Member {
-  id:              string;
-  name:            string;
-  email:           string;
-  image:           string | null;
-  subtype:         MemberSubtype;
-  clusterId:       string;
-  clusterName:     string;
-  tasksTotal:      number;
-  tasksSubmitted:  number;
-  avgScore:        number;
-  attendance:      number;
+  id: string;
+  name: string;
+  email: string;
+  image: string | null;
+  subtype: MemberSubtype;
+  clusterId: string;
+  clusterName: string;
+  tasksTotal: number;
+  tasksSubmitted: number;
+  avgScore: number;
+  attendance: number;
   attendanceTotal: number;
 }
 
-interface Cluster { id: string; name: string }
+interface Cluster { id: string; name: string; }
 
 const SUBTYPE_COLORS: Record<MemberSubtype, string> = {
-  EMERGING:  "bg-sky-100/80 dark:bg-sky-950/50 text-sky-700 dark:text-sky-400 border-sky-200/70 dark:border-sky-800/50",
-  ACTIVE:    "bg-teal-100/80 dark:bg-teal-950/50 text-teal-700 dark:text-teal-400 border-teal-200/70 dark:border-teal-800/50",
+  EMERGING: "bg-sky-100/80 dark:bg-sky-950/50 text-sky-700 dark:text-sky-400 border-sky-200/70 dark:border-sky-800/50",
+  ACTIVE: "bg-teal-100/80 dark:bg-teal-950/50 text-teal-700 dark:text-teal-400 border-teal-200/70 dark:border-teal-800/50",
   GRADUATED: "bg-violet-100/80 dark:bg-violet-950/40 text-violet-700 dark:text-violet-400 border-violet-200/70 dark:border-violet-800/50",
-  ALUMNI:    "bg-zinc-100/80 dark:bg-zinc-800/50 text-zinc-600 dark:text-zinc-400 border-zinc-200/70 dark:border-zinc-700/50",
+  ALUMNI: "bg-zinc-100/80 dark:bg-zinc-800/50 text-zinc-600 dark:text-zinc-400 border-zinc-200/70 dark:border-zinc-700/50",
 };
 
 const pct = (a: number, b: number) => b === 0 ? 0 : Math.round((a / b) * 100);
@@ -41,7 +41,7 @@ const barColor = (p: number) => p >= 80 ? "bg-teal-500" : p >= 60 ? "bg-amber-40
 const initials = (name: string) => name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
 
 // ─── Radar chart (SVG) ──────────────────────────────────────
-function RadarChart({ members }: { members: Member[] }) {
+function RadarChart({ members }: { members: Member[]; }) {
   const axes = ["Submissions", "Attendance", "Avg Score"];
   const N = axes.length;
   const CX = 120, CY = 120, R = 90;
@@ -82,7 +82,7 @@ function RadarChart({ members }: { members: Member[] }) {
 }
 
 // ─── Member row ───────────────────────────────────────────
-function MemberRow({ member, rank }: { member: Member; rank: number }) {
+function MemberRow({ member, rank }: { member: Member; rank: number; }) {
   const subPct = pct(member.tasksSubmitted, member.tasksTotal);
   const attPct = pct(member.attendance, member.attendanceTotal);
   const overall = Math.round((subPct + attPct + member.avgScore) / 3);
@@ -91,9 +91,9 @@ function MemberRow({ member, rank }: { member: Member; rank: number }) {
     <div className="flex items-center gap-4 px-5 py-4 border-b border-border/60 last:border-0 hover:bg-muted/20 transition-colors">
       <div className={cn("w-7 h-7 rounded-lg flex-shrink-0 flex items-center justify-center text-[12px] font-extrabold",
         rank === 1 ? "bg-amber-100/80 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 border border-amber-200/70 dark:border-amber-800/50"
-        : rank === 2 ? "bg-zinc-100/80 dark:bg-zinc-800/50 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700"
-        : rank === 3 ? "bg-orange-100/80 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 border border-orange-200/70 dark:border-orange-800/50"
-        : "bg-muted text-muted-foreground border border-border"
+          : rank === 2 ? "bg-zinc-100/80 dark:bg-zinc-800/50 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700"
+            : rank === 3 ? "bg-orange-100/80 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 border border-orange-200/70 dark:border-orange-800/50"
+              : "bg-muted text-muted-foreground border border-border"
       )}>
         {rank <= 3 ? ["🥇", "🥈", "🥉"][rank - 1] : rank}
       </div>
@@ -118,8 +118,8 @@ function MemberRow({ member, rank }: { member: Member; rank: number }) {
       <div className="hidden lg:grid grid-cols-3 gap-5 flex-shrink-0">
         {[
           { label: "Submissions", value: `${subPct}%`, sub: `${member.tasksSubmitted}/${member.tasksTotal}`, color: barColor(subPct) },
-          { label: "Attendance",  value: `${attPct}%`, sub: `${member.attendance}/${member.attendanceTotal}`,  color: barColor(attPct) },
-          { label: "Avg score",   value: `${member.avgScore}%`, sub: "out of 100", color: barColor(member.avgScore) },
+          { label: "Attendance", value: `${attPct}%`, sub: `${member.attendance}/${member.attendanceTotal}`, color: barColor(attPct) },
+          { label: "Avg score", value: `${member.avgScore}%`, sub: "out of 100", color: barColor(member.avgScore) },
         ].map(m => (
           <div key={m.label} className="flex flex-col gap-1 min-w-[80px]">
             <div className="flex justify-between">
@@ -148,13 +148,13 @@ function MemberRow({ member, rank }: { member: Member; rank: number }) {
 
 // ─── Page ─────────────────────────────────────────────────
 export default function MemberProgressPage() {
-  const [clusters,     setClusters]     = useState<Cluster[]>([]);
-  const [allMembers,   setAllMembers]   = useState<Member[]>([]);
-  const [loading,      setLoading]      = useState(true);
-  const [clusterId,    setClusterId]    = useState("all");
-  const [search,       setSearch]       = useState("");
-  const [sortBy,       setSortBy]       = useState<"overall" | "attendance" | "score" | "submissions">("overall");
-  const [showRadar,    setShowRadar]    = useState(true);
+  const [clusters, setClusters] = useState<Cluster[]>([]);
+  const [allMembers, setAllMembers] = useState<Member[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [clusterId, setClusterId] = useState("all");
+  const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState<"overall" | "attendance" | "score" | "submissions">("overall");
+  const [showRadar, setShowRadar] = useState(true);
 
   const fetchProgress = useCallback(async () => {
     setLoading(true);
@@ -174,17 +174,17 @@ export default function MemberProgressPage() {
 
           // Map to Member shape — attendance & task stats may vary by backend
           return rawMembers.map((m: any): Member => ({
-            id:              m.studentProfileId ?? m.id,
-            name:            m.name ?? m.user?.name ?? "Unknown",
-            email:           m.email ?? m.user?.email ?? "",
-            image:           m.image ?? m.user?.image ?? null,
-            subtype:         ((m.subtype === "RUNNING" ? "ACTIVE" : m.subtype) ?? "ACTIVE") as MemberSubtype,
-            clusterId:       cl.id,
-            clusterName:     cl.name,
-            tasksTotal:      m.tasksTotal   ?? 0,
-            tasksSubmitted:  m.tasksSubmitted ?? 0,
-            avgScore:        m.avgScore     ?? 0,
-            attendance:      m.attendance   ?? 0,
+            id: m.studentProfileId ?? m.id,
+            name: m.name ?? m.user?.name ?? "Unknown",
+            email: m.email ?? m.user?.email ?? "",
+            image: m.image ?? m.user?.image ?? null,
+            subtype: ((m.subtype === "RUNNING" ? "ACTIVE" : m.subtype) ?? "ACTIVE") as MemberSubtype,
+            clusterId: cl.id,
+            clusterName: cl.name,
+            tasksTotal: m.tasksTotal ?? 0,
+            tasksSubmitted: m.tasksSubmitted ?? 0,
+            avgScore: m.avgScore ?? 0,
+            attendance: m.attendance ?? 0,
             attendanceTotal: m.attendanceTotal ?? 0,
           }));
         } catch {
@@ -206,8 +206,8 @@ export default function MemberProgressPage() {
     if (search.trim()) m = m.filter(x => x.name.toLowerCase().includes(search.toLowerCase()) || x.email.toLowerCase().includes(search.toLowerCase()));
     return m.sort((a, b) => {
       const score = (x: Member) => {
-        if (sortBy === "attendance")  return pct(x.attendance, x.attendanceTotal);
-        if (sortBy === "score")       return x.avgScore;
+        if (sortBy === "attendance") return pct(x.attendance, x.attendanceTotal);
+        if (sortBy === "score") return x.avgScore;
         if (sortBy === "submissions") return pct(x.tasksSubmitted, x.tasksTotal);
         return Math.round((pct(x.tasksSubmitted, x.tasksTotal) + pct(x.attendance, x.attendanceTotal) + x.avgScore) / 3);
       };
@@ -215,8 +215,8 @@ export default function MemberProgressPage() {
     });
   }, [allMembers, clusterId, search, sortBy]);
 
-  const topPerformers    = filtered.slice(0, 3);
-  const avgOverall       = filtered.length
+  const topPerformers = filtered.slice(0, 3);
+  const avgOverall = filtered.length
     ? Math.round(filtered.reduce((s, m) => s + Math.round((pct(m.tasksSubmitted, m.tasksTotal) + pct(m.attendance, m.attendanceTotal) + m.avgScore) / 3), 0) / filtered.length)
     : 0;
 
@@ -257,7 +257,7 @@ export default function MemberProgressPage() {
         <button onClick={() => setShowRadar(s => !s)}
           className={cn("h-10 px-4 rounded-xl border text-[13.5px] font-semibold transition-all",
             showRadar ? "border-teal-300/60 dark:border-teal-700/50 bg-teal-50/40 dark:bg-teal-950/20 text-teal-700 dark:text-teal-400"
-            : "border-border text-muted-foreground hover:text-foreground hover:bg-muted/50")}>
+              : "border-border text-muted-foreground hover:text-foreground hover:bg-muted/50")}>
           <RiBarChartBoxLine className="inline mr-1.5 text-base" />Radar
         </button>
       </div>

@@ -17,9 +17,9 @@ import { cn } from "@/lib/utils";
 
 // ─── Data ─────────────────────────────────────────────────
 const STATS = [
-  { value: "12,400+", label: "Active Clusters"     },
-  { value: "89,000+", label: "Resources Shared"    },
-  { value: "340,000+",label: "Sessions Held"       },
+  { value: "12,400+", label: "Active Clusters" },
+  { value: "89,000+", label: "Resources Shared" },
+  { value: "340,000+", label: "Sessions Held" },
   { value: "28,000+", label: "Certificates Issued" },
 ];
 
@@ -69,29 +69,29 @@ const VALUES = [
 ];
 
 const TEAM = [
-  { name: "Dr. Priya Nair",    role: "Co-founder & CEO",         initials: "PN", color: "teal"   },
-  { name: "Aryan Mehta",       role: "Co-founder & CTO",         initials: "AM", color: "violet" },
-  { name: "Sara El-Amin",      role: "Head of Product",          initials: "SE", color: "amber"  },
-  { name: "Lucas Ferreira",    role: "Lead Engineer",            initials: "LF", color: "sky"    },
-  { name: "Dr. Fatima Hassan", role: "Head of Research",         initials: "FH", color: "rose"   },
-  { name: "James Okonkwo",     role: "Head of Design",           initials: "JO", color: "emerald"},
+  { name: "Dr. Priya Nair", role: "Co-founder & CEO", initials: "PN", color: "teal" },
+  { name: "Aryan Mehta", role: "Co-founder & CTO", initials: "AM", color: "violet" },
+  { name: "Sara El-Amin", role: "Head of Product", initials: "SE", color: "amber" },
+  { name: "Lucas Ferreira", role: "Lead Engineer", initials: "LF", color: "sky" },
+  { name: "Dr. Fatima Hassan", role: "Head of Research", initials: "FH", color: "rose" },
+  { name: "James Okonkwo", role: "Head of Design", initials: "JO", color: "emerald" },
 ];
 
-const ACCENT: Record<string, { icon: string; bg: string; border: string }> = {
-  teal:    { icon: "text-teal-600 dark:text-teal-400",    bg: "bg-teal-50 dark:bg-teal-950/50",    border: "border-teal-200/60 dark:border-teal-800/50"   },
-  violet:  { icon: "text-violet-600 dark:text-violet-400",bg: "bg-violet-50 dark:bg-violet-950/50",border: "border-violet-200/60 dark:border-violet-800/50"},
-  amber:   { icon: "text-amber-600 dark:text-amber-400",  bg: "bg-amber-50 dark:bg-amber-950/50",  border: "border-amber-200/60 dark:border-amber-800/50"  },
-  sky:     { icon: "text-sky-600 dark:text-sky-400",      bg: "bg-sky-50 dark:bg-sky-950/50",      border: "border-sky-200/60 dark:border-sky-800/50"      },
-  rose:    { icon: "text-rose-600 dark:text-rose-400",    bg: "bg-rose-50 dark:bg-rose-950/50",    border: "border-rose-200/60 dark:border-rose-800/50"    },
-  emerald: { icon: "text-emerald-600 dark:text-emerald-400",bg:"bg-emerald-50 dark:bg-emerald-950/50",border:"border-emerald-200/60 dark:border-emerald-800/50"},
+const ACCENT: Record<string, { icon: string; bg: string; border: string; }> = {
+  teal: { icon: "text-teal-600 dark:text-teal-400", bg: "bg-teal-50 dark:bg-teal-950/50", border: "border-teal-200/60 dark:border-teal-800/50" },
+  violet: { icon: "text-violet-600 dark:text-violet-400", bg: "bg-violet-50 dark:bg-violet-950/50", border: "border-violet-200/60 dark:border-violet-800/50" },
+  amber: { icon: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-950/50", border: "border-amber-200/60 dark:border-amber-800/50" },
+  sky: { icon: "text-sky-600 dark:text-sky-400", bg: "bg-sky-50 dark:bg-sky-950/50", border: "border-sky-200/60 dark:border-sky-800/50" },
+  rose: { icon: "text-rose-600 dark:text-rose-400", bg: "bg-rose-50 dark:bg-rose-950/50", border: "border-rose-200/60 dark:border-rose-800/50" },
+  emerald: { icon: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-950/50", border: "border-emerald-200/60 dark:border-emerald-800/50" },
 };
 
 const AVATAR_COLORS: Record<string, string> = {
-  teal:    "bg-teal-100 dark:bg-teal-950/60 text-teal-700 dark:text-teal-400",
-  violet:  "bg-violet-100 dark:bg-violet-950/60 text-violet-700 dark:text-violet-400",
-  amber:   "bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400",
-  sky:     "bg-sky-100 dark:bg-sky-950/60 text-sky-700 dark:text-sky-400",
-  rose:    "bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400",
+  teal: "bg-teal-100 dark:bg-teal-950/60 text-teal-700 dark:text-teal-400",
+  violet: "bg-violet-100 dark:bg-violet-950/60 text-violet-700 dark:text-violet-400",
+  amber: "bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400",
+  sky: "bg-sky-100 dark:bg-sky-950/60 text-sky-700 dark:text-sky-400",
+  rose: "bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400",
   emerald: "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400",
 };
 
@@ -109,7 +109,7 @@ function useReveal() {
 }
 
 // ─── Reusable section header ──────────────────────────────
-function SectionLabel({ children }: { children: React.ReactNode }) {
+function SectionLabel({ children }: { children: React.ReactNode; }) {
   return (
     <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-semibold border bg-teal-50 dark:bg-teal-950/40 text-teal-700 dark:text-teal-400 border-teal-200/60 dark:border-teal-800/60 mb-5">
       <RiSparklingFill className="animate-pulse text-base" />
@@ -119,7 +119,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 }
 
 // ─── Gradient headline ────────────────────────────────────
-function GradH2({ children }: { children: React.ReactNode }) {
+function GradH2({ children }: { children: React.ReactNode; }) {
   return (
     <span style={{ background: "linear-gradient(135deg,#0d9488 0%,#14b8a6 50%,#5eead4 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
       {children}
@@ -129,12 +129,12 @@ function GradH2({ children }: { children: React.ReactNode }) {
 
 // ─── Page ─────────────────────────────────────────────────
 export default function AboutPage() {
-  const hero   = useReveal();
-  const stats  = useReveal();
-  const story  = useReveal();
+  const hero = useReveal();
+  const stats = useReveal();
+  const story = useReveal();
   const values = useReveal();
-  const team   = useReveal();
-  const cta    = useReveal();
+  const team = useReveal();
+  const cta = useReveal();
 
   return (
     <main className="bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50">

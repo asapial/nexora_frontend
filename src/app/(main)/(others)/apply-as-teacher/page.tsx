@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   RiSparklingFill,
   RiGraduationCapLine,
@@ -23,6 +22,7 @@ import {
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { teacherApplicationFormSchema } from "@/lib/formSchemas";
 
 // ─── Types ────────────────────────────────────────────────
 interface FormData {
@@ -77,7 +77,7 @@ const textareaCls =
   "w-full px-3 py-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/60 text-[13.5px] text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-teal-400/40 placeholder:text-zinc-400 transition-colors resize-none";
 
 // ─── Status Banner ────────────────────────────────────────
-function StatusBanner({ app }: { app: ExistingApplication }) {
+function StatusBanner({ app }: { app: ExistingApplication; }) {
   const configs = {
     PENDING: {
       bg: "bg-amber-50 dark:bg-amber-950/30 border-amber-200/60 dark:border-amber-800/60",
@@ -122,16 +122,12 @@ function StatusBanner({ app }: { app: ExistingApplication }) {
 
 // ─── Page ─────────────────────────────────────────────────
 export default function ApplyAsTeacherPage() {
-  const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [existingApp, setExistingApp] = useState<ExistingApplication | null>(null);
   const [loadingApp, setLoadingApp] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [userEmail, setUserEmail] = useState("");
-  const [userName, setUserName] = useState("");
-
   const [form, setForm] = useState<FormData>({
     fullName: "", email: "", phone: "", designation: "",
     institution: "", department: "", specialization: "",
@@ -147,8 +143,6 @@ export default function ApplyAsTeacherPage() {
         if (data.success) {
           setIsLoggedIn(true);
           const u = data.data?.userData ?? data.data;
-          setUserEmail(u.email || "");
-          setUserName(u.name || "");
           setForm((f) => ({ ...f, fullName: u.name || "", email: u.email || "" }));
 
           // Check existing application
@@ -170,16 +164,14 @@ export default function ApplyAsTeacherPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.fullName.trim() || !form.email.trim() || !form.bio.trim()) {
-      toast.error("Please fill in all required fields.");
+    const parsed = teacherApplicationFormSchema.safeParse(form);
+    if (!parsed.success) {
+      toast.error(parsed.error.issues[0]?.message ?? "Please check the application fields.");
       return;
     }
     setSubmitting(true);
     try {
-      const payload: any = {
-        ...form,
-        experience: form.experience ? parseInt(form.experience) : undefined,
-      };
+      const payload = { ...parsed.data, experience: parsed.data.experience === "" ? undefined : parsed.data.experience };
       const res = await fetch("/api/teacher-applications/apply", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -191,8 +183,8 @@ export default function ApplyAsTeacherPage() {
       setSubmitted(true);
       setExistingApp(data.data);
       toast.success("Application submitted successfully!");
-    } catch (err: any) {
-      toast.error(err.message || "Something went wrong. Please try again.");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     } finally {
       setSubmitting(false);
     }

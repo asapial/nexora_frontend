@@ -17,7 +17,7 @@ type Certificate = {
   pdfUrl?: string;
   verifyCode?: string;
   verificationCode?: string;
-  course?: { id: string; title: string } | null;
+  course?: { id: string; title: string; } | null;
 };
 
 const fmtDate = (d: string) =>

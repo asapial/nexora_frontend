@@ -38,13 +38,13 @@ interface Application {
   status: "PENDING" | "APPROVED" | "REJECTED";
   adminNote?: string;
   createdAt: string;
-  user: { id: string; name: string; email: string; image?: string | null };
+  user: { id: string; name: string; email: string; image?: string | null; };
 }
 
 // ─── Status badge ─────────────────────────────────────────
-function StatusBadge({ status }: { status: Application["status"] }) {
+function StatusBadge({ status }: { status: Application["status"]; }) {
   const configs = {
-    PENDING:  { cls: "bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border-amber-200/60 dark:border-amber-800/60", label: "Pending" },
+    PENDING: { cls: "bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border-amber-200/60 dark:border-amber-800/60", label: "Pending" },
     APPROVED: { cls: "bg-teal-50 dark:bg-teal-950/40 text-teal-700 dark:text-teal-400 border-teal-200/60 dark:border-teal-800/60", label: "Approved" },
     REJECTED: { cls: "bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 border-red-200/60 dark:border-red-800/60", label: "Rejected" },
   };
@@ -55,7 +55,7 @@ function StatusBadge({ status }: { status: Application["status"] }) {
 }
 
 // ─── Reject modal ─────────────────────────────────────────
-function RejectModal({ app, onClose, onConfirm, loading }: { app: Application; onClose: () => void; onConfirm: (note: string) => void; loading: boolean }) {
+function RejectModal({ app, onClose, onConfirm, loading }: { app: Application; onClose: () => void; onConfirm: (note: string) => void; loading: boolean; }) {
   const [note, setNote] = useState("");
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">

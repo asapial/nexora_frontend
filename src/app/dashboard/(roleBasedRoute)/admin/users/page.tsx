@@ -12,8 +12,8 @@ import { adminUsersApi } from "@/lib/api";
 import { toast } from "sonner";
 import RefreshIcon from "@/components/shared/RefreshIcon";
 
-const ROLE_CFG: Record<string, { label: string; cls: string }> = {
-  ADMIN:   { label: "Admin",   cls: "text-violet-700 dark:text-violet-400 bg-violet-50/80 dark:bg-violet-950/40 border-violet-200/60 dark:border-violet-800/50" },
+const ROLE_CFG: Record<string, { label: string; cls: string; }> = {
+  ADMIN: { label: "Admin", cls: "text-violet-700 dark:text-violet-400 bg-violet-50/80 dark:bg-violet-950/40 border-violet-200/60 dark:border-violet-800/50" },
   TEACHER: { label: "Teacher", cls: "text-teal-700 dark:text-teal-400 bg-teal-50/80 dark:bg-teal-950/40 border-teal-200/60 dark:border-teal-800/50" },
   STUDENT: { label: "Student", cls: "text-sky-700 dark:text-sky-400 bg-sky-50/80 dark:bg-sky-950/40 border-sky-200/60 dark:border-sky-800/50" },
 };
@@ -290,51 +290,51 @@ export default function AdminUserManagementPage() {
         {loading
           ? Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} />)
           : users.length === 0
-          ? (
-            <div className="py-16 text-center">
-              <RiUserLine className="text-4xl text-muted-foreground/20 mx-auto mb-3" />
-              <p className="text-[13.5px] font-medium text-muted-foreground">No users found</p>
-            </div>
-          )
-          : users.map(u => {
-            const roleCfg = ROLE_CFG[u.role] ?? { label: u.role, cls: "border-border text-muted-foreground" };
-            return (
-              <div key={u.id} className="grid grid-cols-[1fr_180px_100px_120px_80px] gap-4 px-5 py-4 border-b border-border/60 last:border-0 hover:bg-muted/10 transition-colors items-center">
-                <div className="flex items-center gap-3 min-w-0">
-                  {u.image ? (
-                    <img src={u.image} alt={u.name} className="w-8 h-8 rounded-full object-cover shrink-0 ring-1 ring-border" />
-                  ) : (
-                    <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center shrink-0">
-                      <RiUserLine className="text-muted-foreground text-xs" />
-                    </div>
-                  )}
-                  <div className="min-w-0">
-                    <p className="text-[13px] font-semibold text-foreground truncate">{u.name}</p>
-                    <p className="text-[11.5px] text-muted-foreground truncate">{u.email}</p>
-                  </div>
-                </div>
-                <p className="text-[12.5px] text-muted-foreground">{fmtDate(u.createdAt)}</p>
-                <span className={cn("text-[10.5px] font-bold tracking-wide uppercase px-2 py-0.5 rounded-full border w-fit", roleCfg.cls)}>
-                  {roleCfg.label}
-                </span>
-                <span className={cn("text-[10.5px] font-bold tracking-wide uppercase px-2 py-0.5 rounded-full border w-fit",
-                  u.isDeleted
-                    ? "text-rose-600 bg-rose-50/70 dark:bg-rose-950/30 border-rose-200/60"
-                    : u.needPasswordChange
-                    ? "text-amber-600 bg-amber-50/70 dark:bg-amber-950/30 border-amber-200/60"
-                    : "text-teal-600 bg-teal-50/70 dark:bg-teal-950/30 border-teal-200/60"
-                )}>
-                  {u.isDeleted ? "Inactive" : u.needPasswordChange ? "Pending" : "Active"}
-                </span>
-                <ActionMenu user={u}
-                  onEdit={() => setEditingUser(u)}
-                  onDeactivate={() => handleDeactivate(u)}
-                  onResetPwd={() => handleResetPwd(u)}
-                  onImpersonate={() => handleImpersonate(u)}
-                />
+            ? (
+              <div className="py-16 text-center">
+                <RiUserLine className="text-4xl text-muted-foreground/20 mx-auto mb-3" />
+                <p className="text-[13.5px] font-medium text-muted-foreground">No users found</p>
               </div>
-            );
-          })}
+            )
+            : users.map(u => {
+              const roleCfg = ROLE_CFG[u.role] ?? { label: u.role, cls: "border-border text-muted-foreground" };
+              return (
+                <div key={u.id} className="grid grid-cols-[1fr_180px_100px_120px_80px] gap-4 px-5 py-4 border-b border-border/60 last:border-0 hover:bg-muted/10 transition-colors items-center">
+                  <div className="flex items-center gap-3 min-w-0">
+                    {u.image ? (
+                      <img src={u.image} alt={u.name} className="w-8 h-8 rounded-full object-cover shrink-0 ring-1 ring-border" />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center shrink-0">
+                        <RiUserLine className="text-muted-foreground text-xs" />
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <p className="text-[13px] font-semibold text-foreground truncate">{u.name}</p>
+                      <p className="text-[11.5px] text-muted-foreground truncate">{u.email}</p>
+                    </div>
+                  </div>
+                  <p className="text-[12.5px] text-muted-foreground">{fmtDate(u.createdAt)}</p>
+                  <span className={cn("text-[10.5px] font-bold tracking-wide uppercase px-2 py-0.5 rounded-full border w-fit", roleCfg.cls)}>
+                    {roleCfg.label}
+                  </span>
+                  <span className={cn("text-[10.5px] font-bold tracking-wide uppercase px-2 py-0.5 rounded-full border w-fit",
+                    u.isDeleted
+                      ? "text-rose-600 bg-rose-50/70 dark:bg-rose-950/30 border-rose-200/60"
+                      : u.needPasswordChange
+                        ? "text-amber-600 bg-amber-50/70 dark:bg-amber-950/30 border-amber-200/60"
+                        : "text-teal-600 bg-teal-50/70 dark:bg-teal-950/30 border-teal-200/60"
+                  )}>
+                    {u.isDeleted ? "Inactive" : u.needPasswordChange ? "Pending" : "Active"}
+                  </span>
+                  <ActionMenu user={u}
+                    onEdit={() => setEditingUser(u)}
+                    onDeactivate={() => handleDeactivate(u)}
+                    onResetPwd={() => handleResetPwd(u)}
+                    onImpersonate={() => handleImpersonate(u)}
+                  />
+                </div>
+              );
+            })}
       </div>
 
       {/* Pagination */}

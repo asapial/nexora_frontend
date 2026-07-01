@@ -13,11 +13,11 @@ import {
 
 export interface NavMainItem {
   title: string;
-  url:   string;
-  icon:  React.ReactNode;
+  url: string;
+  icon: React.ReactNode;
 }
 
-export function NavMain({ items }: { items: NavMainItem[] }) {
+export function NavMain({ items }: { items: NavMainItem[]; }) {
   const pathname = usePathname();
 
   return (

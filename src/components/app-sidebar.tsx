@@ -7,7 +7,6 @@ import {
   RiDashboardLine,
   RiUserLine,
   RiSettings4Line,
-  RiQuestionLine,
   RiNotificationLine,
 
   // Teacher
@@ -34,6 +33,7 @@ import {
   RiAwardLine,
   RiMessage2Line,
   RiUserAddLine,
+  RiLayoutLine,
 } from "react-icons/ri";
 
 import { NavDocuments, type NavDocItem } from "@/components/nav-documents";
@@ -86,6 +86,19 @@ const teacherNav: NavDocItem[] = [
     ],
   },
   {
+    title: "ExamShield",
+    url: "/dashboard/teacher/exams",
+    icon: <RiShieldCheckLine />,
+    items: [
+      { title: "Exam overview", url: "/dashboard/teacher/exams" },
+      { title: "Create exam", url: "/dashboard/teacher/exams/create" },
+      { title: "Live proctoring", url: "/dashboard/teacher/exams/proctoring" },
+      { title: "Snapshot wall", url: "/dashboard/teacher/exams/monitoring" },
+      { title: "Publish results", url: "/dashboard/teacher/exams/results" },
+      { title: "Exam history & export", url: "/dashboard/teacher/exams/history" },
+    ],
+  },
+  {
     title: "Courses",
     url: "/dashboard/teacher/courses",
     icon: <RiBookOpenLine />,
@@ -103,6 +116,7 @@ const teacherNav: NavDocItem[] = [
     items: [
       { title: "Upload Resource", url: "/dashboard/teacher/resource/upload" },
       { title: "My Resources", url: "/dashboard/teacher/resource/myResource" },
+      { title: "Read & Annotate", url: "/dashboard/teacher/resource-annotation" },
     ],
   },
   {
@@ -131,7 +145,7 @@ const teacherNav: NavDocItem[] = [
       { title: "Task templates", url: "/dashboard/teacher/task-templates" },
     ],
   },
-    {
+  {
     title: "Notices",
     url: "/dashboard/student/notice",
     icon: <RiNotificationLine />,
@@ -181,6 +195,15 @@ const studentNav: NavDocItem[] = [
     icon: <RiTaskLine />,
     items: [
       { title: "My Homework", url: "/dashboard/student/homework" },
+    ],
+  },
+  {
+    title: "ExamShield",
+    url: "/dashboard/student/exams",
+    icon: <RiShieldCheckLine />,
+    items: [
+      { title: "My Exams", url: "/dashboard/student/exams" },
+      { title: "Published results", url: "/dashboard/student/exams/results" },
     ],
   },
   // {
@@ -257,6 +280,8 @@ const adminNav: NavDocItem[] = [
       { title: "Course Approvals", url: "/dashboard/admin/approvals/courses" },
       { title: "Mission Approvals", url: "/dashboard/admin/approvals/missions" },
       { title: "Price Requests", url: "/dashboard/admin/approvals/price-requests" },
+      { title: "Exam Approvals", url: "/dashboard/admin/exams" },
+      { title: "Pro Mode detection lab", url: "/dashboard/admin/examshield-lab" },
     ],
   },
   {
@@ -304,6 +329,27 @@ const adminNav: NavDocItem[] = [
       { title: "All Applications", url: "/dashboard/admin/teacher-requests" },
     ],
   },
+  {
+    title: "Public Site Content",
+    url: "/dashboard/admin/site-content",
+    icon: <RiLayoutLine />,
+    items: [
+      { title: "Content studio", url: "/dashboard/admin/site-content" },
+      { title: "Navbar", url: "/dashboard/admin/site-content/navbar" },
+      { title: "Homepage hero", url: "/dashboard/admin/site-content/home-hero" },
+      { title: "Featured courses", url: "/dashboard/admin/site-content/home-courses" },
+      { title: "Features", url: "/dashboard/admin/site-content/home-features" },
+      { title: "How it works", url: "/dashboard/admin/site-content/home-how-it-works" },
+      { title: "Roles", url: "/dashboard/admin/site-content/home-roles" },
+      { title: "Testimonials copy", url: "/dashboard/admin/site-content/home-testimonials" },
+      { title: "FAQ", url: "/dashboard/admin/site-content/home-faq" },
+      { title: "Homepage CTA", url: "/dashboard/admin/site-content/home-cta" },
+      { title: "Footer", url: "/dashboard/admin/site-content/footer" },
+      { title: "Sign in page", url: "/dashboard/admin/site-content/auth-signin" },
+      { title: "Sign up page", url: "/dashboard/admin/site-content/auth-signup" },
+      { title: "Featured teachers", url: "/dashboard/admin/hero-section" },
+    ],
+  },
 ];
 
 const commonNav: NavSecondaryItem[] = [
@@ -313,7 +359,7 @@ const commonNav: NavSecondaryItem[] = [
 ];
 
 // ─── Role chip ────────────────────────────────────────────────────────────────
-const ROLE_CHIP: Record<string, { label: string; cls: string }> = {
+const ROLE_CHIP: Record<string, { label: string; cls: string; }> = {
   TEACHER: { label: "Teacher", cls: "text-teal-600 dark:text-teal-400 bg-teal-500/10 border-teal-500/25" },
   STUDENT: { label: "Student", cls: "text-sky-600  dark:text-sky-400  bg-sky-500/10  border-sky-500/25" },
   ADMIN: { label: "Admin", cls: "text-violet-600 dark:text-violet-400 bg-violet-500/10 border-violet-500/25" },

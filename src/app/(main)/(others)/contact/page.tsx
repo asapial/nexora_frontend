@@ -46,11 +46,11 @@ const CHANNELS = [
   },
 ];
 
-const ACCENT_STYLES: Record<string, { icon: string; bg: string; border: string }> = {
-  teal:    { icon: "text-teal-600 dark:text-teal-400",     bg: "bg-teal-50 dark:bg-teal-950/50",    border: "border-teal-200/60 dark:border-teal-800/50" },
-  violet:  { icon: "text-violet-600 dark:text-violet-400", bg: "bg-violet-50 dark:bg-violet-950/50", border: "border-violet-200/60 dark:border-violet-800/50" },
-  amber:   { icon: "text-amber-600 dark:text-amber-400",   bg: "bg-amber-50 dark:bg-amber-950/50",   border: "border-amber-200/60 dark:border-amber-800/50" },
-  sky:     { icon: "text-sky-600 dark:text-sky-400",       bg: "bg-sky-50 dark:bg-sky-950/50",       border: "border-sky-200/60 dark:border-sky-800/50" },
+const ACCENT_STYLES: Record<string, { icon: string; bg: string; border: string; }> = {
+  teal: { icon: "text-teal-600 dark:text-teal-400", bg: "bg-teal-50 dark:bg-teal-950/50", border: "border-teal-200/60 dark:border-teal-800/50" },
+  violet: { icon: "text-violet-600 dark:text-violet-400", bg: "bg-violet-50 dark:bg-violet-950/50", border: "border-violet-200/60 dark:border-violet-800/50" },
+  amber: { icon: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-950/50", border: "border-amber-200/60 dark:border-amber-800/50" },
+  sky: { icon: "text-sky-600 dark:text-sky-400", bg: "bg-sky-50 dark:bg-sky-950/50", border: "border-sky-200/60 dark:border-sky-800/50" },
 };
 
 const SUBJECTS = [
@@ -75,7 +75,7 @@ function useReveal() {
   return { ref, visible };
 }
 
-function FormField({ label, id, children, error }: { label: string; id: string; children: React.ReactNode; error?: string }) {
+function FormField({ label, id, children, error }: { label: string; id: string; children: React.ReactNode; error?: string; }) {
   return (
     <div className="flex flex-col gap-1.5">
       <label htmlFor={id} className="text-[13px] font-semibold text-zinc-700 dark:text-zinc-300">{label}</label>
@@ -90,9 +90,9 @@ export default function ContactPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
-  const hero     = useReveal();
+  const hero = useReveal();
   const channels = useReveal();
-  const formRef  = useReveal();
+  const formRef = useReveal();
 
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setForm(p => ({ ...p, [k]: e.target.value }));
@@ -101,10 +101,10 @@ export default function ContactPage() {
 
   const validate = () => {
     const e: Record<string, string> = {};
-    if (!form.name.trim())   e.name    = "Name is required";
-    if (!form.email.trim())  e.email   = "Email is required";
+    if (!form.name.trim()) e.name = "Name is required";
+    if (!form.email.trim()) e.email = "Email is required";
     else if (!/\S+@\S+\.\S+/.test(form.email)) e.email = "Enter a valid email";
-    if (!form.subject)       e.subject  = "Please select a subject";
+    if (!form.subject) e.subject = "Please select a subject";
     if (!form.message.trim()) e.message = "Message is required";
     else if (form.message.trim().length < 20) e.message = "Please write at least 20 characters";
     return e;
@@ -288,7 +288,7 @@ export default function ContactPage() {
                 <p className="font-bold text-zinc-900 dark:text-zinc-50 text-[14.5px]">Response times</p>
               </div>
               <ul className="flex flex-col gap-2.5 text-[13px]">
-                {[["General enquiry","1–2 business days"],["Support tickets","Within 24 hours"],["Enterprise","Same business day"]].map(([k,v]) => (
+                {[["General enquiry", "1–2 business days"], ["Support tickets", "Within 24 hours"], ["Enterprise", "Same business day"]].map(([k, v]) => (
                   <li key={k} className="flex items-center justify-between gap-3">
                     <span className="text-zinc-500 dark:text-zinc-500">{k}</span>
                     <span className="font-semibold text-zinc-700 dark:text-zinc-300 text-right">{v}</span>

@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import {
   RiSparklingFill, RiArrowRightLine, RiGroupLine,
-  RiMapPinLine, RiTimeLine, RiShieldCheckLine,
+  RiShieldCheckLine,
   RiFlaskLine, RiFireLine,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
@@ -21,8 +21,20 @@ interface FeaturedCourse {
   isFree: boolean;
   isFeatured: boolean;
   status: string;
-  _count: { enrollments: number; missions: number };
+  _count: { enrollments: number; missions: number; };
   createdAt: string;
+}
+
+export interface CoursesSectionData {
+  eyebrow: string;
+  headline: string;
+  highlightedText: string;
+  subtext: string;
+  viewAllText: string;
+  viewAllLink: string;
+  footerTitle: string;
+  footerText: string;
+  footerButtonText: string;
 }
 
 // ─── Accent palette per card index ───────────────────────
@@ -259,7 +271,7 @@ function CourseCard({
 }
 
 // ─── Section header ───────────────────────────────────────
-function SectionHeader({ count }: { count: number }) {
+function SectionHeader({ count, data }: { count: number; data: CoursesSectionData; }) {
   return (
     <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
       <div>
@@ -269,23 +281,23 @@ function SectionHeader({ count }: { count: number }) {
             <RiSparklingFill className="text-teal-500 dark:text-teal-400 text-[10px]" />
           </div>
           <span className="text-[10.5px] font-black tracking-[.18em] uppercase text-teal-600 dark:text-teal-400">
-            Featured Courses
+            {data.eyebrow}
           </span>
         </div>
 
         {/* Headline with mixed weight typography */}
         <h2 className="text-[2rem] sm:text-[2.4rem] font-black tracking-tight text-foreground leading-[1.1]">
-          Learn from the{" "}
+          {data.headline}{" "}
           <span className="relative inline-block">
             <span className="relative z-10 bg-gradient-to-r from-teal-500 to-emerald-500 bg-clip-text text-transparent">
-              best
+              {data.highlightedText}
             </span>
             {/* Underline accent */}
             <span className="absolute -bottom-1 left-0 right-0 h-[3px] rounded-full bg-gradient-to-r from-teal-500/60 to-emerald-500/40" />
           </span>
         </h2>
         <p className="text-[13.5px] text-muted-foreground mt-2 max-w-md leading-relaxed">
-          Hand-picked courses reviewed and approved by the Nexora team — built for depth, not breadth.
+          {data.subtext}
         </p>
       </div>
 
@@ -295,11 +307,11 @@ function SectionHeader({ count }: { count: number }) {
           {count} course{count !== 1 ? "s" : ""}
         </span>
         <Link
-          href="/courses"
+          href={data.viewAllLink}
           className="flex items-center gap-1.5 text-[13px] font-bold text-teal-600 dark:text-teal-400
             hover:text-teal-500 transition-colors group"
         >
-          View all
+          {data.viewAllText}
           <RiArrowRightLine className="text-sm group-hover:translate-x-0.5 transition-transform" />
         </Link>
       </div>
@@ -317,7 +329,7 @@ function SectionDivider() {
 }
 
 // ─── Main exported section ────────────────────────────────
-export default function FeaturedCoursesSection() {
+export default function FeaturedCoursesSection({ data }: { data: CoursesSectionData; }) {
   const [courses, setCourses] = useState<FeaturedCourse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -334,8 +346,8 @@ export default function FeaturedCoursesSection() {
         if (data.success && Array.isArray(data.data)) {
           setCourses(data.data.filter((c: FeaturedCourse) => c.status === "PUBLISHED").slice(0, 6));
         }
-      } catch (e: any) {
-        setError(e.message ?? "Something went wrong");
+      } catch (error: unknown) {
+        setError(error instanceof Error ? error.message : "Something went wrong");
       } finally {
         setLoading(false);
       }
@@ -370,7 +382,7 @@ export default function FeaturedCoursesSection() {
           "transition-all duration-700",
           visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6",
         )}>
-          <SectionHeader count={courses.length || 0} />
+          <SectionHeader count={courses.length || 0} data={data} />
         </div>
 
         {/* ── Divider ── */}
@@ -386,13 +398,13 @@ export default function FeaturedCoursesSection() {
           {loading
             ? [0, 1, 2, 3, 4, 5].map(i => <CourseSkeleton key={i} />)
             : courses.map((course, i) => (
-                <CourseCard
-                  key={course.id}
-                  course={course}
-                  index={i}
-                  visible={visible}
-                />
-              ))
+              <CourseCard
+                key={course.id}
+                course={course}
+                index={i}
+                visible={visible}
+              />
+            ))
           }
         </div>
 
@@ -411,19 +423,19 @@ export default function FeaturedCoursesSection() {
                 <RiSparklingFill className="text-sm animate-pulse" />
               </div>
               <div>
-                <p className="text-[13.5px] font-bold text-foreground">More courses launching soon</p>
-                <p className="text-[12px] text-muted-foreground">All courses are reviewed and approved by Nexora.</p>
+                <p className="text-[13.5px] font-bold text-foreground">{data.footerTitle}</p>
+                <p className="text-[12px] text-muted-foreground">{data.footerText}</p>
               </div>
             </div>
             <Link
-              href="/courses"
+              href={data.viewAllLink}
               className="flex-shrink-0 flex items-center gap-2 h-10 px-5 rounded-xl
                 bg-teal-600 dark:bg-teal-500 hover:bg-teal-700 dark:hover:bg-teal-600
                 text-white text-[13px] font-bold
                 shadow-md shadow-teal-600/20
                 transition-all hover:scale-[1.02] active:scale-[0.98]"
             >
-              Browse all courses <RiArrowRightLine className="text-sm" />
+              {data.footerButtonText} <RiArrowRightLine className="text-sm" />
             </Link>
           </div>
         )}

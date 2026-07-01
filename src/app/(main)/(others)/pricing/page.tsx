@@ -79,9 +79,9 @@ const PLANS = [
 ];
 
 const FAQ_ITEMS = [
-  { q: "Can I change plans later?",   a: "Yes — upgrade or downgrade any time. Changes take effect at the start of your next billing period." },
+  { q: "Can I change plans later?", a: "Yes — upgrade or downgrade any time. Changes take effect at the start of your next billing period." },
   { q: "Is there a free trial for Pro?", a: "Pro comes with a 14-day free trial — no credit card required to start." },
-  { q: "What counts as a 'member'?",  a: "A member is any student added to at least one of your clusters. The same person across multiple clusters counts once." },
+  { q: "What counts as a 'member'?", a: "A member is any student added to at least one of your clusters. The same person across multiple clusters counts once." },
   { q: "Do you offer academic discounts?", a: "Yes. Verified teachers at accredited institutions get 40% off Pro. Email us with your institutional address." },
   { q: "How does billing work for annual plans?", a: "Annual plans are billed once per year and save you up to 20% compared to monthly." },
 ];
@@ -101,9 +101,9 @@ function useReveal(threshold = 0.12) {
 export default function PricingPage() {
   const [annual, setAnnual] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
-  const hero  = useReveal(0.1);
+  const hero = useReveal(0.1);
   const plans = useReveal(0.08);
-  const faq   = useReveal(0.1);
+  const faq = useReveal(0.1);
 
   return (
     <main className="bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50">

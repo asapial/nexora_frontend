@@ -49,11 +49,11 @@ export interface MenuItem {
 
 export interface NavBarProps {
   className?: string;
-  logo?: { url: string; src: string; alt: string; title: string };
+  logo?: { url: string; src: string; alt: string; title: string; };
   menu?: MenuItem[];
   auth?: {
-    login:  { title: string; url: string };
-    signup: { title: string; url: string };
+    login: { title: string; url: string; };
+    signup: { title: string; url: string; };
   };
   /**
    * Authenticated user — managed by the parent layout, NOT fetched here.
@@ -73,14 +73,14 @@ export interface NavBarProps {
 // ─────────────────────────────────────────────────────────
 // CONSTANTS
 // ─────────────────────────────────────────────────────────
-const ROLE_CFG: Record<Role, { label: string; icon: React.ReactNode; badge: string }> = {
-  ADMIN:   { label: "Admin",   icon: <RiAdminLine className="text-xs" />,         badge: "bg-violet-100/80 dark:bg-violet-950/50 text-violet-700 dark:text-violet-300 border-violet-200/70 dark:border-violet-800/50" },
+const ROLE_CFG: Record<Role, { label: string; icon: React.ReactNode; badge: string; }> = {
+  ADMIN: { label: "Admin", icon: <RiAdminLine className="text-xs" />, badge: "bg-violet-100/80 dark:bg-violet-950/50 text-violet-700 dark:text-violet-300 border-violet-200/70 dark:border-violet-800/50" },
   TEACHER: { label: "Teacher", icon: <RiGraduationCapLine className="text-xs" />, badge: "bg-teal-100/80 dark:bg-teal-950/50 text-teal-700 dark:text-teal-300 border-teal-200/70 dark:border-teal-800/50" },
-  STUDENT: { label: "Student", icon: <RiUserLine className="text-xs" />,          badge: "bg-blue-100/80 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border-blue-200/70 dark:border-blue-800/50" },
+  STUDENT: { label: "Student", icon: <RiUserLine className="text-xs" />, badge: "bg-blue-100/80 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border-blue-200/70 dark:border-blue-800/50" },
 };
 
 const DASHBOARD_ROUTE: Record<Role, string> = {
-  ADMIN:   "/dashboard",
+  ADMIN: "/dashboard",
   TEACHER: "/dashboard",
   STUDENT: "/dashboard",
 };
@@ -136,7 +136,7 @@ function UserAvatar({
 
       <div className="relative w-full h-full rounded-full p-[2px] bg-gradient-to-br from-teal-400 to-teal-600">
         <div className="w-full h-full rounded-full overflow-hidden bg-background flex items-center justify-center">
-          
+
           {user.image ? (
             <img
               src={user.image}
@@ -155,11 +155,11 @@ function UserAvatar({
 
       <span
         className="
-          absolute 
-          bottom-0 right-0 
+          absolute
+          bottom-0 right-0
           translate-x-1/4 translate-y-1/4
           w-3 h-3
-          rounded-full 
+          rounded-full
           bg-green-500
           border-2 border-background
           shadow-md
@@ -174,7 +174,7 @@ function AvatarSkeleton() {
   return <div className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-700 animate-pulse" />;
 }
 
-function SubMenuLink({ item, mobile = false }: { item: MenuItem; mobile?: boolean }) {
+function SubMenuLink({ item, mobile = false }: { item: MenuItem; mobile?: boolean; }) {
   return (
     <a href={item.url} className={cn(
       "flex flex-row items-start gap-3 rounded-lg p-2.5 no-underline outline-none select-none transition-colors duration-150 group",
@@ -193,7 +193,7 @@ function SubMenuLink({ item, mobile = false }: { item: MenuItem; mobile?: boolea
   );
 }
 
-function LogoMark({ title }: { title: string }) {
+function LogoMark({ title }: { title: string; }) {
   return (
     <Link href="/" className="flex gap-2">
       <div className="relative flex h-10 w-10 flex-shrink-0 items-center justify-center select-none">
@@ -217,9 +217,9 @@ function AccountDropdown({ user, onSignOut, onChangePassword, onVerifyEmail, onC
   onVerifyEmail?: () => Promise<void> | void;
   onClose: () => void;
 }) {
-  const [signingOut,    setSigningOut]    = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const [sendingVerify, setSendingVerify] = useState(false);
-  const [verifyDone,    setVerifyDone]    = useState(false);
+  const [verifyDone, setVerifyDone] = useState(false);
   const cfg = ROLE_CFG[user.role];
 
   const handleSignOut = async () => {
@@ -276,8 +276,8 @@ function AccountDropdown({ user, onSignOut, onChangePassword, onVerifyEmail, onC
             )}
           >
             {sendingVerify ? <><RiLoader4Line className="animate-spin text-xs" />Sending…</>
-              : verifyDone  ? <><RiCheckLine className="text-xs" />Email sent!</>
-              : <><RiMailCheckLine className="text-xs" />Resend verification email</>}
+              : verifyDone ? <><RiCheckLine className="text-xs" />Email sent!</>
+                : <><RiMailCheckLine className="text-xs" />Resend verification email</>}
           </button>
         </div>
       ) : (
@@ -339,10 +339,10 @@ function AvatarButton({ user, onSignOut, onChangePassword, onVerifyEmail }: {
 
   useEffect(() => {
     if (!open) return;
-    const onDown = (e: MouseEvent)    => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
-    const onKey  = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    const onDown = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
     document.addEventListener("mousedown", onDown);
-    document.addEventListener("keydown",   onKey);
+    document.addEventListener("keydown", onKey);
     return () => { document.removeEventListener("mousedown", onDown); document.removeEventListener("keydown", onKey); };
   }, [open]);
 
@@ -360,7 +360,7 @@ function AvatarButton({ user, onSignOut, onChangePassword, onVerifyEmail }: {
       >
         {/* Amber dot if unverified */}
         <div className="relative ">
-          <UserAvatar user={user}  />
+          <UserAvatar user={user} />
           {/* {!user.emailVerified && (
             <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-amber-400 ring-1 ring-white dark:ring-zinc-900 z-10" />
           )} */}
@@ -393,9 +393,9 @@ function MobileAccountSection({ user, onSignOut, onChangePassword, onVerifyEmail
   onChangePassword?: () => void;
   onVerifyEmail?: () => Promise<void> | void;
 }) {
-  const [signingOut,    setSigningOut]    = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const [sendingVerify, setSendingVerify] = useState(false);
-  const [verifyDone,    setVerifyDone]    = useState(false);
+  const [verifyDone, setVerifyDone] = useState(false);
   const cfg = ROLE_CFG[user.role];
 
   return (

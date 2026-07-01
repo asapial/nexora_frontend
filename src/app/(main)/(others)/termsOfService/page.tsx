@@ -4,8 +4,8 @@ import { useState, useEffect, useRef } from "react";
 import { RiFileListLine, RiMailLine, RiArrowUpLine } from "react-icons/ri";
 import { cn } from "@/lib/utils";
 
-const LAST_UPDATED = "June 1, 2025";
-const EFFECTIVE_DATE = "June 1, 2025";
+const LAST_UPDATED = "June 13, 2026";
+const EFFECTIVE_DATE = "June 13, 2026";
 
 const SECTIONS = [
   {
@@ -73,6 +73,17 @@ If you do not agree to these Terms, do not access or use the Service. We reserve
 **Cluster Deletion:** Soft-deleted clusters retain all data for 12 months before permanent deletion. Hard-deleted clusters are permanently purged within 30 days.
 
 **AI Features:** Enabling AI features on a cluster means student submissions and resources within that cluster may be processed by our AI systems. The teacher enabling this feature is responsible for ensuring students are informed.`,
+  },
+  {
+    id: "examshield-pro",
+    title: "ExamShield Pro Mode",
+    content: `**Teacher Responsibilities:** A teacher enabling ExamShield Pro Mode must have a lawful educational purpose, inform students before the exam, provide a reasonable accommodation process, and review integrity signals fairly.
+
+**Student Consent:** A student must complete the Pro Mode consent and camera preflight before starting a Pro Mode exam. A student who cannot complete Pro Mode because of accessibility, device, or privacy requirements should contact the responsible teacher or institution before the exam.
+
+**Human Review Required:** Camera and browser integrity events are reviewable signals, not automatic findings of misconduct. Teachers and institutions remain responsible for any academic-integrity decision and related appeal process.
+
+**Prohibited Use:** Users may not attempt to access another student's Pro Mode records, publish camera-related evidence, or use integrity signals for purposes unrelated to the relevant assessment.`,
   },
   {
     id: "payments",
@@ -206,7 +217,7 @@ function renderContent(text: string) {
 
 export default function TermsOfServicePage() {
   const [activeId, setActiveId] = useState("acceptance");
-  const [showTop, setShowTop]   = useState(false);
+  const [showTop, setShowTop] = useState(false);
   const hero = useReveal();
 
   useEffect(() => {

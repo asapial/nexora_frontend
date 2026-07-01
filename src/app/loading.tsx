@@ -34,15 +34,15 @@ function NeuralCanvas() {
     let particles: Particle[] = [];
 
     const resize = () => {
-      canvas.width  = canvas.offsetWidth;
+      canvas.width = canvas.offsetWidth;
       canvas.height = canvas.offsetHeight;
-      const count   = Math.floor((canvas.width * canvas.height) / 9000);
-      particles     = Array.from({ length: count }, () => ({
-        x:       Math.random() * canvas.width,
-        y:       Math.random() * canvas.height,
-        vx:      (Math.random() - 0.5) * 0.35,
-        vy:      (Math.random() - 0.5) * 0.35,
-        radius:  Math.random() * 1.4 + 0.5,
+      const count = Math.floor((canvas.width * canvas.height) / 9000);
+      particles = Array.from({ length: count }, () => ({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        vx: (Math.random() - 0.5) * 0.35,
+        vy: (Math.random() - 0.5) * 0.35,
+        radius: Math.random() * 1.4 + 0.5,
         opacity: Math.random() * 0.35 + 0.1,
       }));
     };
@@ -53,7 +53,7 @@ function NeuralCanvas() {
       particles.forEach((p, i) => {
         p.x += p.vx;
         p.y += p.vy;
-        if (p.x < 0 || p.x > canvas.width)  p.vx *= -1;
+        if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
         if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
 
         ctx.beginPath();
@@ -69,7 +69,7 @@ function NeuralCanvas() {
             ctx.moveTo(p.x, p.y);
             ctx.lineTo(q.x, q.y);
             ctx.strokeStyle = `rgba(20,184,166,${(1 - d / 110) * 0.12})`;
-            ctx.lineWidth   = 0.5;
+            ctx.lineWidth = 0.5;
             ctx.stroke();
           }
         }
@@ -196,7 +196,7 @@ export default function Loading() {
           <div
             className="absolute inset-[-12px] rounded-full border border-transparent"
             style={{
-              borderTopColor:   "rgba(20,184,166,.5)",
+              borderTopColor: "rgba(20,184,166,.5)",
               borderRightColor: "rgba(20,184,166,.15)",
               animation: "nexora-spin-cw 2.6s linear infinite",
             }}
@@ -207,7 +207,7 @@ export default function Loading() {
             className="absolute inset-[-20px] rounded-full border border-transparent"
             style={{
               borderBottomColor: "rgba(20,184,166,.3)",
-              borderLeftColor:   "rgba(20,184,166,.1)",
+              borderLeftColor: "rgba(20,184,166,.1)",
               animation: "nexora-spin-ccw 4.2s linear infinite",
             }}
           />
@@ -217,8 +217,8 @@ export default function Loading() {
             className="w-[76px] h-[76px] rounded-[18px] flex items-center justify-center text-[28px] text-teal-400 relative overflow-hidden"
             style={{
               background: "rgba(20,184,166,.1)",
-              border:     "1.5px solid rgba(20,184,166,.3)",
-              animation:  "nexora-hex-pulse 3s ease-in-out infinite",
+              border: "1.5px solid rgba(20,184,166,.3)",
+              animation: "nexora-hex-pulse 3s ease-in-out infinite",
             }}
           >
             {/* Inner gradient shimmer */}
@@ -266,9 +266,9 @@ export default function Loading() {
         <p
           className="text-[12.5px] font-medium h-5 text-center select-none"
           style={{
-            color:      "rgba(45,212,191,1)",
+            color: "rgba(45,212,191,1)",
             transition: "opacity 0.36s ease",
-            opacity:    statusVisible ? 1 : 0,
+            opacity: statusVisible ? 1 : 0,
           }}
         >
           {LOADING_STATUSES[statusIndex]}
@@ -282,7 +282,7 @@ export default function Loading() {
               className="w-[4px] h-[4px] rounded-full"
               style={{
                 background: "rgba(20,184,166,.3)",
-                animation:  `nexora-dot 1.4s ease-in-out ${i * 0.2}s infinite`,
+                animation: `nexora-dot 1.4s ease-in-out ${i * 0.2}s infinite`,
               }}
             />
           ))}
@@ -298,8 +298,8 @@ export default function Loading() {
         aria-hidden="true"
       >
         <circle cx="160" cy="0" r="120" stroke="#14b8a6" strokeWidth=".8" />
-        <circle cx="160" cy="0" r="75"  stroke="#14b8a6" strokeWidth=".8" />
-        <circle cx="160" cy="0" r="35"  stroke="#14b8a6" strokeWidth=".8" />
+        <circle cx="160" cy="0" r="75" stroke="#14b8a6" strokeWidth=".8" />
+        <circle cx="160" cy="0" r="35" stroke="#14b8a6" strokeWidth=".8" />
       </svg>
       <svg
         className="absolute bottom-0 left-0 pointer-events-none"
@@ -309,7 +309,7 @@ export default function Loading() {
         aria-hidden="true"
       >
         <circle cx="0" cy="140" r="110" stroke="#14b8a6" strokeWidth=".8" />
-        <circle cx="0" cy="140" r="65"  stroke="#14b8a6" strokeWidth=".8" />
+        <circle cx="0" cy="140" r="65" stroke="#14b8a6" strokeWidth=".8" />
       </svg>
     </div>
   );

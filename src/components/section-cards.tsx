@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import { Badge } from "@/components/ui/badge"
+import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardAction,
@@ -8,8 +8,8 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
-import { IconTrendingUp, IconTrendingDown } from "@tabler/icons-react"
+} from "@/components/ui/card";
+import { IconTrendingUp, IconTrendingDown } from "@tabler/icons-react";
 
 export function SectionCards() {
   return (
@@ -107,5 +107,5 @@ export function SectionCards() {
         </CardFooter>
       </Card>
     </div>
-  )
+  );
 }

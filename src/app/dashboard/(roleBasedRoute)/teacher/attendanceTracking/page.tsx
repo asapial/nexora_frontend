@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useMemo, useEffect, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   RiCalendarCheckLine, RiGroupLine, RiSparklingFill,
   RiCheckLine, RiCloseLine, RiSubtractLine, RiSaveLine,
   RiHistoryLine, RiLoader4Line, RiAlertLine,
-  RiSettings3Line,
-  RiFileWarningLine,
+  RiSettings3Line, RiFileWarningLine, RiTimeLine, RiMapPinLine,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -15,25 +15,25 @@ import RefreshIcon from "@/components/shared/RefreshIcon";
 // ─── Types ────────────────────────────────────────────────
 type Status = "PRESENT" | "ABSENT" | "EXCUSED" | "UNMARKED";
 
-interface ATRecord { memberId: string; status: Status; note: string }
-interface Member { studentProfileId: string; userId: string; name: string; email: string; image: string | null }
-interface Session { id: string; title: string; scheduledAt: string; status: string; clusterId: string; cluster: { id: string; name: string } }
-interface HistEntry { status: Status; session: { title: string; scheduledAt: string } }
+interface ATRecord { memberId: string; status: Status; note: string; }
+interface Member { studentProfileId: string; userId: string; name: string; email: string; image: string | null; }
+interface Session { id: string; title: string; scheduledAt: string; status: string; clusterId: string; cluster: { id: string; name: string; }; }
+interface HistEntry { status: Status; session: { title: string; scheduledAt: string; }; }
 
 // ─── Config ───────────────────────────────────────────────
-const STATUS_CONFIG: Record<Status, { label: string; icon: React.ReactNode; activeClass: string; dotClass: string }> = {
-  PRESENT:  { label: "Present",  icon: <RiCheckLine />,     activeClass: "border-teal-400 bg-teal-600 text-white",    dotClass: "bg-teal-500" },
-  ABSENT:   { label: "Absent",   icon: <RiCloseLine />,     activeClass: "border-red-400 bg-red-600 text-white",      dotClass: "bg-red-500"  },
-  EXCUSED:  { label: "Excused",  icon: <RiSubtractLine />,  activeClass: "border-amber-400 bg-amber-500 text-white",  dotClass: "bg-amber-400"},
-  UNMARKED: { label: "—",        icon: null,                activeClass: "",                                           dotClass: "bg-muted-foreground/30" },
+const STATUS_CONFIG: Record<Status, { label: string; icon: React.ReactNode; activeClass: string; dotClass: string; }> = {
+  PRESENT: { label: "Present", icon: <RiCheckLine />, activeClass: "border-teal-400 bg-teal-600 text-white", dotClass: "bg-teal-500" },
+  ABSENT: { label: "Absent", icon: <RiCloseLine />, activeClass: "border-red-400 bg-red-600 text-white", dotClass: "bg-red-500" },
+  EXCUSED: { label: "Excused", icon: <RiSubtractLine />, activeClass: "border-amber-400 bg-amber-500 text-white", dotClass: "bg-amber-400" },
+  UNMARKED: { label: "—", icon: null, activeClass: "", dotClass: "bg-muted-foreground/30" },
 };
 
 const initials = (n: string) => n.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
-const fmtDate  = (d: string) => { try { return new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }); } catch { return d; } };
-const pct      = (a: number, b: number) => b === 0 ? 0 : Math.round((a / b) * 100);
+const fmtDate = (d: string) => { try { return new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }); } catch { return d; } };
+const pct = (a: number, b: number) => b === 0 ? 0 : Math.round((a / b) * 100);
 
 // ─── Status toggle button ─────────────────────────────────
-function StatusBtn({ status, current, onClick }: { status: Status; current: Status; onClick: () => void }) {
+function StatusBtn({ status, current, onClick }: { status: Status; current: Status; onClick: () => void; }) {
   const cfg = STATUS_CONFIG[status];
   const isActive = status === current;
   if (status === "UNMARKED") return null;
@@ -48,12 +48,12 @@ function StatusBtn({ status, current, onClick }: { status: Status; current: Stat
 }
 
 // ─── Attendance rate bar ───────────────────────────────────
-function RateBar({ records }: { records: ATRecord[] }) {
-  const present  = records.filter(r => r.status === "PRESENT").length;
-  const excused  = records.filter(r => r.status === "EXCUSED").length;
-  const absent   = records.filter(r => r.status === "ABSENT").length;
+function RateBar({ records }: { records: ATRecord[]; }) {
+  const present = records.filter(r => r.status === "PRESENT").length;
+  const excused = records.filter(r => r.status === "EXCUSED").length;
+  const absent = records.filter(r => r.status === "ABSENT").length;
   const unmarked = records.filter(r => r.status === "UNMARKED").length;
-  const total    = records.length;
+  const total = records.length;
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between text-[12.5px] font-semibold text-foreground">
@@ -64,9 +64,9 @@ function RateBar({ records }: { records: ATRecord[] }) {
       </div>
       <div className="h-3 rounded-full bg-muted overflow-hidden flex gap-0.5">
         {total > 0 && [
-          { count: present,  color: "bg-teal-500" },
-          { count: excused,  color: "bg-amber-400" },
-          { count: absent,   color: "bg-red-400" },
+          { count: present, color: "bg-teal-500" },
+          { count: excused, color: "bg-amber-400" },
+          { count: absent, color: "bg-red-400" },
           { count: unmarked, color: "bg-muted-foreground/20" },
         ].map((seg, i) => seg.count > 0 && (
           <div key={i} className={cn("h-full transition-all duration-700", seg.color)} style={{ width: `${pct(seg.count, total)}%` }} />
@@ -82,32 +82,82 @@ function RateBar({ records }: { records: ATRecord[] }) {
   );
 }
 
-// ─── Cluster selector with real data ──────────────────────
+// ─── History dot with tooltip ────────────────────────────────
+function HistoryDot({ entry }: { entry: HistEntry; }) {
+  const [hover, setHover] = useState(false);
+  const cfg = STATUS_CONFIG[entry.status] ?? STATUS_CONFIG.UNMARKED;
+  const fmtDate = (d: string) => { try { return new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }); } catch { return d; } };
+  const fmtTime = (d: string) => { try { return new Date(d).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }); } catch { return ""; } };
+  return (
+    <div className={cn("relative", hover && "z-50")} onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
+      <div className={cn(
+        "w-4 h-4 rounded-full border-2 border-background cursor-pointer transition-transform hover:scale-125",
+        cfg.dotClass
+      )} />
+      {hover && (
+        <div className={cn(
+          "absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50",
+          "w-52 rounded-xl border border-border bg-card shadow-xl shadow-black/10 dark:shadow-black/40",
+          "px-3 py-2.5 flex flex-col gap-1 pointer-events-none"
+        )}>
+          {/* Arrow */}
+          <div className="absolute top-full left-1/2 -translate-x-1/2 w-2 h-2 bg-card border-r border-b border-border rotate-45 -mt-1" />
+          <div className="flex items-center gap-1.5 mb-0.5">
+            <span className={cn("w-2 h-2 rounded-full flex-shrink-0", cfg.dotClass)} />
+            <span className={cn("text-[11px] font-bold uppercase tracking-wide",
+              entry.status === "PRESENT" ? "text-teal-600 dark:text-teal-400"
+                : entry.status === "ABSENT" ? "text-red-500 dark:text-red-400"
+                  : entry.status === "EXCUSED" ? "text-amber-600 dark:text-amber-400"
+                    : "text-muted-foreground")}>
+              {cfg.label}
+            </span>
+          </div>
+          <p className="text-[12px] font-semibold text-foreground leading-snug line-clamp-2">
+            {entry.session?.title ?? "Session"}
+          </p>
+          <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+            <RiCalendarCheckLine className="text-teal-500 dark:text-teal-400 flex-shrink-0" />
+            {fmtDate(entry.session?.scheduledAt ?? "")}
+          </div>
+          <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+            <RiTimeLine className="text-teal-500 dark:text-teal-400 flex-shrink-0" />
+            {fmtTime(entry.session?.scheduledAt ?? "")}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Cluster selector with real data ──────────────────────────
 export default function AttendanceTrackingPage() {
+  const searchParams = useSearchParams();
+  const urlSessionId = searchParams.get("sessionId") ?? "";
+
   // ── cluster/session selection
-  const [clusters,  setClusters]  = useState<{id:string;name:string}[]>([]);
+  const [clusters, setClusters] = useState<{ id: string; name: string ;}[]>([]);
   const [clusterId, setClusterId] = useState("");
-  const [sessions,  setSessions]  = useState<Session[]>([]);
+  const [sessions, setSessions] = useState<Session[]>([]);
   const [sessionId, setSessionId] = useState("");
-  const [members,   setMembers]   = useState<Member[]>([]);
-  const [history,   setHistory]   = useState<Record<string, HistEntry[]>>({});
+  const [members, setMembers] = useState<Member[]>([]);
+  const [history, setHistory] = useState<Record<string, HistEntry[]>>({});
 
   // ── attendance records [key = memberStudentProfileId]
-  const [records,   setRecords]   = useState<Record<string, ATRecord>>({});
+  const [records, setRecords] = useState<Record<string, ATRecord>>({});
 
   // ── ui states
   const [loadingClusters, setLoadingClusters] = useState(true);
   const [loadingSessions, setLoadingSessions] = useState(false);
-  const [loadingMembers,  setLoadingMembers]  = useState(false);
+  const [loadingMembers, setLoadingMembers] = useState(false);
   const [loadingExisting, setLoadingExisting] = useState(false);
-  const [loadingHistory,  setLoadingHistory]  = useState(false);
-  const [saving,  setSaving]  = useState(false);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
 
   // ── absent warning config
-  const [showWarningCfg, setShowWarningCfg]   = useState(false);
+  const [showWarningCfg, setShowWarningCfg] = useState(false);
   const [absentThreshold, setAbsentThreshold] = useState(3);
-  const [warningMsg, setWarningMsg]           = useState("This student has excessive absences and may need immediate attention.");
+  const [warningMsg, setWarningMsg] = useState("This student has excessive absences and may need immediate attention.");
 
   // ── absent warning config — load from backend
   useEffect(() => {
@@ -118,7 +168,7 @@ export default function AttendanceTrackingPage() {
         if (cfg.threshold) setAbsentThreshold(cfg.threshold);
         if (cfg.message) setWarningMsg(cfg.message);
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   const activeSession = sessions.find(s => s.id === sessionId) ?? sessions[0];
@@ -129,7 +179,7 @@ export default function AttendanceTrackingPage() {
     try {
       const res = await fetch("/api/cluster", { credentials: "include" });
       const d = await res.json();
-      const list = (d.data ?? d) as {id:string;name:string}[];
+      const list = (d.data ?? d) as { id: string; name: string ;}[];
       setClusters(list);
       if (list.length > 0) setClusterId(list[0].id);
     } catch { toast.error("Failed to load clusters"); }
@@ -138,19 +188,25 @@ export default function AttendanceTrackingPage() {
 
   useEffect(() => { fetchClusters(); }, [fetchClusters]);
 
-  // ── Fetch sessions when cluster changes
+  // ── Fetch sessions when cluster changes (only completed ones)
   useEffect(() => {
     if (!clusterId) return;
     setLoadingSessions(true); setSessions([]); setSessionId(""); setMembers([]); setRecords({});
     fetch(`/api/sessions?clusterId=${clusterId}`, { credentials: "include" })
       .then(r => r.json())
       .then(d => {
-        const list = (d.data ?? d) as Session[];
+        const list = ((d.data ?? d) as Session[]).filter(s => s.status === "completed");
         setSessions(list);
-        if (list.length > 0) setSessionId(list[0].id);
+        // Auto-select from URL param if present, else first in list
+        if (urlSessionId && list.some(s => s.id === urlSessionId)) {
+          setSessionId(urlSessionId);
+        } else if (list.length > 0) {
+          setSessionId(list[0].id);
+        }
       })
       .catch(() => toast.error("Failed to load sessions"))
       .finally(() => setLoadingSessions(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clusterId]);
 
   // ── Fetch members + existing attendance when session changes
@@ -162,10 +218,16 @@ export default function AttendanceTrackingPage() {
       .then(d => {
         const list = (d.data ?? []) as Member[];
         setMembers(list);
-        // init all as UNMARKED
-        const init: Record<string, ATRecord> = {};
-        list.forEach(m => { init[m.studentProfileId] = { memberId: m.studentProfileId, status: "UNMARKED", note: "" }; });
-        setRecords(init);
+        // init all as UNMARKED, preserving any already loaded attendance
+        setRecords(prev => {
+          const next = { ...prev };
+          list.forEach(m => {
+            if (!next[m.studentProfileId]) {
+              next[m.studentProfileId] = { memberId: m.studentProfileId, status: "UNMARKED", note: "" };
+            }
+          });
+          return next;
+        });
       })
       .catch(() => toast.error("Failed to load members"))
       .finally(() => setLoadingMembers(false));
@@ -175,20 +237,18 @@ export default function AttendanceTrackingPage() {
     fetch(`/api/sessions/${activeSession.id}/attendance`, { credentials: "include" })
       .then(r => r.json())
       .then(d => {
-        const recList = (d.data?.records ?? d.data ?? []) as Array<{studentId:string;status:string;note?:string}>;
+        const recList = (d.data?.records ?? d.data ?? []) as Array<{ studentId: string; status: string; note?: string ;}>;
         if (recList.length) {
           setRecords(prev => {
             const next = { ...prev };
             recList.forEach(r => {
-              if (next[r.studentId]) {
-                next[r.studentId] = { memberId: r.studentId, status: r.status as Status, note: r.note ?? "" };
-              }
+              next[r.studentId] = { memberId: r.studentId, status: r.status as Status, note: r.note ?? "" };
             });
             return next;
           });
         }
       })
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setLoadingExisting(false));
   }, [activeSession?.id]);
 
@@ -258,7 +318,7 @@ export default function AttendanceTrackingPage() {
 
   // ── Absent count per member (across history)
   const absentCount = (memberId: string) => (history[memberId] ?? []).filter(h => h.status === "ABSENT").length;
-  const isWarned    = (memberId: string) => absentCount(memberId) >= absentThreshold;
+  const isWarned = (memberId: string) => absentCount(memberId) >= absentThreshold;
 
   const markedCount = sessionRecords.filter(r => r.status !== "UNMARKED").length;
 
@@ -347,6 +407,10 @@ export default function AttendanceTrackingPage() {
             <label className="text-[13px] font-semibold text-foreground/80">Session</label>
             {loadingSessions ? (
               <div className="h-10 rounded-xl bg-muted animate-pulse" />
+            ) : sessions.length === 0 ? (
+              <div className="h-10 rounded-xl bg-muted/30 border border-border flex items-center px-4">
+                <span className="text-[13px] text-muted-foreground/60">No completed sessions yet</span>
+              </div>
             ) : (
               <select value={activeSession?.id ?? ""} onChange={e => setSessionId(e.target.value)}
                 className="w-full h-10 px-4 rounded-xl text-[13.5px] bg-muted/40 border border-border text-foreground appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-teal-400/20 focus:border-teal-400/70 transition-all">
@@ -355,14 +419,19 @@ export default function AttendanceTrackingPage() {
             )}
           </div>
         </div>
+        {/* Completed-only note */}
+        <p className="text-[11.5px] text-muted-foreground/60 flex items-center gap-1">
+          <RiCalendarCheckLine className="text-teal-500 dark:text-teal-400" />
+          Only completed sessions are shown. Complete a session from Manage Sessions to mark attendance.
+        </p>
         {activeSession && !loadingMembers && !loadingExisting && <RateBar records={sessionRecords} />}
       </div>
 
       {/* Members table */}
       {activeSession && (
-        <div className="rounded-2xl border border-border bg-card overflow-hidden">
+        <div className="rounded-2xl border border-border bg-card">
           {/* Table header */}
-          <div className="flex items-center justify-between px-5 py-3.5 border-b border-border bg-muted/20">
+          <div className="flex items-center justify-between px-5 py-3.5 border-b border-border bg-muted/20 rounded-t-2xl">
             <div className="flex items-center gap-2">
               <RiGroupLine className="text-muted-foreground/60 text-base" />
               <span className="text-[13px] font-bold text-foreground">{members.length} members</span>
@@ -374,8 +443,8 @@ export default function AttendanceTrackingPage() {
                 <button key={s} type="button" onClick={() => markAll(s)}
                   className={cn("h-7 px-3 rounded-lg text-[11.5px] font-bold border transition-all",
                     s === "PRESENT" ? "border-teal-300/60 dark:border-teal-700/50 text-teal-700 dark:text-teal-400 hover:bg-teal-50/60 dark:hover:bg-teal-950/30"
-                    : s === "ABSENT" ? "border-red-300/60 dark:border-red-700/50 text-red-600 dark:text-red-400 hover:bg-red-50/60 dark:hover:bg-red-950/30"
-                    : "border-amber-300/60 dark:border-amber-700/50 text-amber-600 dark:text-amber-400 hover:bg-amber-50/60 dark:hover:bg-amber-950/30"
+                      : s === "ABSENT" ? "border-red-300/60 dark:border-red-700/50 text-red-600 dark:text-red-400 hover:bg-red-50/60 dark:hover:bg-red-950/30"
+                        : "border-amber-300/60 dark:border-amber-700/50 text-amber-600 dark:text-amber-400 hover:bg-amber-50/60 dark:hover:bg-amber-950/30"
                   )}>
                   {s.charAt(0) + s.slice(1).toLowerCase()}
                 </button>
@@ -397,9 +466,9 @@ export default function AttendanceTrackingPage() {
           ) : members.length === 0 ? (
             <p className="px-5 py-8 text-[13px] text-muted-foreground italic text-center">No members in this session.</p>
           ) : members.map(member => {
-            const rec    = records[member.studentProfileId] ?? { memberId: member.studentProfileId, status: "UNMARKED" as Status, note: "" };
+            const rec = records[member.studentProfileId] ?? { memberId: member.studentProfileId, status: "UNMARKED" as Status, note: "" };
             const status = rec.status;
-            const note   = rec.note;
+            const note = rec.note;
             const warned = showHistory && isWarned(member.studentProfileId);
 
             return (
@@ -440,9 +509,9 @@ export default function AttendanceTrackingPage() {
                   {/* Status label */}
                   <div className={cn("w-20 text-center text-[11.5px] font-bold flex-shrink-0 hidden sm:block",
                     status === "PRESENT" ? "text-teal-600 dark:text-teal-400"
-                    : status === "ABSENT" ? "text-red-500 dark:text-red-400"
-                    : status === "EXCUSED" ? "text-amber-600 dark:text-amber-400"
-                    : "text-muted-foreground/40")}>
+                      : status === "ABSENT" ? "text-red-500 dark:text-red-400"
+                        : status === "EXCUSED" ? "text-amber-600 dark:text-amber-400"
+                          : "text-muted-foreground/40")}>
                     {STATUS_CONFIG[status].label}
                   </div>
                 </div>
@@ -463,11 +532,9 @@ export default function AttendanceTrackingPage() {
                       <span className="text-[11.5px] text-muted-foreground/40">No history</span>
                     ) : (
                       <div className="flex items-center gap-2">
-                        <div className="flex gap-1">
-                          {(history[member.studentProfileId] ?? []).slice(0, 10).map((e, i) => (
-                            <div key={i}
-                              title={`${e.session?.title} · ${fmtDate(e.session?.scheduledAt ?? "")} · ${e.status}`}
-                              className={cn("w-3 h-3 rounded-sm transition-all", STATUS_CONFIG[e.status]?.dotClass ?? "bg-muted-foreground/30")} />
+                        <div className="flex gap-1.5 flex-wrap">
+                          {(history[member.studentProfileId] ?? []).slice(0, 12).map((e, i) => (
+                            <HistoryDot key={i} entry={e} />
                           ))}
                         </div>
                         {(() => {
@@ -489,7 +556,7 @@ export default function AttendanceTrackingPage() {
           })}
 
           {/* Save footer */}
-          <div className="flex items-center justify-between px-5 py-4 border-t border-border bg-muted/20">
+          <div className="flex items-center justify-between px-5 py-4 border-t border-border bg-muted/20 rounded-b-2xl">
             <p className="text-[12.5px] text-muted-foreground">
               {markedCount}/{members.length} marked
             </p>

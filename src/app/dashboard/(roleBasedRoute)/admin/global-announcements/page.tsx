@@ -12,7 +12,7 @@ import { adminPlatformApi, adminUsersApi } from "@/lib/api";
 import { toast } from "sonner";
 import { Avatar, AvatarBadge, AvatarImage } from "@/components/ui/avatar";
 
-const URGENCY_CFG: Record<string, { label: string; cls: string; icon: React.ReactNode }> = {
+const URGENCY_CFG: Record<string, { label: string; cls: string; icon: React.ReactNode; }> = {
   INFO: { label: "Info", icon: <RiInformationLine />, cls: "text-sky-700 dark:text-sky-400 bg-sky-50/80 dark:bg-sky-950/40 border-sky-200/60" },
   IMPORTANT: { label: "Important", icon: <RiAlertLine />, cls: "text-amber-700 dark:text-amber-400 bg-amber-50/80 dark:bg-amber-950/40 border-amber-200/60" },
   CRITICAL: { label: "Critical", icon: <RiBroadcastLine />, cls: "text-rose-700 dark:text-rose-400 bg-rose-50/80 dark:bg-rose-950/40 border-rose-200/60" },
@@ -33,7 +33,7 @@ type Announcement = {
   scheduledAt?: string;
   publishedAt?: string;
   createdAt: string;
-  author: { name: string; email: string };
+  author: { name: string; email: string; };
 };
 
 type UserOption = {
@@ -71,7 +71,7 @@ function PersonalNoticeModal({
   onSend,
 }: {
   onClose: () => void;
-  onSend: (targetUserId: string, payload: { title: string; body: string; urgency: string }) => Promise<void>;
+  onSend: (targetUserId: string, payload: { title: string; body: string; urgency: string; }) => Promise<void>;
 }) {
   const [search, setSearch] = useState("");
   const [users, setUsers] = useState<UserOption[]>([]);
@@ -250,7 +250,7 @@ export default function GlobalAnnouncementsPage() {
     finally { setSaving(false); }
   };
 
-  const sendPersonal = async (targetUserId: string, payload: { title: string; body: string; urgency: string }) => {
+  const sendPersonal = async (targetUserId: string, payload: { title: string; body: string; urgency: string; }) => {
     await adminPlatformApi.sendPersonalNotice(targetUserId, payload);
     toast.success("Personal notice sent");
     await load();

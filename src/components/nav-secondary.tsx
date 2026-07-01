@@ -12,15 +12,15 @@ import {
 
 export interface NavSecondaryItem {
   title: string;
-  url:   string;
-  icon:  React.ReactNode;
+  url: string;
+  icon: React.ReactNode;
 }
 
 export function NavSecondary({
   items,
   className,
 }: {
-  items:      NavSecondaryItem[];
+  items: NavSecondaryItem[];
   className?: string;
 }) {
   const pathname = usePathname();

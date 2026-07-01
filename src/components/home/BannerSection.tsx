@@ -36,9 +36,9 @@ const BANNER_CONFIG: Record<
   }
 > = {
   info: {
-    bg:          "bg-sky-50/80 dark:bg-sky-950/30",
-    border:      "border-sky-200/60 dark:border-sky-800/40",
-    text:        "text-sky-800 dark:text-sky-200",
+    bg: "bg-sky-50/80 dark:bg-sky-950/30",
+    border: "border-sky-200/60 dark:border-sky-800/40",
+    text: "text-sky-800 dark:text-sky-200",
     ctaBg:
       "bg-sky-100 dark:bg-sky-900/50 hover:bg-sky-200 dark:hover:bg-sky-900 text-sky-700 dark:text-sky-300",
     icon: (
@@ -47,9 +47,9 @@ const BANNER_CONFIG: Record<
     progressBar: "bg-sky-400/60 dark:bg-sky-500/60",
   },
   warning: {
-    bg:          "bg-amber-50/80 dark:bg-amber-950/30",
-    border:      "border-amber-200/60 dark:border-amber-800/40",
-    text:        "text-amber-800 dark:text-amber-200",
+    bg: "bg-amber-50/80 dark:bg-amber-950/30",
+    border: "border-amber-200/60 dark:border-amber-800/40",
+    text: "text-amber-800 dark:text-amber-200",
     ctaBg:
       "bg-amber-100 dark:bg-amber-900/50 hover:bg-amber-200 dark:hover:bg-amber-900 text-amber-700 dark:text-amber-300",
     icon: (
@@ -58,9 +58,9 @@ const BANNER_CONFIG: Record<
     progressBar: "bg-amber-400/60 dark:bg-amber-500/60",
   },
   critical: {
-    bg:          "bg-red-50/80 dark:bg-red-950/30",
-    border:      "border-red-200/60 dark:border-red-800/40",
-    text:        "text-red-800 dark:text-red-200",
+    bg: "bg-red-50/80 dark:bg-red-950/30",
+    border: "border-red-200/60 dark:border-red-800/40",
+    text: "text-red-800 dark:text-red-200",
     ctaBg:
       "bg-red-100 dark:bg-red-900/50 hover:bg-red-200 dark:hover:bg-red-900 text-red-700 dark:text-red-300",
     icon: (
@@ -69,9 +69,9 @@ const BANNER_CONFIG: Record<
     progressBar: "bg-red-400/60 dark:bg-red-500/60",
   },
   success: {
-    bg:          "bg-emerald-50/80 dark:bg-emerald-950/30",
-    border:      "border-emerald-200/60 dark:border-emerald-800/40",
-    text:        "text-emerald-800 dark:text-emerald-200",
+    bg: "bg-emerald-50/80 dark:bg-emerald-950/30",
+    border: "border-emerald-200/60 dark:border-emerald-800/40",
+    text: "text-emerald-800 dark:text-emerald-200",
     ctaBg:
       "bg-emerald-100 dark:bg-emerald-900/50 hover:bg-emerald-200 dark:hover:bg-emerald-900 text-emerald-700 dark:text-emerald-300",
     icon: (

@@ -5,7 +5,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   RiSparklingFill, RiBookOpenLine, RiCheckLine, RiAlertLine,
-  RiArrowRightLine,RiTrophyLine,
+  RiArrowRightLine, RiTrophyLine,
   RiCalendarLine, RiTimeLine
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
@@ -26,13 +26,13 @@ export default function MyLearningPage() {
   const load = useCallback(async () => {
     setLoading(true); setError(null);
     try {
-      await paymentApi.syncPendingPayments().catch(() => {});
+      await paymentApi.syncPendingPayments().catch(() => { });
       const r = await studentApi.getMyEnrollments();
       const raw = r.data as unknown;
       const list = Array.isArray(raw)
         ? raw
-        : raw && typeof raw === "object" && "data" in raw && Array.isArray((raw as { data: unknown }).data)
-          ? (raw as { data: unknown[] }).data
+        : raw && typeof raw === "object" && "data" in raw && Array.isArray((raw as { data: unknown; }).data)
+          ? (raw as { data: unknown[]; }).data
           : [];
       setEnrollments(list);
     } catch (e: unknown) {
@@ -45,7 +45,7 @@ export default function MyLearningPage() {
   useEffect(() => { load(); }, [load]);
 
   const inProgress = enrollments.filter(e => !e.completedAt && Number(e.progress ?? 0) < 100);
-  const completed  = enrollments.filter(e => e.completedAt || Number(e.progress ?? 0) >= 100);
+  const completed = enrollments.filter(e => e.completedAt || Number(e.progress ?? 0) >= 100);
 
   // If everything landed under "Completed" (e.g. progress already 100%), don't leave the user on an empty "In Progress" tab.
   useEffect(() => {
@@ -53,7 +53,7 @@ export default function MyLearningPage() {
     if (inProgress.length === 0 && completed.length > 0) setActiveTab("completed");
   }, [loading, enrollments, inProgress.length, completed.length]);
 
-  const EnrollCard = ({ e }: { e: any }) => {
+  const EnrollCard = ({ e }: { e: any; }) => {
     const course = e.course ?? {};
     const isDone = !!(e.completedAt || (e.progress ?? 0) >= 100);
     const pct = e.progress ?? 0;
@@ -71,9 +71,9 @@ export default function MyLearningPage() {
           {course.thumbnailUrl
             ? <img src={course.thumbnailUrl} alt={course.title} className="w-full h-full object-cover opacity-70 group-hover:opacity-85 group-hover:scale-[1.03] transition-all duration-500 ease-out" />
             : <div className="w-full h-full flex items-center justify-center relative">
-                <div className="absolute inset-0 opacity-[0.07]" style={{ backgroundImage: "linear-gradient(rgba(20,184,166,1) 1px,transparent 1px),linear-gradient(90deg,rgba(20,184,166,1) 1px,transparent 1px)", backgroundSize: "20px 20px" }} />
-                <RiBookOpenLine className="text-4xl text-teal-700/20 relative z-10" />
-              </div>
+              <div className="absolute inset-0 opacity-[0.07]" style={{ backgroundImage: "linear-gradient(rgba(20,184,166,1) 1px,transparent 1px),linear-gradient(90deg,rgba(20,184,166,1) 1px,transparent 1px)", backgroundSize: "20px 20px" }} />
+              <RiBookOpenLine className="text-4xl text-teal-700/20 relative z-10" />
+            </div>
           }
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
           {/* Progress bar on thumbnail */}
@@ -139,8 +139,8 @@ export default function MyLearningPage() {
               <div className="absolute inset-0 bg-gradient-to-br from-transparent to-teal-500/[0.02] pointer-events-none" />
               <div className={cn("w-9 h-9 rounded-xl flex-shrink-0 flex items-center justify-center text-base border z-10",
                 s.a === "amber" ? "bg-amber-100/70 dark:bg-amber-950/50 border-amber-200/60 dark:border-amber-800/50 text-amber-600 dark:text-amber-400"
-                : s.a === "blue" ? "bg-blue-100/70 dark:bg-blue-950/50 border-blue-200/60 dark:border-blue-800/50 text-blue-600 dark:text-blue-400"
-                : "bg-teal-100/70 dark:bg-teal-950/50 border-teal-200/60 dark:border-teal-800/50 text-teal-600 dark:text-teal-400"
+                  : s.a === "blue" ? "bg-blue-100/70 dark:bg-blue-950/50 border-blue-200/60 dark:border-blue-800/50 text-blue-600 dark:text-blue-400"
+                    : "bg-teal-100/70 dark:bg-teal-950/50 border-teal-200/60 dark:border-teal-800/50 text-teal-600 dark:text-teal-400"
               )}>{s.icon}</div>
               <div className="z-10"><p className="text-[20px] font-extrabold text-foreground leading-none tabular-nums">{s.v}</p><p className="text-[12px] text-muted-foreground mt-0.5">{s.l}</p></div>
             </div>
@@ -165,10 +165,10 @@ export default function MyLearningPage() {
         ? <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 animate-pulse">{Array.from({ length: 3 }).map((_, i) => <div key={i} className="h-64 rounded-2xl bg-muted/40" />)}</div>
         : list.length === 0
           ? <div className="rounded-2xl border border-border bg-card/80 py-20 flex flex-col items-center gap-4 text-center">
-              {activeTab === "inprogress" ? <RiTimeLine className="text-4xl text-muted-foreground/30" /> : <RiTrophyLine className="text-4xl text-muted-foreground/30" />}
-              <p className="text-[14px] font-bold text-muted-foreground">{activeTab === "inprogress" ? "No courses in progress" : "No completed courses yet"}</p>
-              <button onClick={() => router.push("/courses")} className="flex items-center gap-2 h-9 px-4 rounded-xl bg-teal-600 dark:bg-teal-500 text-white text-[13px] font-bold hover:bg-teal-700 transition-colors"><RiBookOpenLine className="text-sm" />Browse courses</button>
-            </div>
+            {activeTab === "inprogress" ? <RiTimeLine className="text-4xl text-muted-foreground/30" /> : <RiTrophyLine className="text-4xl text-muted-foreground/30" />}
+            <p className="text-[14px] font-bold text-muted-foreground">{activeTab === "inprogress" ? "No courses in progress" : "No completed courses yet"}</p>
+            <button onClick={() => router.push("/courses")} className="flex items-center gap-2 h-9 px-4 rounded-xl bg-teal-600 dark:bg-teal-500 text-white text-[13px] font-bold hover:bg-teal-700 transition-colors"><RiBookOpenLine className="text-sm" />Browse courses</button>
+          </div>
           : <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">{list.map(e => <EnrollCard key={e.id} e={e} />)}</div>
       }
     </div>

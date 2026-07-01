@@ -25,10 +25,10 @@ import { toast } from "sonner";
 
 // ─── Types ─────────────────────────────────────────────────
 type CreateResult = {
-  newAccountsCreated:        string[];
-  existingUpgraded:          string[];
+  newAccountsCreated: string[];
+  existingUpgraded: string[];
   alreadyRegisteredAsTeacher?: string[];
-  alreadyRegisteredAsAdmin?:   string[];
+  alreadyRegisteredAsAdmin?: string[];
 };
 
 // ─── Helpers ───────────────────────────────────────────────
@@ -40,7 +40,7 @@ function parseEmails(text: string): string[] {
 }
 
 // ─── Live email chip preview ───────────────────────────────
-function EmailPreview({ raw, accent }: { raw: string; accent: "teal" | "violet" }) {
+function EmailPreview({ raw, accent }: { raw: string; accent: "teal" | "violet"; }) {
   const emails = useMemo(() => parseEmails(raw), [raw]);
   if (!raw.trim()) return null;
 
@@ -120,10 +120,10 @@ function EmailPreview({ raw, accent }: { raw: string; accent: "teal" | "violet" 
 function ResultBlock({
   title, emails, variant, icon,
 }: {
-  title:   string;
-  emails:  string[];
+  title: string;
+  emails: string[];
   variant: "ok" | "neutral" | "warn";
-  icon:    React.ReactNode;
+  icon: React.ReactNode;
 }) {
   if (!emails.length) return null;
 
@@ -131,15 +131,15 @@ function ResultBlock({
     variant === "ok"
       ? "border-teal-200/60 dark:border-teal-800/50 bg-teal-50/40 dark:bg-teal-950/20"
       : variant === "warn"
-      ? "border-amber-200/60 dark:border-amber-800/50 bg-amber-50/40 dark:bg-amber-950/20"
-      : "border-border bg-muted/30";
+        ? "border-amber-200/60 dark:border-amber-800/50 bg-amber-50/40 dark:bg-amber-950/20"
+        : "border-border bg-muted/30";
 
   const dotCls =
     variant === "ok"
       ? "bg-teal-500"
       : variant === "warn"
-      ? "bg-amber-400"
-      : "bg-muted-foreground/40";
+        ? "bg-amber-400"
+        : "bg-muted-foreground/40";
 
   return (
     <div className={cn("rounded-xl border px-4 py-3", wrapCls)}>
@@ -170,11 +170,11 @@ function ResultBlock({
 function SectionCard({
   icon, iconBg, title, subtitle, children,
 }: {
-  icon:    React.ReactNode;
-  iconBg:  string;
-  title:   string;
-  subtitle:string;
-  children:React.ReactNode;
+  icon: React.ReactNode;
+  iconBg: string;
+  title: string;
+  subtitle: string;
+  children: React.ReactNode;
 }) {
   return (
     <div className="rounded-2xl border border-border bg-card overflow-hidden">
@@ -200,14 +200,14 @@ function SectionCard({
 // ─── Page ──────────────────────────────────────────────────
 export default function AdminBulkCreatePage() {
   const [teacherEmails, setTeacherEmails] = useState("");
-  const [adminEmails,   setAdminEmails]   = useState("");
-  const [loadingT,      setLoadingT]      = useState(false);
-  const [loadingA,      setLoadingA]      = useState(false);
-  const [resultT,       setResultT]       = useState<CreateResult | null>(null);
-  const [resultA,       setResultA]       = useState<CreateResult | null>(null);
+  const [adminEmails, setAdminEmails] = useState("");
+  const [loadingT, setLoadingT] = useState(false);
+  const [loadingA, setLoadingA] = useState(false);
+  const [resultT, setResultT] = useState<CreateResult | null>(null);
+  const [resultA, setResultA] = useState<CreateResult | null>(null);
 
   const tCount = useMemo(() => parseEmails(teacherEmails).length, [teacherEmails]);
-  const aCount = useMemo(() => parseEmails(adminEmails).length,   [adminEmails]);
+  const aCount = useMemo(() => parseEmails(adminEmails).length, [adminEmails]);
 
   const submitTeachers = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -294,9 +294,9 @@ export default function AdminBulkCreatePage() {
             },
           ].map((s) => {
             const a = {
-              teal:   { icon: "text-teal-600 dark:text-teal-400",   bg: "bg-teal-100/70 dark:bg-teal-950/50",   border: "border-teal-200/70 dark:border-teal-800/50"    },
+              teal: { icon: "text-teal-600 dark:text-teal-400", bg: "bg-teal-100/70 dark:bg-teal-950/50", border: "border-teal-200/70 dark:border-teal-800/50" },
               violet: { icon: "text-violet-600 dark:text-violet-400", bg: "bg-violet-100/70 dark:bg-violet-950/50", border: "border-violet-200/70 dark:border-violet-800/50" },
-              sky:    { icon: "text-sky-600 dark:text-sky-400",       bg: "bg-sky-100/70 dark:bg-sky-950/50",       border: "border-sky-200/70 dark:border-sky-800/50"       },
+              sky: { icon: "text-sky-600 dark:text-sky-400", bg: "bg-sky-100/70 dark:bg-sky-950/50", border: "border-sky-200/70 dark:border-sky-800/50" },
             }[s.accent];
             return (
               <div
@@ -333,9 +333,9 @@ export default function AdminBulkCreatePage() {
         {/* ── Info: what happens ──────────────────────────── */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {[
-            { icon: <RiAddLine />,           label: "New email",    desc: "Account created + welcome email with temp password" },
-            { icon: <RiCheckboxCircleLine />, label: "Existing user",desc: "Role upgraded · existing password unchanged"         },
-            { icon: <RiAlertLine />,          label: "Already role", desc: "Skipped — no changes made to that account"           },
+            { icon: <RiAddLine />, label: "New email", desc: "Account created + welcome email with temp password" },
+            { icon: <RiCheckboxCircleLine />, label: "Existing user", desc: "Role upgraded · existing password unchanged" },
+            { icon: <RiAlertLine />, label: "Already role", desc: "Skipped — no changes made to that account" },
           ].map((row) => (
             <div
               key={row.label}
@@ -410,8 +410,8 @@ export default function AdminBulkCreatePage() {
                 {loadingT
                   ? "Processing…"
                   : tCount > 0
-                  ? `Create / upgrade ${tCount} teacher${tCount !== 1 ? "s" : ""}`
-                  : "Create / upgrade teachers"}
+                    ? `Create / upgrade ${tCount} teacher${tCount !== 1 ? "s" : ""}`
+                    : "Create / upgrade teachers"}
               </button>
 
               {/* Result */}
@@ -499,8 +499,8 @@ export default function AdminBulkCreatePage() {
                 {loadingA
                   ? "Processing…"
                   : aCount > 0
-                  ? `Create / upgrade ${aCount} admin${aCount !== 1 ? "s" : ""}`
-                  : "Create / upgrade admins"}
+                    ? `Create / upgrade ${aCount} admin${aCount !== 1 ? "s" : ""}`
+                    : "Create / upgrade admins"}
               </button>
 
               {/* Result */}

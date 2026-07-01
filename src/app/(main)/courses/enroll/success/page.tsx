@@ -22,7 +22,7 @@ type PayStatus = "loading" | "succeeded" | "processing" | "failed";
 
 export default function PaymentSuccessPage() {
   const router = useRouter();
-  const { id } = useParams() as { id: string };
+  const { id } = useParams() as { id: string; };
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<PayStatus>("loading");
   const [attempts, setAttempts] = useState(0);

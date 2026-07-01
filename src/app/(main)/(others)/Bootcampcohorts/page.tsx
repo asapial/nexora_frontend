@@ -20,31 +20,31 @@ function useReveal(t = 0.1) {
   return { ref, v };
 }
 
-function TealText({ children }: { children: React.ReactNode }) {
+function TealText({ children }: { children: React.ReactNode; }) {
   return (
-    <span style={{ background:"linear-gradient(135deg,#0d9488 0%,#14b8a6 50%,#5eead4 100%)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text" }}>
+    <span style={{ background: "linear-gradient(135deg,#0d9488 0%,#14b8a6 50%,#5eead4 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
       {children}
     </span>
   );
 }
 
 const FEATURES = [
-  { icon: <RiBarChartBoxLine />,  title: "Cluster Health Score",    body: "Auto-calculated 0–100 score from submission rate, attendance, and activity. At-risk flagged instantly." },
-  { icon: <RiTimeLine />,         title: "Deadline Countdown",       body: "Live countdown on every student's dashboard. Push alerts 24h and 1h before deadline." },
-  { icon: <RiNotificationLine />, title: "Inactive Member Alerts",   body: "Auto-flag students with zero activity. Re-engagement emails with a single click." },
-  { icon: <RiTrophyLine />,       title: "Milestone Badges",         body: "Custom milestones auto-awarded: '5 sprints submitted', 'Perfect attendance', and more." },
-  { icon: <RiGroupLine />,        title: "Peer Study Groups",        body: "Students form groups of up to 5 with a shared folder and discussion thread." },
-  { icon: <RiGraduationCapLine />,title: "Graduation Certificates",  body: "Branded PDFs with unique verification URLs. Students share to LinkedIn in one click." },
-  { icon: <RiCalendarCheckLine />,title: "Task Draft History",        body: "Students' work auto-saves. Full version history before final submission — no lost work." },
-  { icon: <RiFileTextLine />,     title: "Session Agendas",          body: "Publish structured agendas before each session so students arrive prepared." },
+  { icon: <RiBarChartBoxLine />, title: "Cluster Health Score", body: "Auto-calculated 0–100 score from submission rate, attendance, and activity. At-risk flagged instantly." },
+  { icon: <RiTimeLine />, title: "Deadline Countdown", body: "Live countdown on every student's dashboard. Push alerts 24h and 1h before deadline." },
+  { icon: <RiNotificationLine />, title: "Inactive Member Alerts", body: "Auto-flag students with zero activity. Re-engagement emails with a single click." },
+  { icon: <RiTrophyLine />, title: "Milestone Badges", body: "Custom milestones auto-awarded: '5 sprints submitted', 'Perfect attendance', and more." },
+  { icon: <RiGroupLine />, title: "Peer Study Groups", body: "Students form groups of up to 5 with a shared folder and discussion thread." },
+  { icon: <RiGraduationCapLine />, title: "Graduation Certificates", body: "Branded PDFs with unique verification URLs. Students share to LinkedIn in one click." },
+  { icon: <RiCalendarCheckLine />, title: "Task Draft History", body: "Students' work auto-saves. Full version history before final submission — no lost work." },
+  { icon: <RiFileTextLine />, title: "Session Agendas", body: "Publish structured agendas before each session so students arrive prepared." },
 ];
 
 // Kanban columns — all teal shades to match Nexora theme
 const KANBAN = [
-  { label: "Not started", dot: "bg-zinc-400 dark:bg-zinc-600",   border: "border-l-zinc-300 dark:border-l-zinc-600", items: ["Read Ch. 4 — React Patterns", "Sprint 8 Writeup"] },
-  { label: "In progress",  dot: "bg-teal-400",                    border: "border-l-teal-400",                         items: ["Portfolio Review", "Async/Await Deep Dive"] },
-  { label: "Submitted",    dot: "bg-teal-500",                    border: "border-l-teal-500",                         items: ["CSS Grid Challenge", "REST API Project"] },
-  { label: "Reviewed",     dot: "bg-teal-600 dark:bg-teal-400",  border: "border-l-teal-600 dark:border-l-teal-400",  items: ["Git Workflow Task", "DOM Manipulation"] },
+  { label: "Not started", dot: "bg-zinc-400 dark:bg-zinc-600", border: "border-l-zinc-300 dark:border-l-zinc-600", items: ["Read Ch. 4 — React Patterns", "Sprint 8 Writeup"] },
+  { label: "In progress", dot: "bg-teal-400", border: "border-l-teal-400", items: ["Portfolio Review", "Async/Await Deep Dive"] },
+  { label: "Submitted", dot: "bg-teal-500", border: "border-l-teal-500", items: ["CSS Grid Challenge", "REST API Project"] },
+  { label: "Reviewed", dot: "bg-teal-600 dark:bg-teal-400", border: "border-l-teal-600 dark:border-l-teal-400", items: ["Git Workflow Task", "DOM Manipulation"] },
 ];
 
 export default function BootcampCohortsPage() {
@@ -137,7 +137,7 @@ export default function BootcampCohortsPage() {
       ══════════════════════════════════════════ */}
       <div className="border-y border-border bg-muted/40">
         <div className="max-w-6xl mx-auto px-6 grid grid-cols-2 lg:grid-cols-4 divide-x divide-border">
-          {[["87%","Avg submission rate"],["4×","Faster session prep"],["100%","Digital attendance"],["2 min","To onboard a member"]].map(([v, l], i) => (
+          {[["87%", "Avg submission rate"], ["4×", "Faster session prep"], ["100%", "Digital attendance"], ["2 min", "To onboard a member"]].map(([v, l], i) => (
             <div key={i} className="flex flex-col items-center py-10 px-4 text-center">
               <p className="text-[2.2rem] font-black text-teal-600 dark:text-teal-400 tabular-nums leading-none mb-1.5">{v}</p>
               <p className="text-[11.5px] font-semibold text-muted-foreground">{l}</p>
@@ -284,10 +284,10 @@ export default function BootcampCohortsPage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[["01","Create cohort cluster","Enter name, batch tag, student emails. Credentials and welcome emails auto-sent."],
-              ["02","Set sprint template","Create a reusable task template so sessions auto-fill for all students."],
-              ["03","Run your first sprint","Schedule. Tasks appear on every dashboard. Attendance in one click."],
-              ["04","Monitor & graduate","Watch health score. Review submissions. Generate certificates."],
+            {[["01", "Create cohort cluster", "Enter name, batch tag, student emails. Credentials and welcome emails auto-sent."],
+            ["02", "Set sprint template", "Create a reusable task template so sessions auto-fill for all students."],
+            ["03", "Run your first sprint", "Schedule. Tasks appear on every dashboard. Attendance in one click."],
+            ["04", "Monitor & graduate", "Watch health score. Review submissions. Generate certificates."],
             ].map(([num, title, desc], i) => (
               <div key={num}
                 className={cn("transition-[opacity,transform] duration-500", r3.v ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10")}

@@ -2,32 +2,19 @@
 
 import { AppSidebar } from "@/components/app-sidebar";
 import {
-  AmbientBg1,
-  AmbientBg2,
-  AmbientBg3,
-  AmbientBg4,
-  AmbientBg5,
-  AmbientBg6,
+  AmbientBg1, AmbientBg2, AmbientBg3,
+  AmbientBg4, AmbientBg5, AmbientBg6,
 } from "@/components/backgrounds/AmbientBg";
-
 import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbList,
-  BreadcrumbPage,
+  Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage,
 } from "@/components/ui/breadcrumb";
-
 import { Separator } from "@/components/ui/separator";
-
 import {
-  SidebarInset,
-  SidebarProvider,
-  SidebarTrigger,
+  SidebarInset, SidebarProvider, SidebarTrigger,
 } from "@/components/ui/sidebar";
-
 import { TooltipProvider } from "@/components/ui/tooltip";
-
 import { useEffect, useState } from "react";
+import ChatWidget from "@/components/chat/ChatWidget";
 
 // ─────────────────────────────────────────
 // TYPES
@@ -147,13 +134,23 @@ function DashboardHeader() {
 // ─────────────────────────────────────────
 // LAYOUT
 // ─────────────────────────────────────────
-export default function Layout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function Layout({ children }: { children: React.ReactNode; }) {
   const bgIndex = useAmbientBg();
   const AmbientComponent = ambientComponents[bgIndex];
+
+  // Fetch session user for ChatWidget
+  const [chatUser, setChatUser] = useState<{ name: string; role: "STUDENT" | "TEACHER" | "ADMIN"; } | null>(null);
+  useEffect(() => {
+    fetch("/api/auth/me", { credentials: "include" })
+      .then(r => r.json())
+      .then(d => {
+        if (d.success) {
+          const u = d?.data?.userData ?? d?.data;
+          if (u?.name && u?.role) setChatUser({ name: u.name, role: u.role });
+        }
+      })
+      .catch(() => { });
+  }, []);
 
   return (
     <TooltipProvider>
@@ -176,6 +173,8 @@ export default function Layout({
           </div>
         </SidebarInset>
       </SidebarProvider>
+      {/* Global AI chat — available on every dashboard page */}
+      <ChatWidget user={chatUser} loginPath="/auth/signin" />
     </TooltipProvider>
   );
 }

@@ -42,9 +42,9 @@ export function ProfileAvatar({ name, src, size = "lg", onUploadSuccess }: {
       {src
         ? <img src={src} alt={name} className={cn(dim, "rounded-2xl object-cover border-2 border-border")} />
         : <div className={cn(dim, "rounded-2xl flex items-center justify-center font-extrabold border-2",
-            "bg-teal-600/15 dark:bg-teal-400/12 text-teal-700 dark:text-teal-300 border-teal-300/50 dark:border-teal-600/30")}>
-            {initials}
-          </div>
+          "bg-teal-600/15 dark:bg-teal-400/12 text-teal-700 dark:text-teal-300 border-teal-300/50 dark:border-teal-600/30")}>
+          {initials}
+        </div>
       }
 
       {/* ✅ hidden file input এখানেই */}

@@ -15,10 +15,10 @@ import { cn } from "@/lib/utils";
 
 // ─── Quick-nav links shown below the CTA buttons ───────────
 const QUICK_LINKS = [
-  { label: "Features",       href: "/#features"  },
-  { label: "Documentation",  href: "/docs"        },
-  { label: "Contact support",href: "/contact"     },
-  { label: "Platform status",href: "/status"      },
+  { label: "Features", href: "/#features" },
+  { label: "Documentation", href: "/docs" },
+  { label: "Contact support", href: "/contact" },
+  { label: "Platform status", href: "/status" },
 ];
 
 // ─── Suggestion cards ──────────────────────────────────────
@@ -26,42 +26,42 @@ const SUGGESTIONS = [
   {
     icon: <RiHome4Line className="text-[18px]" />,
     label: "Homepage",
-    desc:  "Return to the Nexora landing page",
-    href:  "/",
+    desc: "Return to the Nexora landing page",
+    href: "/",
     color: "teal",
   },
   {
     icon: <RiDashboardLine className="text-[18px]" />,
     label: "Dashboard",
-    desc:  "Go to your personal dashboard",
-    href:  "/dashboard",
+    desc: "Go to your personal dashboard",
+    href: "/dashboard",
     color: "violet",
   },
   {
     icon: <RiBookOpenLine className="text-[18px]" />,
     label: "Resources",
-    desc:  "Browse the shared resource library",
-    href:  "/resources",
+    desc: "Browse the shared resource library",
+    href: "/resources",
     color: "amber",
   },
   {
     icon: <RiCustomerService2Line className="text-[18px]" />,
     label: "Support",
-    desc:  "Open a support ticket with our team",
-    href:  "/support",
+    desc: "Open a support ticket with our team",
+    href: "/support",
     color: "sky",
   },
 ];
 
-const CARD_STYLES: Record<string, { icon: string; bg: string; border: string; hover: string }> = {
-  teal:   { icon: "text-teal-600 dark:text-teal-400",     bg: "bg-teal-50/60 dark:bg-teal-950/30",    border: "border-teal-200/60 dark:border-teal-800/50",   hover: "hover:border-teal-300/70 dark:hover:border-teal-700/60" },
+const CARD_STYLES: Record<string, { icon: string; bg: string; border: string; hover: string; }> = {
+  teal: { icon: "text-teal-600 dark:text-teal-400", bg: "bg-teal-50/60 dark:bg-teal-950/30", border: "border-teal-200/60 dark:border-teal-800/50", hover: "hover:border-teal-300/70 dark:hover:border-teal-700/60" },
   violet: { icon: "text-violet-600 dark:text-violet-400", bg: "bg-violet-50/60 dark:bg-violet-950/30", border: "border-violet-200/60 dark:border-violet-800/50", hover: "hover:border-violet-300/70 dark:hover:border-violet-700/60" },
-  amber:  { icon: "text-amber-600 dark:text-amber-400",   bg: "bg-amber-50/60 dark:bg-amber-950/30",   border: "border-amber-200/60 dark:border-amber-800/50",   hover: "hover:border-amber-300/70 dark:hover:border-amber-700/60" },
-  sky:    { icon: "text-sky-600 dark:text-sky-400",       bg: "bg-sky-50/60 dark:bg-sky-950/30",       border: "border-sky-200/60 dark:border-sky-800/50",       hover: "hover:border-sky-300/70 dark:hover:border-sky-700/60" },
+  amber: { icon: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50/60 dark:bg-amber-950/30", border: "border-amber-200/60 dark:border-amber-800/50", hover: "hover:border-amber-300/70 dark:hover:border-amber-700/60" },
+  sky: { icon: "text-sky-600 dark:text-sky-400", bg: "bg-sky-50/60 dark:bg-sky-950/30", border: "border-sky-200/60 dark:border-sky-800/50", hover: "hover:border-sky-300/70 dark:hover:border-sky-700/60" },
 };
 
 // ─── Animated glitch line ─────────────────────────────────
-function GlitchLine({ top, delay, opacity }: { top: string; delay: number; opacity: number }) {
+function GlitchLine({ top, delay, opacity }: { top: string; delay: number; opacity: number; }) {
   return (
     <div
       className="absolute left-0 right-0 pointer-events-none"
@@ -150,7 +150,7 @@ export default function NotFound() {
       >
         <circle cx="0" cy="0" r="160" stroke="#14b8a6" strokeWidth=".8" />
         <circle cx="0" cy="0" r="100" stroke="#14b8a6" strokeWidth=".8" />
-        <circle cx="0" cy="0" r="48"  stroke="#14b8a6" strokeWidth=".8" />
+        <circle cx="0" cy="0" r="48" stroke="#14b8a6" strokeWidth=".8" />
         <line x1="0" y1="100" x2="100" y2="0" stroke="#14b8a6" strokeWidth=".6" />
         <line x1="0" y1="160" x2="160" y2="0" stroke="#14b8a6" strokeWidth=".4" />
       </svg>
@@ -163,7 +163,7 @@ export default function NotFound() {
       >
         <circle cx="200" cy="200" r="160" stroke="#14b8a6" strokeWidth=".8" />
         <circle cx="200" cy="200" r="100" stroke="#14b8a6" strokeWidth=".8" />
-        <circle cx="200" cy="200" r="48"  stroke="#14b8a6" strokeWidth=".8" />
+        <circle cx="200" cy="200" r="48" stroke="#14b8a6" strokeWidth=".8" />
         <line x1="200" y1="100" x2="100" y2="200" stroke="#14b8a6" strokeWidth=".6" />
       </svg>
 
@@ -189,7 +189,7 @@ export default function NotFound() {
                 "linear-gradient(180deg, rgba(20,184,166,.92) 0%, rgba(13,148,136,.55) 55%, rgba(20,184,166,.14) 100%)",
               WebkitBackgroundClip: "text",
               WebkitTextFillColor: "transparent",
-              backgroundClip:       "text",
+              backgroundClip: "text",
             }}
           >
             404
@@ -197,9 +197,9 @@ export default function NotFound() {
 
           {/* Glitch scan lines sweeping across the 404 */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-sm" aria-hidden="true">
-            <GlitchLine top="28%"   delay={0}   opacity={0.5} />
-            <GlitchLine top="52%"   delay={1.8} opacity={0.35} />
-            <GlitchLine top="75%"   delay={3.5} opacity={0.25} />
+            <GlitchLine top="28%" delay={0} opacity={0.5} />
+            <GlitchLine top="52%" delay={1.8} opacity={0.35} />
+            <GlitchLine top="75%" delay={3.5} opacity={0.25} />
           </div>
 
           {/* Floating icon above the number — the "broken cluster" metaphor */}
@@ -218,9 +218,9 @@ export default function NotFound() {
           className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[11px] font-bold tracking-[.08em] uppercase mb-5 mt-1"
           style={{
             background: "rgba(20,184,166,.08)",
-            border:     "1px solid rgba(20,184,166,.2)",
-            color:      "#2dd4bf",
-            animation:  mounted ? "nf-reveal-up .7s .1s both" : "none",
+            border: "1px solid rgba(20,184,166,.2)",
+            color: "#2dd4bf",
+            animation: mounted ? "nf-reveal-up .7s .1s both" : "none",
           }}
         >
           <span className="w-1.5 h-1.5 rounded-full bg-teal-400 opacity-80" />

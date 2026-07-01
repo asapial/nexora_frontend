@@ -11,27 +11,27 @@ import { adminApi } from "../../../../../lib/api";
 import { toast } from "sonner";
 import RefreshIcon from "@/components/shared/RefreshIcon";
 
-const fmtUSD  = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
+const fmtUSD = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
 const fmtDate = (d: string) => new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 
 type PayStatus = "all" | "PAID" | "PENDING" | "FAILED";
 
 const PAY_STATUS_CFG: Record<string, string> = {
-  PAID:    "bg-teal-100/80 dark:bg-teal-950/50 text-teal-700 dark:text-teal-400 border-teal-200/70",
+  PAID: "bg-teal-100/80 dark:bg-teal-950/50 text-teal-700 dark:text-teal-400 border-teal-200/70",
   PENDING: "bg-amber-100/80 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border-amber-200/70",
-  FAILED:  "bg-red-100/70 dark:bg-red-950/30 text-red-600 dark:text-red-400 border-red-200/70",
-  FREE:    "bg-sky-100/70 dark:bg-sky-950/30 text-sky-600 dark:text-sky-400 border-sky-200/70",
+  FAILED: "bg-red-100/70 dark:bg-red-950/30 text-red-600 dark:text-red-400 border-red-200/70",
+  FREE: "bg-sky-100/70 dark:bg-sky-950/30 text-sky-600 dark:text-sky-400 border-sky-200/70",
 };
 
 export default function AdminEnrollmentsPage() {
   const [enrollments, setEnrollments] = useState<any[]>([]);
-  const [loading,     setLoading]     = useState(true);
-  const [search,      setSearch]      = useState("");
-  const [payFilter,   setPayFilter]   = useState<PayStatus>("all");
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [payFilter, setPayFilter] = useState<PayStatus>("all");
 
   // date range filters
   const [fromDate, setFromDate] = useState("");
-  const [toDate,   setToDate]   = useState("");
+  const [toDate, setToDate] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -39,7 +39,7 @@ export default function AdminEnrollmentsPage() {
       const p: any = {};
       if (payFilter !== "all") p.paymentStatus = payFilter;
       if (fromDate) p.from = fromDate;
-      if (toDate)   p.to   = toDate;
+      if (toDate) p.to = toDate;
       const r = await adminApi.getAllEnrollments(p);
       const raw = r.data;
       setEnrollments(Array.isArray(raw) ? raw : (raw as any).data ?? []);
@@ -60,7 +60,7 @@ export default function AdminEnrollmentsPage() {
   });
 
   const totalPaid = enrollments.filter(e => e.paymentStatus === "PAID" || e.course?.isFree).length;
-  const totalRev  = enrollments
+  const totalRev = enrollments
     .filter(e => e.paymentStatus === "PAID")
     .reduce((s, e) => s + (e.amount ?? e.course?.price ?? 0), 0);
 
@@ -86,9 +86,9 @@ export default function AdminEnrollmentsPage() {
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {[
-          { icon: <RiGroupLine />,               l: "Total Enrollments", v: enrollments.length.toLocaleString(), cls: "text-teal-600 dark:text-teal-400 bg-teal-100/60 dark:bg-teal-950/40 border-teal-200/60 dark:border-teal-800/40" },
-          { icon: <RiCheckLine />,               l: "Paid / Free",       v: totalPaid.toLocaleString(),          cls: "text-sky-600 dark:text-sky-400 bg-sky-100/60 dark:bg-sky-950/40 border-sky-200/60 dark:border-sky-800/40" },
-          { icon: <RiMoneyDollarCircleLine />,   l: "Revenue",           v: fmtUSD(totalRev),                    cls: "text-violet-600 dark:text-violet-400 bg-violet-100/60 dark:bg-violet-950/40 border-violet-200/60 dark:border-violet-800/40" },
+          { icon: <RiGroupLine />, l: "Total Enrollments", v: enrollments.length.toLocaleString(), cls: "text-teal-600 dark:text-teal-400 bg-teal-100/60 dark:bg-teal-950/40 border-teal-200/60 dark:border-teal-800/40" },
+          { icon: <RiCheckLine />, l: "Paid / Free", v: totalPaid.toLocaleString(), cls: "text-sky-600 dark:text-sky-400 bg-sky-100/60 dark:bg-sky-950/40 border-sky-200/60 dark:border-sky-800/40" },
+          { icon: <RiMoneyDollarCircleLine />, l: "Revenue", v: fmtUSD(totalRev), cls: "text-violet-600 dark:text-violet-400 bg-violet-100/60 dark:bg-violet-950/40 border-violet-200/60 dark:border-violet-800/40" },
         ].map(s => (
           <div key={s.l} className="rounded-2xl border border-border bg-card p-4">
             <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center text-sm border mb-2.5", s.cls)}>{s.icon}</div>
@@ -111,7 +111,7 @@ export default function AdminEnrollmentsPage() {
           <div className="flex items-center gap-2">
             <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} className={INP} placeholder="From" />
             <span className="text-muted-foreground text-sm">–</span>
-            <input type="date" value={toDate}   onChange={e => setToDate(e.target.value)}   className={INP} placeholder="To" />
+            <input type="date" value={toDate} onChange={e => setToDate(e.target.value)} className={INP} placeholder="To" />
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">

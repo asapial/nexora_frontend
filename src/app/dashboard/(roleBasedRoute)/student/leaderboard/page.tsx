@@ -30,7 +30,7 @@ const MEDAL_COLOR: Record<number, string> = {
   3: "text-orange-400",
 };
 
-function RankBadge({ rank }: { rank: number }) {
+function RankBadge({ rank }: { rank: number; }) {
   if (rank <= 3) {
     return (
       <span className={cn("text-lg", MEDAL_COLOR[rank])}>
@@ -193,57 +193,57 @@ export default function StudentLeaderboardPage() {
         {loading
           ? Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} />)
           : entries.length === 0
-          ? (
-            <div className="py-16 text-center">
-              <RiGroupLine className="text-4xl text-muted-foreground/20 mx-auto mb-3" />
-              <p className="text-[13.5px] font-medium text-muted-foreground">No entries yet</p>
-              <p className="text-[12px] text-muted-foreground/60 mt-1">Join clusters and complete tasks to appear here</p>
-            </div>
-          )
-          : entries.map((e) => (
-            <div
-              key={e.userId}
-              className={cn(
-                "grid grid-cols-[36px_1fr_80px_80px_80px] gap-3 px-5 py-3.5 border-b border-border/60 last:border-0 items-center",
-                e.rank <= 3 && "bg-amber-50/20 dark:bg-amber-950/10",
-                myEntry?.userId === e.userId && "bg-teal-50/30 dark:bg-teal-950/10 ring-1 ring-teal-300/30 dark:ring-teal-700/30"
-              )}
-            >
-              <RankBadge rank={e.rank} />
-              <div className="flex items-center gap-2.5 min-w-0">
-                {e.image ? (
-                  <img src={e.image} alt={e.name} className="w-9 h-9 rounded-full object-cover shrink-0 ring-2 ring-border" />
-                ) : (
-                  <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center shrink-0">
-                    <RiUserLine className="text-muted-foreground text-sm" />
-                  </div>
+            ? (
+              <div className="py-16 text-center">
+                <RiGroupLine className="text-4xl text-muted-foreground/20 mx-auto mb-3" />
+                <p className="text-[13.5px] font-medium text-muted-foreground">No entries yet</p>
+                <p className="text-[12px] text-muted-foreground/60 mt-1">Join clusters and complete tasks to appear here</p>
+              </div>
+            )
+            : entries.map((e) => (
+              <div
+                key={e.userId}
+                className={cn(
+                  "grid grid-cols-[36px_1fr_80px_80px_80px] gap-3 px-5 py-3.5 border-b border-border/60 last:border-0 items-center",
+                  e.rank <= 3 && "bg-amber-50/20 dark:bg-amber-950/10",
+                  myEntry?.userId === e.userId && "bg-teal-50/30 dark:bg-teal-950/10 ring-1 ring-teal-300/30 dark:ring-teal-700/30"
                 )}
-                <div className="min-w-0">
-                  <p className="text-[13px] font-semibold text-foreground truncate">
-                    {e.name}
-                    {myEntry?.userId === e.userId && (
-                      <span className="ml-1.5 text-[10px] font-bold text-teal-600 dark:text-teal-400 bg-teal-100/70 dark:bg-teal-950/50 px-1.5 py-0.5 rounded-full">You</span>
-                    )}
-                  </p>
-                  <p className="text-[11px] text-muted-foreground">{e.taskCount} tasks graded</p>
+              >
+                <RankBadge rank={e.rank} />
+                <div className="flex items-center gap-2.5 min-w-0">
+                  {e.image ? (
+                    <img src={e.image} alt={e.name} className="w-9 h-9 rounded-full object-cover shrink-0 ring-2 ring-border" />
+                  ) : (
+                    <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center shrink-0">
+                      <RiUserLine className="text-muted-foreground text-sm" />
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <p className="text-[13px] font-semibold text-foreground truncate">
+                      {e.name}
+                      {myEntry?.userId === e.userId && (
+                        <span className="ml-1.5 text-[10px] font-bold text-teal-600 dark:text-teal-400 bg-teal-100/70 dark:bg-teal-950/50 px-1.5 py-0.5 rounded-full">You</span>
+                      )}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">{e.taskCount} tasks graded</p>
+                  </div>
+                </div>
+                <p className="text-[13px] font-semibold tabular-nums text-foreground">{e.taskScore}</p>
+                <div className="flex items-center gap-1">
+                  <RiCalendarCheckLine className="text-teal-500 text-xs" />
+                  <p className="text-[13px] font-semibold tabular-nums text-foreground">{e.attendanceCount}</p>
+                </div>
+                <div className={cn(
+                  "text-[12px] font-bold tabular-nums px-2 py-0.5 rounded-full w-fit",
+                  e.rank === 1 && "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40",
+                  e.rank === 2 && "text-zinc-600 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-900/40",
+                  e.rank === 3 && "text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/40",
+                  e.rank > 3 && "text-foreground bg-muted/60"
+                )}>
+                  {e.composite}
                 </div>
               </div>
-              <p className="text-[13px] font-semibold tabular-nums text-foreground">{e.taskScore}</p>
-              <div className="flex items-center gap-1">
-                <RiCalendarCheckLine className="text-teal-500 text-xs" />
-                <p className="text-[13px] font-semibold tabular-nums text-foreground">{e.attendanceCount}</p>
-              </div>
-              <div className={cn(
-                "text-[12px] font-bold tabular-nums px-2 py-0.5 rounded-full w-fit",
-                e.rank === 1 && "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40",
-                e.rank === 2 && "text-zinc-600 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-900/40",
-                e.rank === 3 && "text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/40",
-                e.rank > 3 && "text-foreground bg-muted/60"
-              )}>
-                {e.composite}
-              </div>
-            </div>
-          ))}
+            ))}
       </div>
 
       <div className="flex items-center gap-2 p-3 rounded-xl border border-border bg-muted/20 text-[12px] text-muted-foreground">

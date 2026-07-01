@@ -5,7 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import {
   RiSparklingFill, RiArrowLeftLine, RiStarLine, RiStarFill,
   RiGroupLine, RiFileTextLine, RiMoneyDollarCircleLine, RiCheckLine,
-  RiCloseLine, RiAlertLine, RiRefreshLine, RiLoader4Line, 
+  RiCloseLine, RiAlertLine, RiRefreshLine, RiLoader4Line,
   RiShieldCheckLine, RiEditLine, RiUserLine,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
@@ -14,30 +14,30 @@ import { toast } from "sonner";
 import { Trash } from "lucide-react";
 
 interface Mission {
-  id: string; title: string; status: string; _count: { contents: number };
+  id: string; title: string; status: string; _count: { contents: number; };
 }
 interface Course {
   id: string; title: string; description: string | null;
   status: string; isFeatured: boolean; isFree: boolean; price: number;
   teacherRevenuePercent: number; tags: string[];
-  teacher?: { user: { name: string; email: string } };
-  _count?: { enrollments: number; missions: number };
+  teacher?: { user: { name: string; email: string; }; };
+  _count?: { enrollments: number; missions: number; };
   rejectedNote?: string | null;
   missions?: Mission[];
 }
 
 const STATUS_MAP: Record<string, string> = {
-  DRAFT:            "text-muted-foreground bg-muted/40 border-border",
+  DRAFT: "text-muted-foreground bg-muted/40 border-border",
   PENDING_APPROVAL: "text-amber-600 dark:text-amber-400 bg-amber-50/60 dark:bg-amber-950/30 border-amber-200/60 dark:border-amber-800/50",
-  PUBLISHED:        "text-teal-600 dark:text-teal-400 bg-teal-50/60 dark:bg-teal-950/30 border-teal-200/60 dark:border-teal-800/50",
-  CLOSED:           "text-blue-600 dark:text-blue-400 bg-blue-50/60 dark:bg-blue-950/30 border-blue-200/60 dark:border-blue-800/50",
-  REJECTED:         "text-red-600 dark:text-red-400 bg-red-50/40 dark:bg-red-950/20 border-red-200/60 dark:border-red-800/50",
+  PUBLISHED: "text-teal-600 dark:text-teal-400 bg-teal-50/60 dark:bg-teal-950/30 border-teal-200/60 dark:border-teal-800/50",
+  CLOSED: "text-blue-600 dark:text-blue-400 bg-blue-50/60 dark:bg-blue-950/30 border-blue-200/60 dark:border-blue-800/50",
+  REJECTED: "text-red-600 dark:text-red-400 bg-red-50/40 dark:bg-red-950/20 border-red-200/60 dark:border-red-800/50",
 };
 const STATUS_LABELS: Record<string, string> = {
   DRAFT: "Draft", PENDING_APPROVAL: "Pending Approval", PUBLISHED: "Published", CLOSED: "Closed", REJECTED: "Rejected",
 };
 
-function RejectModal({ label, onClose, onReject }: { label: string; onClose: () => void; onReject: (n: string) => Promise<void> }) {
+function RejectModal({ label, onClose, onReject }: { label: string; onClose: () => void; onReject: (n: string) => Promise<void>; }) {
   const [note, setNote] = useState(""); const [busy, setBusy] = useState(false); const [err, setErr] = useState("");
   const submit = async () => { if (!note.trim()) { setErr("Note required"); return; } setBusy(true); try { await onReject(note.trim()); onClose(); } catch { setErr("Reject failed"); setBusy(false); } };
   return (
@@ -68,14 +68,14 @@ function RejectModal({ label, onClose, onReject }: { label: string; onClose: () 
 
 export default function AdminCourseDetailPage() {
   const router = useRouter();
-  const { id } = useParams() as { id: string };
+  const { id } = useParams() as { id: string; };
 
-  const [course, setCourse]         = useState<Course | null>(null);
-  const [loading, setLoading]       = useState(true);
-  const [error, setError]           = useState<string | null>(null);
+  const [course, setCourse] = useState<Course | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [rejectModal, setRejectModal] = useState(false);
-  const [approving, setApproving]   = useState(false);
-  const [deleting, setDeleting]     = useState(false);
+  const [approving, setApproving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [togglingFeatured, setTogglingFeatured] = useState(false);
 
   const fetchCourse = useCallback(async () => {
@@ -142,7 +142,7 @@ export default function AdminCourseDetailPage() {
   }
 
   const canApprove = course.status === "PENDING_APPROVAL";
-  const canReject  = course.status === "PENDING_APPROVAL";
+  const canReject = course.status === "PENDING_APPROVAL";
 
   return (
     <>
@@ -218,10 +218,10 @@ export default function AdminCourseDetailPage() {
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { icon: <RiGroupLine />, label: "Enrollments",  value: course._count?.enrollments ?? 0,              cls: "text-teal-600 dark:text-teal-400 bg-teal-100/60 dark:bg-teal-950/40 border-teal-200/60 dark:border-teal-800/40" },
-            { icon: <RiFileTextLine />, label: "Missions",  value: course._count?.missions ?? 0,                 cls: "text-sky-600 dark:text-sky-400 bg-sky-100/60 dark:bg-sky-950/40 border-sky-200/60 dark:border-sky-800/40" },
-            { icon: <RiMoneyDollarCircleLine />, label: "Price",  value: course.isFree ? "Free" : `$${course.price}`, cls: "text-amber-600 dark:text-amber-400 bg-amber-100/60 dark:bg-amber-950/40 border-amber-200/60 dark:border-amber-800/40" },
-            { icon: <RiShieldCheckLine />, label: "Rev. Share", value: `${course.teacherRevenuePercent}%`,         cls: "text-violet-600 dark:text-violet-400 bg-violet-100/60 dark:bg-violet-950/40 border-violet-200/60 dark:border-violet-800/40" },
+            { icon: <RiGroupLine />, label: "Enrollments", value: course._count?.enrollments ?? 0, cls: "text-teal-600 dark:text-teal-400 bg-teal-100/60 dark:bg-teal-950/40 border-teal-200/60 dark:border-teal-800/40" },
+            { icon: <RiFileTextLine />, label: "Missions", value: course._count?.missions ?? 0, cls: "text-sky-600 dark:text-sky-400 bg-sky-100/60 dark:bg-sky-950/40 border-sky-200/60 dark:border-sky-800/40" },
+            { icon: <RiMoneyDollarCircleLine />, label: "Price", value: course.isFree ? "Free" : `$${course.price}`, cls: "text-amber-600 dark:text-amber-400 bg-amber-100/60 dark:bg-amber-950/40 border-amber-200/60 dark:border-amber-800/40" },
+            { icon: <RiShieldCheckLine />, label: "Rev. Share", value: `${course.teacherRevenuePercent}%`, cls: "text-violet-600 dark:text-violet-400 bg-violet-100/60 dark:bg-violet-950/40 border-violet-200/60 dark:border-violet-800/40" },
           ].map(s => (
             <div key={s.label} className="rounded-2xl border border-border bg-card p-4">
               <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center text-sm border mb-2.5", s.cls)}>{s.icon}</div>

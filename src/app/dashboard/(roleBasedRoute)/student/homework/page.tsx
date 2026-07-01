@@ -14,10 +14,10 @@ type TaskStatus = "PENDING" | "SUBMITTED" | "REVIEWED";
 interface HomeworkTask {
   id: string; title: string; homework: string; status: TaskStatus;
   deadline: string | null; finalScore: number | null;
-  submission: { id: string; submittedAt: string } | null;
+  submission: { id: string; submittedAt: string; } | null;
   StudySession: {
     id: string; title: string; scheduledAt: string;
-    cluster: { id: string; name: string };
+    cluster: { id: string; name: string; };
   };
 }
 
@@ -27,10 +27,58 @@ function isEffectivelyDone(t: HomeworkTask) {
   return t.status === "SUBMITTED" || t.status === "REVIEWED";
 }
 
+function CountdownTimer({ deadline, done }: { deadline: string; done: boolean; }) {
+  const [timeLeft, setTimeLeft] = useState("");
+  const [isOverdue, setIsOverdue] = useState(false);
+
+  useEffect(() => {
+    if (done) return;
+    const update = () => {
+      const diff = new Date(deadline).getTime() - Date.now();
+      if (diff <= 0) {
+        setIsOverdue(true);
+        setTimeLeft("");
+      } else {
+        setIsOverdue(false);
+        const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
+        const m = Math.floor((diff / 1000 / 60) % 60);
+        const s = Math.floor((diff / 1000) % 60);
+        setTimeLeft(`${d}d ${h}h ${m}m ${s}s`);
+      }
+    };
+    update();
+    const interval = setInterval(update, 1000);
+    return () => clearInterval(interval);
+  }, [deadline, done]);
+
+  if (done) {
+    return (
+      <span className="flex items-center gap-0.5">
+        <RiTimeLine className="text-xs" /> {new Date(deadline).toLocaleDateString()}
+      </span>
+    );
+  }
+
+  if (isOverdue) {
+    return (
+      <span className="text-[10.5px] font-semibold text-red-500 bg-red-50 dark:bg-red-950/30 px-1.5 py-0.5 rounded border border-red-200 dark:border-red-800/50 flex items-center gap-1">
+        <RiTimeLine className="text-xs" /> Closed
+      </span>
+    );
+  }
+
+  return (
+    <span className="text-[10.5px] font-mono font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 px-1.5 py-0.5 rounded border border-amber-200 dark:border-amber-800/50 flex items-center gap-1">
+      <RiTimeLine className="text-xs" /> {timeLeft}
+    </span>
+  );
+}
+
 export default function HomeworkPage() {
   const router = useRouter();
-  const [tasks, setTasks]         = useState<HomeworkTask[]>([]);
-  const [loading, setLoading]     = useState(true);
+  const [tasks, setTasks] = useState<HomeworkTask[]>([]);
+  const [loading, setLoading] = useState(true);
   const [doneFilter, setDoneFilter] = useState<DoneFilter>("all");
 
   const fetchHomework = useCallback(() => {
@@ -49,7 +97,7 @@ export default function HomeworkPage() {
     return true;
   });
 
-  const doneCount    = tasks.filter(isEffectivelyDone).length;
+  const doneCount = tasks.filter(isEffectivelyDone).length;
   const pendingCount = tasks.length - doneCount;
 
   return (
@@ -111,16 +159,16 @@ export default function HomeworkPage() {
         <div className="rounded-2xl border border-border bg-card overflow-hidden">
           <div className="flex flex-col divide-y divide-border">
             {filtered.map(t => {
-              const done    = isEffectivelyDone(t);
+              const done = isEffectivelyDone(t);
               const overdue = t.deadline && new Date(t.deadline).getTime() < Date.now() && !done;
 
               return (
                 <div key={t.id} className={cn("flex items-start gap-4 px-5 py-4 hover:bg-muted/20 transition-colors", done && "opacity-70")}>
                   {/* Status icon */}
                   <div className={cn("mt-0.5 w-9 h-9 rounded-xl flex-shrink-0 flex items-center justify-center text-base border",
-                    t.status === "REVIEWED"  ? "bg-violet-100/80 dark:bg-violet-950/50 text-violet-600 dark:text-violet-400 border-violet-200/70" :
-                    t.status === "SUBMITTED" ? "bg-teal-100/80 dark:bg-teal-950/50 text-teal-600 dark:text-teal-400 border-teal-200/70" :
-                    "bg-amber-100/60 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border-amber-200/60")}>
+                    t.status === "REVIEWED" ? "bg-violet-100/80 dark:bg-violet-950/50 text-violet-600 dark:text-violet-400 border-violet-200/70" :
+                      t.status === "SUBMITTED" ? "bg-teal-100/80 dark:bg-teal-950/50 text-teal-600 dark:text-teal-400 border-teal-200/70" :
+                        "bg-amber-100/60 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border-amber-200/60")}>
                     {t.status === "REVIEWED" ? <RiStarLine /> : t.status === "SUBMITTED" ? <RiCheckboxCircleLine /> : <RiBookLine />}
                   </div>
 
@@ -136,11 +184,7 @@ export default function HomeworkPage() {
                         onClick={() => router.push(`/dashboard/student/sessions/${t.StudySession.id}`)}>
                         {t.StudySession.title} <RiArrowRightLine className="text-xs" />
                       </span>
-                      {t.deadline && (
-                        <span className={cn("flex items-center gap-0.5", overdue ? "text-red-500" : "")}>
-                          <RiTimeLine className="text-xs" />{new Date(t.deadline).toLocaleDateString()}{overdue && " (overdue)"}
-                        </span>
-                      )}
+                      {t.deadline && <CountdownTimer deadline={t.deadline} done={done} />}
                     </div>
                     {/* Score shown if reviewed */}
                     {t.status === "REVIEWED" && t.finalScore != null && (

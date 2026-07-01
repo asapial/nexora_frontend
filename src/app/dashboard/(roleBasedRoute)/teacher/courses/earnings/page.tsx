@@ -32,7 +32,7 @@ const fmtCurrency = (n: number, compact = false) => {
 const fmtDate = (d: string) => new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 
 // ─── Sparkline ────────────────────────────────────────────
-function Sparkline({ values }: { values: number[] }) {
+function Sparkline({ values }: { values: number[]; }) {
   const max = Math.max(...values, 1);
   return (
     <div className="flex items-end gap-1 h-12">
@@ -51,9 +51,9 @@ function StatCard({ icon, label, value, sub, trend, accent, loading }: {
   trend?: number; accent: "teal" | "amber" | "blue"; loading?: boolean;
 }) {
   const clr = {
-    teal:  "bg-teal-100/70 dark:bg-teal-950/50 border-teal-200/60 dark:border-teal-800/50 text-teal-600 dark:text-teal-400",
+    teal: "bg-teal-100/70 dark:bg-teal-950/50 border-teal-200/60 dark:border-teal-800/50 text-teal-600 dark:text-teal-400",
     amber: "bg-amber-100/70 dark:bg-amber-950/50 border-amber-200/60 dark:border-amber-800/50 text-amber-600 dark:text-amber-400",
-    blue:  "bg-blue-100/70 dark:bg-blue-950/50 border-blue-200/60 dark:border-blue-800/50 text-blue-600 dark:text-blue-400",
+    blue: "bg-blue-100/70 dark:bg-blue-950/50 border-blue-200/60 dark:border-blue-800/50 text-blue-600 dark:text-blue-400",
   };
   return (
     <div className="relative rounded-2xl border border-border bg-card/90 backdrop-blur-sm px-5 py-5 flex flex-col gap-3 hover:border-teal-200/50 dark:hover:border-teal-800/40 transition-colors overflow-hidden">
@@ -236,14 +236,14 @@ export default function EarningsDashboardPage() {
           : perCourse.length === 0
             ? <div className="rounded-2xl border border-border bg-card/80 py-10 flex flex-col items-center gap-2"><p className="text-[13px] text-muted-foreground">No course data yet</p></div>
             : perCourse.map((c: any, i: number) => (
-                <CourseBar key={c.courseId ?? i}
-                  title={c.courseTitle ?? `Course ${i + 1}`}
-                  earning={c._sum?.teacherEarning ?? 0}
-                  enrollments={c._count?.id ?? 0}
-                  revenuePercent={Math.round(c.teacherRevenuePercent ?? 70)}
-                  max={maxCourseEarning}
-                  onClick={() => router.push(`/dashboard/teacher/courses/${c.courseId}`)} />
-              ))
+              <CourseBar key={c.courseId ?? i}
+                title={c.courseTitle ?? `Course ${i + 1}`}
+                earning={c._sum?.teacherEarning ?? 0}
+                enrollments={c._count?.id ?? 0}
+                revenuePercent={Math.round(c.teacherRevenuePercent ?? 70)}
+                max={maxCourseEarning}
+                onClick={() => router.push(`/dashboard/teacher/courses/${c.courseId}`)} />
+            ))
         }
       </div>
 
@@ -269,18 +269,18 @@ export default function EarningsDashboardPage() {
                 {transactions.length === 0
                   ? <div className="py-10 text-center"><p className="text-[13px] text-muted-foreground">No transactions found</p></div>
                   : transactions.map((tx: any) => (
-                      <div key={tx.id} className="grid grid-cols-[2fr_2fr_1fr_1fr_1fr] gap-4 px-5 py-3.5 items-center hover:bg-muted/20 transition-colors">
-                        <p className="text-[13px] font-semibold text-foreground truncate">{tx.studentName ?? "—"}</p>
-                        <p className="text-[12.5px] text-muted-foreground truncate">{tx.courseTitle ?? "—"}</p>
-                        <p className="text-[13px] font-bold text-foreground tabular-nums">
-                          {tx.totalAmount > 0 ? fmtCurrency(tx.totalAmount) : <span className="text-teal-600 dark:text-teal-400">Free</span>}
-                        </p>
-                        <p className={cn("text-[13px] font-bold tabular-nums", tx.teacherEarning > 0 ? "text-teal-600 dark:text-teal-400" : "text-muted-foreground")}>
-                          {tx.teacherEarning > 0 ? fmtCurrency(tx.teacherEarning) : "—"}
-                        </p>
-                        <p className="text-[12.5px] text-muted-foreground">{fmtDate(tx.transactedAt)}</p>
-                      </div>
-                    ))
+                    <div key={tx.id} className="grid grid-cols-[2fr_2fr_1fr_1fr_1fr] gap-4 px-5 py-3.5 items-center hover:bg-muted/20 transition-colors">
+                      <p className="text-[13px] font-semibold text-foreground truncate">{tx.studentName ?? "—"}</p>
+                      <p className="text-[12.5px] text-muted-foreground truncate">{tx.courseTitle ?? "—"}</p>
+                      <p className="text-[13px] font-bold text-foreground tabular-nums">
+                        {tx.totalAmount > 0 ? fmtCurrency(tx.totalAmount) : <span className="text-teal-600 dark:text-teal-400">Free</span>}
+                      </p>
+                      <p className={cn("text-[13px] font-bold tabular-nums", tx.teacherEarning > 0 ? "text-teal-600 dark:text-teal-400" : "text-muted-foreground")}>
+                        {tx.teacherEarning > 0 ? fmtCurrency(tx.teacherEarning) : "—"}
+                      </p>
+                      <p className="text-[12.5px] text-muted-foreground">{fmtDate(tx.transactedAt)}</p>
+                    </div>
+                  ))
                 }
               </div>
             )

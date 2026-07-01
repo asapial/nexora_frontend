@@ -22,8 +22,19 @@ export interface Testimonial {
   avatar?: string;
   quote: string;
   rating: number;
-  user?: { id: string; name: string; email: string; image?: string | null };
+  user?: { id: string; name: string; email: string; image?: string | null; };
   cardBg?: string;
+}
+
+export interface TestimonialsSectionData {
+  eyebrow: string;
+  headline: string;
+  highlightedText: string;
+  subtext: string;
+  addTitle: string;
+  addText: string;
+  submittedTitle: string;
+  submittedText: string;
 }
 
 // ─── Card background presets ───────────────────────────────
@@ -50,7 +61,7 @@ function getInitials(name: string): string {
 }
 
 // ─── Star display ──────────────────────────────────────────
-function StarRow({ rating, interactive = false, onRate }: { rating: number; interactive?: boolean; onRate?: (r: number) => void }) {
+function StarRow({ rating, interactive = false, onRate }: { rating: number; interactive?: boolean; onRate?: (r: number) => void; }) {
   return (
     <div className="flex items-center gap-0.5 mb-4">
       {[1, 2, 3, 4, 5].map((s) =>
@@ -73,7 +84,7 @@ function StarRow({ rating, interactive = false, onRate }: { rating: number; inte
 }
 
 // ─── Individual testimonial card ───────────────────────────
-function TestimonialCard({ item, idx }: { item: Testimonial; idx: number }) {
+function TestimonialCard({ item, idx }: { item: Testimonial; idx: number; }) {
   const cardBg = CARD_BG_VARIANTS[idx % CARD_BG_VARIANTS.length];
   const avatarUrl = item.user?.image || item.avatar;
   const authorName = item.name || item.user?.name || "Anonymous";
@@ -89,7 +100,7 @@ function TestimonialCard({ item, idx }: { item: Testimonial; idx: number }) {
       )}
     >
       {/* Opening quotation mark */}
-      <span className="block text-4xl leading-none text-teal-300/40 dark:text-teal-600/30 font-serif mb-1">"</span>
+      <span className="block text-4xl leading-none text-teal-300/40 dark:text-teal-600/30 font-serif mb-1">&ldquo;</span>
 
       {/* Quote body */}
       <p className="text-sm leading-relaxed text-zinc-600 dark:text-zinc-300 italic mb-4">{item.quote}</p>
@@ -116,7 +127,7 @@ function TestimonialCard({ item, idx }: { item: Testimonial; idx: number }) {
 }
 
 // ─── Submit Modal ──────────────────────────────────────────
-function AddTestimonialModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
+function AddTestimonialModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void; }) {
   const [form, setForm] = useState({ name: "", role: "", quote: "", rating: 5 });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -141,8 +152,8 @@ function AddTestimonialModal({ onClose, onSuccess }: { onClose: () => void; onSu
       if (!data.success) throw new Error(data.message || "Submission failed");
       setSubmitted(true);
       setTimeout(() => { onSuccess(); onClose(); }, 2000);
-    } catch (err: any) {
-      setError(err.message || "Something went wrong. Please try again.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -245,7 +256,7 @@ function SkeletonCard() {
       <div className="h-3 w-full bg-zinc-100 dark:bg-zinc-800 rounded" />
       <div className="h-3 w-5/6 bg-zinc-100 dark:bg-zinc-800 rounded" />
       <div className="h-3 w-4/6 bg-zinc-100 dark:bg-zinc-800 rounded" />
-      <div className="flex gap-0.5 mt-2">{[1,2,3,4,5].map(i => <div key={i} className="h-3 w-3 bg-zinc-200 dark:bg-zinc-800 rounded" />)}</div>
+      <div className="flex gap-0.5 mt-2">{[1, 2, 3, 4, 5].map(i => <div key={i} className="h-3 w-3 bg-zinc-200 dark:bg-zinc-800 rounded" />)}</div>
       <div className="flex gap-3 mt-2">
         <div className="w-9 h-9 rounded-full bg-zinc-200 dark:bg-zinc-800" />
         <div className="space-y-1.5">
@@ -258,7 +269,7 @@ function SkeletonCard() {
 }
 
 // ─── Section ───────────────────────────────────────────────
-export default function TestimonialsSection() {
+export default function TestimonialsSection({ data }: { data: TestimonialsSectionData; }) {
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [loading, setLoading] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -310,18 +321,18 @@ export default function TestimonialsSection() {
           <div className="text-center mb-14">
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-semibold border bg-teal-50 dark:bg-teal-950/40 text-teal-700 dark:text-teal-400 border-teal-200/60 dark:border-teal-800/60 mb-5">
               <RiSparklingFill className="animate-pulse" />
-              Testimonials
+              {data.eyebrow}
             </div>
 
             <h2 className="text-[clamp(2rem,4vw,3rem)] font-bold tracking-tight leading-[1.1] text-zinc-900 dark:text-zinc-50 mb-4">
-              Loved by researchers{" "}
+              {data.headline}{" "}
               <span style={{ background: "linear-gradient(135deg,#0d9488 0%,#14b8a6 50%,#5eead4 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
-                &amp; learners worldwide
+                {data.highlightedText}
               </span>
             </h2>
 
             <p className="text-zinc-500 dark:text-zinc-400 text-[clamp(1rem,1.8vw,1.15rem)] max-w-lg mx-auto leading-relaxed">
-              Real stories from teachers and members who use Nexora every day.
+              {data.subtext}
             </p>
           </div>
 
@@ -330,8 +341,8 @@ export default function TestimonialsSection() {
             {loading
               ? Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)
               : testimonials.map((item, idx) => (
-                  <TestimonialCard key={item.id} item={item} idx={idx} />
-                ))}
+                <TestimonialCard key={item.id} item={item} idx={idx} />
+              ))}
 
             {/* Add testimonial — only shown when user is logged in */}
             {!loading && isLoggedIn && !alreadySubmitted && (
@@ -350,16 +361,16 @@ export default function TestimonialsSection() {
                 )}
               >
                 <RiAddLine className="text-2xl opacity-60 group-hover:opacity-100 transition-opacity" />
-                <span className="text-sm font-semibold">Share your experience</span>
-                <span className="text-xs opacity-70">It will be reviewed before publishing</span>
+                <span className="text-sm font-semibold">{data.addTitle}</span>
+                <span className="text-xs opacity-70">{data.addText}</span>
               </button>
             )}
 
             {!loading && isLoggedIn && alreadySubmitted && (
               <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-teal-300/60 dark:border-teal-700/60 p-8 text-teal-600 dark:text-teal-400">
                 <RiCheckboxCircleLine className="text-2xl" />
-                <span className="text-sm font-semibold">Testimonial submitted</span>
-                <span className="text-xs opacity-70">Pending admin review</span>
+                <span className="text-sm font-semibold">{data.submittedTitle}</span>
+                <span className="text-xs opacity-70">{data.submittedText}</span>
               </div>
             )}
           </div>

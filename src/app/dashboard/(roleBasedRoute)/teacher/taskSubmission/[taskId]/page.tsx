@@ -17,34 +17,34 @@ interface Submission {
   submittedAt: string;
 }
 interface StudentProfile {
-  user: { id: string; name: string; email: string; image: string | null };
+  user: { id: string; name: string; email: string; image: string | null; };
 }
 interface Task {
   id: string; title: string; description: string | null; homework: string | null;
   status: TaskStatus; finalScore: number | null; reviewNote: string | null;
   deadline: string | null; submission: Submission | null;
   studentProfile: StudentProfile;
-  StudySession: { id: string; title: string; cluster: { name: string } };
+  StudySession: { id: string; title: string; cluster: { name: string; }; };
 }
 
 const STATUS_STYLE: Record<TaskStatus, string> = {
-  PENDING:   "bg-sky-100/80 dark:bg-sky-950/40 text-sky-700 dark:text-sky-400 border-sky-200/70 dark:border-sky-800/50",
+  PENDING: "bg-sky-100/80 dark:bg-sky-950/40 text-sky-700 dark:text-sky-400 border-sky-200/70 dark:border-sky-800/50",
   SUBMITTED: "bg-teal-100/80 dark:bg-teal-950/50 text-teal-700 dark:text-teal-400 border-teal-200/70 dark:border-teal-800/50",
-  REVIEWED:  "bg-violet-100/80 dark:bg-violet-950/50 text-violet-700 dark:text-violet-400 border-violet-200/70 dark:border-violet-800/50",
+  REVIEWED: "bg-violet-100/80 dark:bg-violet-950/50 text-violet-700 dark:text-violet-400 border-violet-200/70 dark:border-violet-800/50",
 };
 
 export default function TeacherSubmissionReviewPage() {
   const router = useRouter();
-  const { taskId } = useParams() as { taskId: string };
+  const { taskId } = useParams() as { taskId: string; };
 
-  const [task, setTask]       = useState<Task | null>(null);
+  const [task, setTask] = useState<Task | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError]     = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const [score, setScore]       = useState("");
-  const [note, setNote]         = useState("");
+  const [score, setScore] = useState("");
+  const [note, setNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [submitErr, setSubmitErr]   = useState<string | null>(null);
+  const [submitErr, setSubmitErr] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);

@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { RiArrowRightLine, RiInformationLine } from "react-icons/ri";
 
-export function CompletenessBar({ filled, total, role }: { filled: number; total: number; role: UserRole }) {
+export function CompletenessBar({ filled, total, role }: { filled: number; total: number; role: UserRole; }) {
   const pct = Math.round((filled / total) * 100);
   const incomplete = total - filled;
   const color = pct === 100 ? "bg-teal-500" : pct >= 70 ? "bg-teal-500" : pct >= 40 ? "bg-amber-400" : "bg-red-400";
@@ -35,8 +35,8 @@ export function CompletenessBar({ filled, total, role }: { filled: number; total
           {pct === 100
             ? "Your profile is fully complete 🎉"
             : incomplete === 1
-            ? "1 field missing — nearly there!"
-            : `${incomplete} fields incomplete`}
+              ? "1 field missing — nearly there!"
+              : `${incomplete} fields incomplete`}
         </p>
         {pct < 100 && (
           <Link href="/dashboard/settings"
