@@ -6,7 +6,7 @@ export function EditableField({ label, value, icon, type = "text", onSave }: {
   onSave: (v: string) => void;
 }) {
   const [editing, setEditing] = useState(false);
-  const [draft,   setDraft]   = useState(value);
+  const [draft, setDraft] = useState(value);
   const commit = () => { onSave(draft); setEditing(false); };
   const cancel = () => { setDraft(value); setEditing(false); };
 

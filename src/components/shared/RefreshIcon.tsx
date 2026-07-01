@@ -1,11 +1,11 @@
-import React from 'react'
-import { RiRefreshLine } from 'react-icons/ri'
-import { cn } from '@/lib/utils'
+import React from 'react';
+import { RiRefreshLine } from 'react-icons/ri';
+import { cn } from '@/lib/utils';
 
 interface RefreshIconProps {
-  onClick: () => void
-  loading: boolean
-  className?: string
+  onClick: () => void;
+  loading: boolean;
+  className?: string;
 }
 
 export default function RefreshIcon({ onClick, loading, className }: RefreshIconProps) {
@@ -23,5 +23,5 @@ export default function RefreshIcon({ onClick, loading, className }: RefreshIcon
     >
       <RiRefreshLine className={cn("text-sm", loading && "animate-spin")} />
     </button>
-  )
+  );
 }

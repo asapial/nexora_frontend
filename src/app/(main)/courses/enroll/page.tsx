@@ -39,7 +39,7 @@ function AmbientBg() {
 }
 
 // ─── Course Summary Widget ────────────────────────────────
-function CourseSummary({ course }: { course: any }) {
+function CourseSummary({ course }: { course: any; }) {
   return (
     <div className="rounded-2xl border border-border bg-card/90 backdrop-blur-sm overflow-hidden">
       {course.thumbnailUrl && (
@@ -67,7 +67,7 @@ function CourseSummary({ course }: { course: any }) {
 }
 
 // ─── Order Summary ────────────────────────────────────────
-function OrderSummary({ course }: { course: any }) {
+function OrderSummary({ course }: { course: any; }) {
   const tax = course.isFree ? 0 : parseFloat((course.price * 0).toFixed(2)); // 0% tax for simplicity
   return (
     <div className="rounded-2xl border border-border bg-card/90 backdrop-blur-sm px-5 py-5 flex flex-col gap-3">
@@ -160,7 +160,7 @@ function StripePaymentForm({ course, clientSecret, paymentIntentId, onSuccess }:
         </div>
         <div className="px-5 py-5">
 
-          
+
         </div>
       </div>
 
@@ -202,7 +202,7 @@ function StripePaymentForm({ course, clientSecret, paymentIntentId, onSuccess }:
 }
 
 // ─── Success Screen ───────────────────────────────────────
-function SuccessScreen({ course }: { course: any }) {
+function SuccessScreen({ course }: { course: any; }) {
   const router = useRouter();
   useEffect(() => {
     const t = setTimeout(() => router.push(`/dashboard/student/courses/${course.id}`), 2500);
@@ -233,7 +233,7 @@ function SuccessScreen({ course }: { course: any }) {
 // ─── Main Page ────────────────────────────────────────────
 export default function EnrollPage() {
   const router = useRouter();
-  const { id } = useParams() as { id: string };
+  const { id } = useParams() as { id: string; };
 
   const [course, setCourse] = useState<any>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);

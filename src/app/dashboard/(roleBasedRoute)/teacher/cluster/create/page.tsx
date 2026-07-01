@@ -472,7 +472,7 @@ export default function CreateClusterPage() {
   };
 
   const validate = (): FormErrors => {
-    const e: FormErrors & { slug?: string } = {};
+    const e: FormErrors & { slug?: string; } = {};
     if (!form.name.trim()) e.name = "Cluster name is required";
     else if (form.name.length < 3) e.name = "Name must be at least 3 characters";
     if (!form.slug.trim()) (e as any).slug = "Slug is required";

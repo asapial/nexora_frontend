@@ -3,9 +3,9 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
 import {
- RiCheckLine, RiAlertLine,
- RiFileMarkedLine, RiArrowRightLine,
-  RiArrowLeftLine, RiMenuLine, RiCloseLine,  RiPlayCircleLine,
+  RiCheckLine, RiAlertLine,
+  RiFileMarkedLine, RiArrowRightLine,
+  RiArrowLeftLine, RiMenuLine, RiCloseLine, RiPlayCircleLine,
   RiVideoLine,
   RiArticleLine,
   RiLoader4Line,
@@ -18,10 +18,10 @@ import { toast } from "sonner";
 
 
 
-const CONTENT_CFG: Record<string, { icon: React.ReactNode; color: string }> = {
-  VIDEO: { icon: <RiVideoLine />,    color: "text-blue-600 dark:text-blue-400 bg-blue-100/60 dark:bg-blue-950/40 border-blue-200/60 dark:border-blue-800/50" },
-  TEXT:  { icon: <RiArticleLine />,  color: "text-teal-600 dark:text-teal-400 bg-teal-100/60 dark:bg-teal-950/40 border-teal-200/60 dark:border-teal-800/50" },
-  PDF:   { icon: <RiFileMarkedLine />, color: "text-amber-600 dark:text-amber-400 bg-amber-100/60 dark:bg-amber-950/40 border-amber-200/60 dark:border-amber-800/50" },
+const CONTENT_CFG: Record<string, { icon: React.ReactNode; color: string; }> = {
+  VIDEO: { icon: <RiVideoLine />, color: "text-blue-600 dark:text-blue-400 bg-blue-100/60 dark:bg-blue-950/40 border-blue-200/60 dark:border-blue-800/50" },
+  TEXT: { icon: <RiArticleLine />, color: "text-teal-600 dark:text-teal-400 bg-teal-100/60 dark:bg-teal-950/40 border-teal-200/60 dark:border-teal-800/50" },
+  PDF: { icon: <RiFileMarkedLine />, color: "text-amber-600 dark:text-amber-400 bg-amber-100/60 dark:bg-amber-950/40 border-amber-200/60 dark:border-amber-800/50" },
 };
 
 
@@ -30,7 +30,7 @@ const CONTENT_CFG: Record<string, { icon: React.ReactNode; color: string }> = {
 // ════════════════════════════════════════════════════════════
 export default function CoursePlayerPage() {
   const router = useRouter();
-  const { courseId } = useParams() as { courseId: string };
+  const { courseId } = useParams() as { courseId: string; };
   const [enrollment, setEnrollment] = useState<any>(null);
   const [missions, setMissions] = useState<any[]>([]);
   const [contents, setContents] = useState<Record<string, any[]>>({});
@@ -151,8 +151,8 @@ export default function CoursePlayerPage() {
                   )}>
                   <div className={cn("w-6 h-6 rounded-lg flex-shrink-0 flex items-center justify-center mt-0.5 text-[10px] font-extrabold border",
                     isDone ? "bg-teal-100/70 dark:bg-teal-950/50 border-teal-200/60 dark:border-teal-800/50 text-teal-600 dark:text-teal-400"
-                    : isActive ? "bg-teal-100/60 dark:bg-teal-950/40 border-teal-200/60 dark:border-teal-800/50 text-teal-600 dark:text-teal-400"
-                    : "bg-muted/40 border-border text-muted-foreground/50"
+                      : isActive ? "bg-teal-100/60 dark:bg-teal-950/40 border-teal-200/60 dark:border-teal-800/50 text-teal-600 dark:text-teal-400"
+                        : "bg-muted/40 border-border text-muted-foreground/50"
                   )}>{isDone ? <RiCheckLine className="text-xs" /> : i + 1}</div>
                   <div className="flex-1 min-w-0">
                     <p className={cn("text-[13px] font-bold leading-snug line-clamp-2", isActive ? "text-teal-600 dark:text-teal-400" : isDone ? "text-foreground/60" : "text-foreground")}>{m.title}</p>

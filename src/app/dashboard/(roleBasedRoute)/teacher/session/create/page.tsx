@@ -34,7 +34,7 @@ interface SessionForm {
 interface Cluster {
   id: string;
   name: string;
-  _count: { members: number };
+  _count: { members: number; };
   batchTag: string;
 }
 
@@ -53,10 +53,10 @@ interface IndividualTaskEntry {
 }
 
 type TaskMode = "template" | "individual" | "none";
-type SessionErrors = Partial<Record<keyof SessionForm, string>> & { general?: string };
+type SessionErrors = Partial<Record<keyof SessionForm, string>> & { general?: string; };
 
 // ─── Field components ─────────────────────────────────────────────────────────
-function Label({ children, required }: { children: React.ReactNode; required?: boolean }) {
+function Label({ children, required }: { children: React.ReactNode; required?: boolean; }) {
   return (
     <label className="text-[13px] font-semibold text-foreground/80">
       {children}
@@ -329,7 +329,7 @@ function SessionPreview({
   form, clusters, taskMode, templates, membersCount, individualTasks,
 }: {
   form: SessionForm; clusters: Cluster[]; taskMode: TaskMode;
-  templates: { id: string; title: string }[];
+  templates: { id: string; title: string; }[];
   membersCount: number;
   individualTasks: IndividualTaskEntry[];
 }) {
@@ -441,7 +441,7 @@ export default function CreateSessionPage() {
   const [success, setSuccess] = useState(false);
 
   const [clusters, setClusters] = useState<Cluster[]>([]);
-  const [templates, setTemplates] = useState<{ id: string; title: string }[]>([]);
+  const [templates, setTemplates] = useState<{ id: string; title: string; }[]>([]);
   const [clusterMembers, setClusterMembers] = useState<ClusterMember[]>([]);
   const [membersLoading, setMembersLoading] = useState(false);
 
@@ -653,8 +653,8 @@ export default function CreateSessionPage() {
               {taskMode === "individual"
                 ? "Individual tasks have been assigned to selected students."
                 : taskMode === "template"
-                ? "Tasks have been auto-created for every active member."
-                : "Session created. Members have been notified."}
+                  ? "Tasks have been auto-created for every active member."
+                  : "Session created. Members have been notified."}
               {form.sendEmail && " Email notifications are on their way."}
             </p>
           </div>
@@ -1021,8 +1021,8 @@ export default function CreateSessionPage() {
                   taskMode === "none"
                     ? { icon: <RiNotificationLine />, text: "Members notified (no tasks)" }
                     : taskMode === "individual"
-                    ? { icon: <RiUserLine />, text: "Custom task per student assigned" }
-                    : { icon: <RiFileTextLine />, text: "Task auto-created for each active member" },
+                      ? { icon: <RiUserLine />, text: "Custom task per student assigned" }
+                      : { icon: <RiFileTextLine />, text: "Task auto-created for each active member" },
                   { icon: <RiNotificationLine />, text: "Members notified via selected channels" },
                   { icon: <RiTimeLine />, text: "Deadline countdown on member dashboards" },
                 ].map((item, i) => (

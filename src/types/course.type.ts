@@ -27,7 +27,7 @@ export interface Course {
   rejectedNote?: string;
   createdAt: string;
   updatedAt: string;
-  _count?: { enrollments: number; missions: number };
+  _count?: { enrollments: number; missions: number; };
   totalRevenue?: number;
   teacherEarning?: number;
 }
@@ -47,7 +47,7 @@ export interface CourseMission {
   createdAt: string;
   updatedAt: string;
   contents?: MissionContent[];
-  _count?: { contents: number };
+  _count?: { contents: number; };
 }
 
 // ─── Content ──────────────────────────────────────────────
@@ -77,7 +77,7 @@ export interface CourseEnrollment {
   paymentId?: string;
   amountPaid?: number;
   teacherEarning?: number;
-  user?: { id: string; name: string; email: string; image?: string };
+  user?: { id: string; name: string; email: string; image?: string; };
 }
 
 // ─── Price Request ────────────────────────────────────────

@@ -37,14 +37,14 @@ function SkeletonSidebar() {
 // ─── Create Template Modal ─────────────────────────────────
 function CreateModal({ onClose, onCreate }: {
   onClose: () => void;
-  onCreate: (t: { name: string; slug: string; subject: string; description: string; body: string }) => Promise<void>;
+  onCreate: (t: { name: string; slug: string; subject: string; description: string; body: string; }) => Promise<void>;
 }) {
-  const [name, setName]         = useState("");
-  const [slug, setSlug]         = useState("");
-  const [subject, setSubject]   = useState("");
-  const [desc, setDesc]         = useState("");
-  const [body, setBody]         = useState("");
-  const [saving, setSaving]     = useState(false);
+  const [name, setName] = useState("");
+  const [slug, setSlug] = useState("");
+  const [subject, setSubject] = useState("");
+  const [desc, setDesc] = useState("");
+  const [body, setBody] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const autoSlug = (n: string) => n.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
 
@@ -112,13 +112,13 @@ function CreateModal({ onClose, onCreate }: {
 
 export default function EmailTemplatesPage() {
   const [templates, setTemplates] = useState<Template[]>([]);
-  const [loading, setLoading]     = useState(true);
-  const [selected, setSelected]   = useState<Template | null>(null);
-  const [editing, setEditing]     = useState(false);
-  const [editBody, setEditBody]   = useState("");
-  const [preview, setPreview]     = useState(false);
-  const [saving, setSaving]       = useState(false);
-  const [deleting, setDeleting]   = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState<Template | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [editBody, setEditBody] = useState("");
+  const [preview, setPreview] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [testEmail, setTestEmail] = useState("");
   const [sendLoading, setSendLoading] = useState(false);
@@ -177,7 +177,7 @@ export default function EmailTemplatesPage() {
     finally { setDeleting(null); }
   };
 
-  const handleCreate = async (payload: { name: string; slug: string; subject: string; description: string; body: string }) => {
+  const handleCreate = async (payload: { name: string; slug: string; subject: string; description: string; body: string; }) => {
     const r = await adminPlatformApi.createEmailTemplate(payload);
     toast.success("Template created");
     await load();

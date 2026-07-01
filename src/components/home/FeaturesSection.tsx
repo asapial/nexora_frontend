@@ -47,6 +47,19 @@ interface FeatureCard {
   tagLabel: string;       // small corner tag
 }
 
+export interface FeaturesSectionData {
+  eyebrow: string;
+  headline: string;
+  highlightedText: string;
+  subtext: string;
+  dragHint: string;
+  footerText: string;
+  footerMutedText: string;
+  footerLinkText: string;
+  footerLink: string;
+  cards: Array<Partial<FeatureCard> & { id: string; title: string; description: string; tagLabel: string }>;
+}
+
 // ─── Default card data ────────────────────────────────────
 const DEFAULT_CARDS: FeatureCard[] = [
   {
@@ -197,7 +210,7 @@ function FeatureCardItem({
           : "cursor-grab hover:cursor-grab",
         // Overlay (the ghost following cursor)
         isOverlay &&
-          "opacity-100 scale-[1.03] shadow-2xl ring-2 ring-teal-500/30 cursor-grabbing rotate-[1deg]",
+        "opacity-100 scale-[1.03] shadow-2xl ring-2 ring-teal-500/30 cursor-grabbing rotate-[1deg]",
         // Hover lift
         !sortableDragging && !isDragging && !isOverlay && "hover:-translate-y-1"
       )}
@@ -289,14 +302,14 @@ function FeatureCardItem({
             "--glow": card.accentColor.includes("teal")
               ? "rgba(20,184,166,0.07)"
               : card.accentColor.includes("violet")
-              ? "rgba(139,92,246,0.07)"
-              : card.accentColor.includes("amber")
-              ? "rgba(245,158,11,0.07)"
-              : card.accentColor.includes("emerald")
-              ? "rgba(16,185,129,0.07)"
-              : card.accentColor.includes("sky")
-              ? "rgba(14,165,233,0.07)"
-              : "rgba(244,63,94,0.07)",
+                ? "rgba(139,92,246,0.07)"
+                : card.accentColor.includes("amber")
+                  ? "rgba(245,158,11,0.07)"
+                  : card.accentColor.includes("emerald")
+                    ? "rgba(16,185,129,0.07)"
+                    : card.accentColor.includes("sky")
+                      ? "rgba(14,165,233,0.07)"
+                      : "rgba(244,63,94,0.07)",
           } as React.CSSProperties
         }
       />
@@ -305,18 +318,18 @@ function FeatureCardItem({
 }
 
 // ─── Section header ───────────────────────────────────────
-function SectionHeader() {
+function SectionHeader({ data }: { data: FeaturesSectionData; }) {
   return (
     <div className="text-center mb-16 space-y-4">
       {/* Eyebrow */}
       <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-semibold border bg-teal-50 dark:bg-teal-950/40 text-teal-700 dark:text-teal-400 border-teal-200/60 dark:border-teal-800/60">
         <RiSparklingFill className="text-teal-500 dark:text-teal-400 animate-pulse" />
-        Everything you need
+        {data.eyebrow}
       </div>
 
       {/* Headline */}
       <h2 className="text-[clamp(2rem,4vw,3rem)] font-bold tracking-tight leading-[1.1] text-zinc-900 dark:text-zinc-50">
-        One platform.{" "}
+        {data.headline}{" "}
         <span className="relative inline-block">
           <span
             className="relative z-10"
@@ -328,7 +341,7 @@ function SectionHeader() {
               backgroundClip: "text",
             }}
           >
-            Every tool.
+            {data.highlightedText}
           </span>
           {/* Underline squiggle */}
           <svg
@@ -356,22 +369,25 @@ function SectionHeader() {
 
       {/* Sub */}
       <p className="text-[clamp(1rem,1.8vw,1.15rem)] text-zinc-500 dark:text-zinc-400 max-w-2xl mx-auto leading-relaxed">
-        Nexora combines cluster management, session planning, resource sharing,
-        analytics, and AI tools — so teachers and members can focus on what matters.
+        {data.subtext}
       </p>
 
       {/* Drag hint */}
       <p className="inline-flex items-center gap-1.5 text-xs text-zinc-400 dark:text-zinc-600 mt-2">
         <RiDraggable className="text-sm" />
-        Drag cards to reorder your priorities
+        {data.dragHint}
       </p>
     </div>
   );
 }
 
 // ─── Main FeaturesSection ─────────────────────────────────
-export default function FeaturesSection() {
-  const [cards, setCards] = useState<FeatureCard[]>(DEFAULT_CARDS);
+export default function FeaturesSection({ data }: { data: FeaturesSectionData; }) {
+  const initialCards = data.cards.map((card, index) => ({
+    ...DEFAULT_CARDS[index % DEFAULT_CARDS.length],
+    ...card,
+  })) as FeatureCard[];
+  const [cards, setCards] = useState<FeatureCard[]>(initialCards);
   const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
 
   const sensors = useSensors(
@@ -416,7 +432,7 @@ export default function FeaturesSection() {
       {/* ── Container ── */}
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
-        <SectionHeader />
+        <SectionHeader data={data} />
 
         {/* ── DnD Grid ── */}
         <DndContext
@@ -451,13 +467,13 @@ export default function FeaturesSection() {
         {/* ── Bottom CTA strip ── */}
         <div className="mt-16 flex flex-col sm:flex-row items-center justify-center gap-4 text-center">
           <p className="text-sm text-zinc-500 dark:text-zinc-400">
-            All features available on the free plan.{" "}
+            {data.footerText}{" "}
             <span className="text-zinc-400 dark:text-zinc-600">
-              Pro unlocks AI tools and advanced analytics.
+              {data.footerMutedText}
             </span>
           </p>
           <a
-            href="#pricing"
+            href={data.footerLink}
             className={cn(
               "inline-flex items-center gap-1.5 text-sm font-semibold",
               "text-teal-600 dark:text-teal-400",
@@ -466,7 +482,7 @@ export default function FeaturesSection() {
               "underline-offset-4 hover:underline"
             )}
           >
-            See all plans →
+            {data.footerLinkText} &rarr;
           </a>
         </div>
       </div>

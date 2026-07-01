@@ -29,12 +29,12 @@ type Role = "ADMIN" | "TEACHER" | "STUDENT";
 
 interface DashboardData {
   stats: Record<string, number>;
-  enrollmentTrend?: { month: string; count: number }[];
-  revenueTrend?: { month: string; amount: number }[];
+  enrollmentTrend?: { month: string; count: number; }[];
+  revenueTrend?: { month: string; amount: number; }[];
   recentSessions?: any[];
-  progressDistribution?: { notStarted: number; inProgress: number; completed: number };
+  progressDistribution?: { notStarted: number; inProgress: number; completed: number; };
   recentEnrollments?: any[];
-  userGrowthTrend?: { month: string; count: number }[];
+  userGrowthTrend?: { month: string; count: number; }[];
 }
 
 // ─────────────────────────────────────────────────────────
@@ -168,7 +168,7 @@ function ChartTooltip({ active, payload, label, prefix = "", suffix = "" }: any)
 // ─────────────────────────────────────────────────────────
 // TEACHER CHARTS
 // ─────────────────────────────────────────────────────────
-function EnrollmentTrendChart({ data }: { data: { month: string; count: number }[] }) {
+function EnrollmentTrendChart({ data }: { data: { month: string; count: number; }[]; }) {
   if (!data?.length) return null;
   return (
     <GlassCard className="p-5 col-span-full lg:col-span-2">
@@ -197,7 +197,7 @@ function EnrollmentTrendChart({ data }: { data: { month: string; count: number }
   );
 }
 
-function RevenueTrendChart({ data }: { data: { month: string; amount: number }[] }) {
+function RevenueTrendChart({ data }: { data: { month: string; amount: number; }[]; }) {
   if (!data?.length) return null;
   return (
     <GlassCard className="p-5">
@@ -221,7 +221,7 @@ function RevenueTrendChart({ data }: { data: { month: string; amount: number }[]
 // ─────────────────────────────────────────────────────────
 // STUDENT PROGRESS DONUT
 // ─────────────────────────────────────────────────────────
-function ProgressDonut({ distribution }: { distribution: { notStarted: number; inProgress: number; completed: number } }) {
+function ProgressDonut({ distribution }: { distribution: { notStarted: number; inProgress: number; completed: number; }; }) {
   const data = [
     { name: "Completed", value: distribution.completed, color: "#14b8a6" },
     { name: "In Progress", value: distribution.inProgress, color: "#f59e0b" },
@@ -275,7 +275,7 @@ function ProgressDonut({ distribution }: { distribution: { notStarted: number; i
 // ─────────────────────────────────────────────────────────
 // ADMIN USER GROWTH CHART
 // ─────────────────────────────────────────────────────────
-function UserGrowthChart({ data }: { data: { month: string; count: number }[] }) {
+function UserGrowthChart({ data }: { data: { month: string; count: number; }[]; }) {
   if (!data?.length) return null;
   return (
     <GlassCard className="p-5 col-span-full lg:col-span-2">
@@ -307,7 +307,7 @@ function UserGrowthChart({ data }: { data: { month: string; count: number }[] })
 // ─────────────────────────────────────────────────────────
 // RECENT SESSIONS WIDGET (TEACHER)
 // ─────────────────────────────────────────────────────────
-function RecentSessionsWidget({ sessions }: { sessions: any[] }) {
+function RecentSessionsWidget({ sessions }: { sessions: any[]; }) {
   if (!sessions?.length) return null;
   const fmtDate = (d: string) => { try { return new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short" }); } catch { return d; } };
   const statusCfg: Record<string, string> = {
@@ -346,7 +346,7 @@ function RecentSessionsWidget({ sessions }: { sessions: any[] }) {
 // ─────────────────────────────────────────────────────────
 // STUDENT RECENT ENROLLMENTS
 // ─────────────────────────────────────────────────────────
-function StudentEnrollments({ enrollments }: { enrollments: any[] }) {
+function StudentEnrollments({ enrollments }: { enrollments: any[]; }) {
   if (!enrollments?.length) return null;
   return (
     <GlassCard className="p-5">
@@ -399,7 +399,7 @@ const STUDENT_ACTIONS = [
   { label: "Ask Mentor", icon: <RiPulseLine />, accent: "violet" as Accent },
 ];
 
-function QuickActions({ role }: { role: Role }) {
+function QuickActions({ role }: { role: Role; }) {
   const actions = role === "ADMIN" ? ADMIN_ACTIONS : role === "TEACHER" ? TEACHER_ACTIONS : STUDENT_ACTIONS;
   return (
     <div>
@@ -439,7 +439,7 @@ function QuickActions({ role }: { role: Role }) {
 // ─────────────────────────────────────────────────────────
 // WELCOME SECTION
 // ─────────────────────────────────────────────────────────
-function WelcomeSection({ role, name, stats, onRefresh, refreshing }: { role: Role; name: string; stats: Record<string, number>; onRefresh: () => void; refreshing: boolean }) {
+function WelcomeSection({ role, name, stats, onRefresh, refreshing }: { role: Role; name: string; stats: Record<string, number>; onRefresh: () => void; refreshing: boolean; }) {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
@@ -452,8 +452,8 @@ function WelcomeSection({ role, name, stats, onRefresh, refreshing }: { role: Ro
 
   const subtitle =
     role === "ADMIN" ? `Managing ${stats.totalUsers ?? 0} users and ${stats.totalCourses ?? 0} courses.`
-    : role === "TEACHER" ? `You have ${stats.totalStudents ?? 0} students across ${stats.totalClusters ?? 0} clusters.`
-    : `You are enrolled in ${stats.totalEnrollments ?? 0} courses.`;
+      : role === "TEACHER" ? `You have ${stats.totalStudents ?? 0} students across ${stats.totalClusters ?? 0} clusters.`
+        : `You are enrolled in ${stats.totalEnrollments ?? 0} courses.`;
 
   return (
     <div className="flex items-start justify-between gap-4">

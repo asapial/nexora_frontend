@@ -10,38 +10,38 @@ import { cn } from "@/lib/utils";
 import RefreshIcon from "@/components/shared/RefreshIcon";
 
 type Urgency = "INFO" | "IMPORTANT" | "CRITICAL";
-interface Cluster { id: string; name: string; _count: { members: number } }
+interface Cluster { id: string; name: string; _count: { members: number; }; }
 interface Announcement {
   id: string; title: string; body: string; urgency: Urgency; publishedAt: string | null;
   scheduledAt: string | null; isGlobal: boolean;
-  clusters: { cluster: { id: string; name: string } }[];
+  clusters: { cluster: { id: string; name: string; }; }[];
 }
 
-const URGENCY_CFG: Record<Urgency, { icon: React.ReactNode; badge: string; border: string }> = {
-  INFO:      { icon: <RiInformationLine />,  badge: "bg-sky-100/80 dark:bg-sky-950/50 text-sky-700 dark:text-sky-400 border-sky-200/70 dark:border-sky-800/50",      border: "border-sky-300/50 dark:border-sky-700/50" },
-  IMPORTANT: { icon: <RiAlertLine />,        badge: "bg-amber-100/80 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border-amber-200/70 dark:border-amber-800/50", border: "border-amber-300/50 dark:border-amber-700/50" },
-  CRITICAL:  { icon: <RiErrorWarningLine />, badge: "bg-red-100/80 dark:bg-red-950/30 text-red-600 dark:text-red-400 border-red-200/70 dark:border-red-800/50",       border: "border-red-300/50 dark:border-red-700/50" },
+const URGENCY_CFG: Record<Urgency, { icon: React.ReactNode; badge: string; border: string; }> = {
+  INFO: { icon: <RiInformationLine />, badge: "bg-sky-100/80 dark:bg-sky-950/50 text-sky-700 dark:text-sky-400 border-sky-200/70 dark:border-sky-800/50", border: "border-sky-300/50 dark:border-sky-700/50" },
+  IMPORTANT: { icon: <RiAlertLine />, badge: "bg-amber-100/80 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border-amber-200/70 dark:border-amber-800/50", border: "border-amber-300/50 dark:border-amber-700/50" },
+  CRITICAL: { icon: <RiErrorWarningLine />, badge: "bg-red-100/80 dark:bg-red-950/30 text-red-600 dark:text-red-400 border-red-200/70 dark:border-red-800/50", border: "border-red-300/50 dark:border-red-700/50" },
 };
 
 const INPUT_CLS = "w-full h-10 px-4 rounded-xl text-[13.5px] font-medium bg-muted/40 border border-border text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-teal-400/20 focus:border-teal-400/70 transition-all";
 
 export default function TeacherAnnouncementPage() {
-  const [clusters, setClusters]           = useState<Cluster[]>([]);
+  const [clusters, setClusters] = useState<Cluster[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [loading, setLoading]             = useState(true);
-  const [showForm, setShowForm]           = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
 
   // Form state
-  const [title, setTitle]           = useState("");
-  const [body, setBody]             = useState("");
-  const [urgency, setUrgency]       = useState<Urgency>("INFO");
-  const [selected, setSelected]     = useState<string[]>([]);
-  const [isGlobal, setIsGlobal]     = useState(false);
-  const [schedDate, setSchedDate]   = useState("");
-  const [schedTime, setSchedTime]   = useState("");
-  const [sending, setSending]       = useState(false);
-  const [success, setSuccess]       = useState(false);
-  const [err, setErr]               = useState<string | null>(null);
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+  const [urgency, setUrgency] = useState<Urgency>("INFO");
+  const [selected, setSelected] = useState<string[]>([]);
+  const [isGlobal, setIsGlobal] = useState(false);
+  const [schedDate, setSchedDate] = useState("");
+  const [schedTime, setSchedTime] = useState("");
+  const [sending, setSending] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
 
   const fetchAll = useCallback(() => {
     Promise.all([
@@ -209,8 +209,8 @@ export default function TeacherAnnouncementPage() {
               className={cn("inline-flex items-center gap-2 h-10 px-6 rounded-xl text-white text-[13.5px] font-bold shadow-md shadow-teal-600/20 transition-all disabled:opacity-60",
                 success ? "bg-teal-600" : "bg-teal-600 hover:bg-teal-700")}>
               {sending ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> :
-               success ? <RiCheckLine /> :
-               schedDate ? <RiCalendarLine /> : <RiSendPlaneLine />}
+                success ? <RiCheckLine /> :
+                  schedDate ? <RiCalendarLine /> : <RiSendPlaneLine />}
               {sending ? "Sending…" : success ? "Sent!" : schedDate ? `Schedule · ${schedDate}` : "Send now"}
             </button>
           </div>
@@ -239,8 +239,8 @@ export default function TeacherAnnouncementPage() {
                 <div className="flex items-start gap-4 px-5 py-4">
                   <div className={cn("w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center text-base mt-0.5",
                     a.urgency === "INFO" ? "bg-sky-100/70 dark:bg-sky-950/50 text-sky-600 dark:text-sky-400" :
-                    a.urgency === "IMPORTANT" ? "bg-amber-100/70 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400" :
-                    "bg-red-100/70 dark:bg-red-950/30 text-red-600 dark:text-red-400")}>{u.icon}</div>
+                      a.urgency === "IMPORTANT" ? "bg-amber-100/70 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400" :
+                        "bg-red-100/70 dark:bg-red-950/30 text-red-600 dark:text-red-400")}>{u.icon}</div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap mb-1">
                       <span className="text-[14px] font-bold text-foreground">{a.title}</span>

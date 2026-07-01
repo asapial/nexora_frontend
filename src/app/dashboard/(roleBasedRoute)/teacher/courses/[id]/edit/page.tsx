@@ -19,22 +19,22 @@ const TEXTAREA = "w-full rounded-xl px-4 py-3 text-[13.5px] leading-relaxed resi
 
 export default function CourseEditPage() {
   const router = useRouter();
-  const { id } = useParams() as { id: string };
+  const { id } = useParams() as { id: string; };
 
   const [course, setCourse] = useState<Course | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError]   = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   // Form state
-  const [title, setTitle]       = useState("");
-  const [desc, setDesc]         = useState("");
-  const [tags, setTags]         = useState("");
-  const [isFree, setIsFree]     = useState(true);
+  const [title, setTitle] = useState("");
+  const [desc, setDesc] = useState("");
+  const [tags, setTags] = useState("");
+  const [isFree, setIsFree] = useState(true);
   const [reqPrice, setReqPrice] = useState("");
 
-  const [saving, setSaving]   = useState(false);
+  const [saving, setSaving] = useState(false);
   const [saveErr, setSaveErr] = useState<string | null>(null);
-  const [saved, setSaved]     = useState(false);
+  const [saved, setSaved] = useState(false);
 
   const fetchCourse = useCallback(async () => {
     setLoading(true); setError(null);

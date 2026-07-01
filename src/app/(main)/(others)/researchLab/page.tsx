@@ -26,7 +26,7 @@ function useReveal(t = 0.1) {
 }
 
 /* ── teal gradient text helper ─────────────────────────── */
-function TealText({ children }: { children: React.ReactNode }) {
+function TealText({ children }: { children: React.ReactNode; }) {
   return (
     <span style={{
       background: "linear-gradient(135deg,#0d9488 0%,#14b8a6 50%,#5eead4 100%)",
@@ -40,14 +40,14 @@ function TealText({ children }: { children: React.ReactNode }) {
 }
 
 const FEATURES = [
-  { icon: <RiFilePaperLine />,     title: "Resource Library + Quizzes",  body: "Upload papers with abstracts. Attach MCQ quizzes so members prove comprehension before downloading." },
-  { icon: <RiCalendarCheckLine />, title: "Auto-Generated Tasks",         body: "Create a session — every RUNNING member gets a task automatically. Set deadlines and templates in seconds." },
-  { icon: <RiBarChartBoxLine />,   title: "Radar-Chart Progress",         body: "Track each member across 5 axes: submissions, attendance, homework, participation, and scores." },
-  { icon: <RiRobot2Line />,        title: "AI Study Companion",           body: "RAG-powered chat over any uploaded paper. Plain-language summaries and practice questions, 24/7." },
-  { icon: <RiGroupLine />,         title: "Co-Supervisor Support",        body: "Invite a second supervisor with read-only or full-edit access. Perfect for co-mentored projects." },
-  { icon: <RiFileTextLine />,      title: "Custom Grading Rubrics",       body: "Build multi-criteria rubrics (Clarity 30% + Depth 40% + Format 30%) attached to any session." },
-  { icon: <RiShieldCheckLine />,   title: "Milestone Badges",             body: "Auto-award badges when members hit criteria like '5 tasks submitted' or '3 sessions attended'." },
-  { icon: <RiLinksLine />,          title: "Session Replay Archive",       body: "Link Zoom recordings with timestamped notes. Members access everything from one place." },
+  { icon: <RiFilePaperLine />, title: "Resource Library + Quizzes", body: "Upload papers with abstracts. Attach MCQ quizzes so members prove comprehension before downloading." },
+  { icon: <RiCalendarCheckLine />, title: "Auto-Generated Tasks", body: "Create a session — every RUNNING member gets a task automatically. Set deadlines and templates in seconds." },
+  { icon: <RiBarChartBoxLine />, title: "Radar-Chart Progress", body: "Track each member across 5 axes: submissions, attendance, homework, participation, and scores." },
+  { icon: <RiRobot2Line />, title: "AI Study Companion", body: "RAG-powered chat over any uploaded paper. Plain-language summaries and practice questions, 24/7." },
+  { icon: <RiGroupLine />, title: "Co-Supervisor Support", body: "Invite a second supervisor with read-only or full-edit access. Perfect for co-mentored projects." },
+  { icon: <RiFileTextLine />, title: "Custom Grading Rubrics", body: "Build multi-criteria rubrics (Clarity 30% + Depth 40% + Format 30%) attached to any session." },
+  { icon: <RiShieldCheckLine />, title: "Milestone Badges", body: "Auto-award badges when members hit criteria like '5 tasks submitted' or '3 sessions attended'." },
+  { icon: <RiLinksLine />, title: "Session Replay Archive", body: "Link Zoom recordings with timestamped notes. Members access everything from one place." },
 ];
 
 export default function ResearchLabsPage() {
@@ -70,9 +70,9 @@ export default function ResearchLabsPage() {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_70%_50%,rgba(20,184,166,.08),transparent)] pointer-events-none" />
         {/* Corner arcs */}
         <svg className="absolute bottom-0 left-0 opacity-[0.06] pointer-events-none" width="300" height="300" viewBox="0 0 300 300" fill="none">
-          <circle cx="0" cy="300" r="220" stroke="#14b8a6" strokeWidth="1"/>
-          <circle cx="0" cy="300" r="140" stroke="#14b8a6" strokeWidth="1"/>
-          <circle cx="0" cy="300" r="70"  stroke="#14b8a6" strokeWidth="1"/>
+          <circle cx="0" cy="300" r="220" stroke="#14b8a6" strokeWidth="1" />
+          <circle cx="0" cy="300" r="140" stroke="#14b8a6" strokeWidth="1" />
+          <circle cx="0" cy="300" r="70" stroke="#14b8a6" strokeWidth="1" />
         </svg>
 
         <div className="relative z-10 max-w-7xl mx-auto px-6 sm:px-10 lg:px-16 py-28 w-full">
@@ -124,9 +124,9 @@ export default function ResearchLabsPage() {
             {/* Right — cluster preview cards */}
             <div className="hidden lg:flex flex-col gap-3">
               {[
-                { tag: "Session 7 Task", name: "Attention Is All You Need", status: "Submitted",   accent: "bg-teal-500"   },
-                { tag: "Resource",       name: "BERT Explained — 2018",     status: "Quiz passed", accent: "bg-teal-400"   },
-                { tag: "Homework",       name: "Read Sections 3.2–3.3",     status: "Done",        accent: "bg-teal-300"   },
+                { tag: "Session 7 Task", name: "Attention Is All You Need", status: "Submitted", accent: "bg-teal-500" },
+                { tag: "Resource", name: "BERT Explained — 2018", status: "Quiz passed", accent: "bg-teal-400" },
+                { tag: "Homework", name: "Read Sections 3.2–3.3", status: "Done", accent: "bg-teal-300" },
               ].map((card, i) => (
                 <div key={i}
                   className="flex items-center gap-3 px-4 py-3.5 rounded-2xl
@@ -166,7 +166,7 @@ export default function ResearchLabsPage() {
       ══════════════════════════════════════════ */}
       <div className="border-y border-border bg-muted/40">
         <div className="max-w-5xl mx-auto px-6 grid grid-cols-2 lg:grid-cols-4 divide-x divide-border">
-          {[["3 hrs","Saved / week / supervisor"],["94%","Avg submission rate"],["12×","Faster resource discovery"],["28k+","Certificates issued"]].map(([v, l], i) => (
+          {[["3 hrs", "Saved / week / supervisor"], ["94%", "Avg submission rate"], ["12×", "Faster resource discovery"], ["28k+", "Certificates issued"]].map(([v, l], i) => (
             <div key={i} className="flex flex-col items-center py-10 px-4 text-center">
               <p className="text-[2.2rem] font-black text-teal-600 dark:text-teal-400 tabular-nums leading-none mb-1.5">{v}</p>
               <p className="text-[11.5px] font-semibold text-muted-foreground">{l}</p>
@@ -323,10 +323,10 @@ export default function ResearchLabsPage() {
             </h2>
 
             <div className="flex flex-col divide-y divide-border">
-              {[["01","Create your research cluster","Name it, add a batch tag, paste student emails. Credentials auto-sent to every member."],
-                ["02","Upload your reading list","Add papers with abstracts, tags, and year. Attach comprehension quizzes to any resource."],
-                ["03","Schedule your first session","Set date, deadline. Tasks auto-created for every member. Notifications sent immediately."],
-                ["04","Review, score, grow","Members submit. Review with rubric scores. Assign homework. Dashboard tracks everything."],
+              {[["01", "Create your research cluster", "Name it, add a batch tag, paste student emails. Credentials auto-sent to every member."],
+              ["02", "Upload your reading list", "Add papers with abstracts, tags, and year. Attach comprehension quizzes to any resource."],
+              ["03", "Schedule your first session", "Set date, deadline. Tasks auto-created for every member. Notifications sent immediately."],
+              ["04", "Review, score, grow", "Members submit. Review with rubric scores. Assign homework. Dashboard tracks everything."],
               ].map(([num, title, desc], i) => (
                 <div key={num}
                   className={cn("flex gap-8 items-start py-8 transition-[opacity,transform] duration-500",

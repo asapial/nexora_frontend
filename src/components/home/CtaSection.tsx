@@ -48,20 +48,20 @@ const DEFAULT_DATA: CtaSectionData = {
 };
 
 // ─── Section ───────────────────────────────────────────────
-export default function CtaSection({ data = DEFAULT_DATA }: { data?: CtaSectionData }) {
+export default function CtaSection({ data = DEFAULT_DATA }: { data?: CtaSectionData; }) {
   const hasImage = Boolean(data.backgroundImageUrl);
   const hasCustomColor = Boolean(data.backgroundColor);
 
   // Build the background style
   const bgStyle: React.CSSProperties = hasImage
     ? {
-        backgroundImage: `url(${data.backgroundImageUrl})`,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-      }
+      backgroundImage: `url(${data.backgroundImageUrl})`,
+      backgroundSize: "cover",
+      backgroundPosition: "center",
+    }
     : hasCustomColor
-    ? { background: data.backgroundColor }
-    : {};
+      ? { background: data.backgroundColor }
+      : {};
 
   return (
     <div className="relative overflow-hidden">
@@ -71,7 +71,7 @@ export default function CtaSection({ data = DEFAULT_DATA }: { data?: CtaSectionD
         className={cn(
           "relative py-24 lg:py-36",
           !hasImage && !hasCustomColor &&
-            "bg-[linear-gradient(135deg,#0d1117_0%,#0f2027_40%,#0d1b1a_100%)]"
+          "bg-[linear-gradient(135deg,#0d1117_0%,#0f2027_40%,#0d1b1a_100%)]"
         )}
         style={bgStyle}
       >
@@ -114,7 +114,7 @@ export default function CtaSection({ data = DEFAULT_DATA }: { data?: CtaSectionD
         >
           <circle cx="0" cy="0" r="160" stroke="#14b8a6" strokeWidth=".7" />
           <circle cx="0" cy="0" r="100" stroke="#14b8a6" strokeWidth=".7" />
-          <circle cx="0" cy="0" r="50"  stroke="#14b8a6" strokeWidth=".7" />
+          <circle cx="0" cy="0" r="50" stroke="#14b8a6" strokeWidth=".7" />
         </svg>
         <svg
           className="absolute bottom-0 right-0 w-48 h-48 pointer-events-none"
@@ -124,7 +124,7 @@ export default function CtaSection({ data = DEFAULT_DATA }: { data?: CtaSectionD
         >
           <circle cx="200" cy="200" r="160" stroke="#14b8a6" strokeWidth=".7" />
           <circle cx="200" cy="200" r="100" stroke="#14b8a6" strokeWidth=".7" />
-          <circle cx="200" cy="200" r="50"  stroke="#14b8a6" strokeWidth=".7" />
+          <circle cx="200" cy="200" r="50" stroke="#14b8a6" strokeWidth=".7" />
         </svg>
 
         {/* ── Content ── */}

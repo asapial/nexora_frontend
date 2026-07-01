@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { RiSparklingFill, RiShieldCheckLine, RiMailLine, RiArrowUpLine } from "react-icons/ri";
 import { cn } from "@/lib/utils";
 
-const LAST_UPDATED = "June 1, 2025";
+const LAST_UPDATED = "June 13, 2026";
 
 const SECTIONS = [
   {
@@ -32,6 +32,21 @@ We are committed to protecting your privacy and handling your data with transpar
 **Payment Information:** If you enrol in a paid course or subscribe to a Pro plan, payment is processed by Stripe. We do not store your full card number — only a tokenised payment reference.
 
 **Communications:** If you contact our support team, we retain records of that correspondence to maintain context for future interactions.`,
+  },
+  {
+    id: "examshield-pro",
+    title: "ExamShield Pro Mode",
+    content: `**When It Applies:** ExamShield Pro Mode applies only when a teacher explicitly creates a Pro Mode exam. Regular Mode exams do not request camera access.
+
+**Consent and Camera Access:** Before a Pro Mode attempt starts, the student receives a clear notice and must provide consent before the browser requests camera permission. Students who require an accommodation should contact their teacher or institution before the exam.
+
+**Local Processing:** Camera frames are processed locally in the student's browser for camera readiness, face presence, multiple-face, and camera interruption signals where supported. Nexora does not continuously upload or store raw camera video.
+
+**Integrity Signals:** Sustained integrity signals may be recorded with timestamps, duration, confidence, and limited technical metadata. These signals are provided to the exam teacher for human review. They do not automatically fail an exam or declare that a student cheated.
+
+**Evidence:** Snapshot evidence is disabled unless Nexora has configured private evidence storage and an approved retention policy. Camera images must never be stored through a public asset URL.
+
+**Retention and Access:** Pro Mode integrity records are accessible only to authorized exam staff and are retained according to the exam policy and applicable institutional requirements.`,
   },
   {
     id: "how-we-use",

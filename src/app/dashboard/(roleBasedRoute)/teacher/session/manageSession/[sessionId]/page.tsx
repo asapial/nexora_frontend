@@ -17,9 +17,9 @@ interface Session {
   id: string; title: string; description: string | null;
   scheduledAt: string; status: SessionStatus;
   durationMins: number | null; location: string | null; taskDeadline: string | null;
-  cluster: { id: string; name: string; batchTag: string | null };
-  tasks: Array<{ id: string; title: string; status: string; submission: { id: string } | null }>;
-  attendance: Array<{ studentProfileId: string; status: string }>;
+  cluster: { id: string; name: string; batchTag: string | null; };
+  tasks: Array<{ id: string; title: string; status: string; submission: { id: string; } | null; }>;
+  attendance: Array<{ studentProfileId: string; status: string; }>;
 }
 interface AttendanceRecord {
   studentId: string; name: string; email: string; status: AttendanceStatus; note?: string; markedAt: string;
@@ -27,15 +27,15 @@ interface AttendanceRecord {
 
 const INP = "w-full h-10 px-4 rounded-xl text-[13.5px] bg-muted/40 border border-border text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-teal-400/20 focus:border-teal-400/70 transition-all";
 
-const SESSION_STATUS_OPTIONS: { value: SessionStatus; label: string; cls: string }[] = [
-  { value: "upcoming",  label: "Upcoming",  cls: "text-sky-600 dark:text-sky-400 border-sky-200/70" },
-  { value: "ongoing",   label: "Ongoing",   cls: "text-teal-600 dark:text-teal-400 border-teal-200/70" },
+const SESSION_STATUS_OPTIONS: { value: SessionStatus; label: string; cls: string; }[] = [
+  { value: "upcoming", label: "Upcoming", cls: "text-sky-600 dark:text-sky-400 border-sky-200/70" },
+  { value: "ongoing", label: "Ongoing", cls: "text-teal-600 dark:text-teal-400 border-teal-200/70" },
   { value: "completed", label: "Completed", cls: "text-muted-foreground border-border" },
 ];
 
 export default function ManageSessionPage() {
   const router = useRouter();
-  const { sessionId } = useParams() as { sessionId: string };
+  const { sessionId } = useParams() as { sessionId: string; };
 
   const [session, setSession] = useState<Session | null>(null);
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
@@ -43,13 +43,13 @@ export default function ManageSessionPage() {
   const [error, setError] = useState<string | null>(null);
 
   // Update form state
-  const [title, setTitle]           = useState("");
-  const [desc, setDesc]             = useState("");
+  const [title, setTitle] = useState("");
+  const [desc, setDesc] = useState("");
   const [sessionStatus, setSessionStatus] = useState<SessionStatus>("upcoming");
-  const [location, setLocation]     = useState("");
-  const [deadline, setDeadline]     = useState("");
-  const [saving, setSaving]         = useState(false);
-  const [saveMsg, setSaveMsg]       = useState<string | null>(null);
+  const [location, setLocation] = useState("");
+  const [deadline, setDeadline] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState<string | null>(null);
 
   const fetchAll = useCallback(async () => {
     setLoading(true); setError(null);
@@ -121,12 +121,12 @@ export default function ManageSessionPage() {
   }
 
   const submittedCount = (session.tasks ?? []).filter(t => t.status === "SUBMITTED" || t.status === "REVIEWED").length;
-  const reviewedCount  = (session.tasks ?? []).filter(t => t.status === "REVIEWED").length;
-  const dueTasks       = (session.tasks ?? []).filter(t => t.status === "PENDING");
+  const reviewedCount = (session.tasks ?? []).filter(t => t.status === "REVIEWED").length;
+  const dueTasks = (session.tasks ?? []).filter(t => t.status === "PENDING");
 
   const ATTENDANCE_CFG = {
     PRESENT: "bg-teal-100/80 dark:bg-teal-950/50 text-teal-700 dark:text-teal-400 border-teal-200/70",
-    ABSENT:  "bg-red-100/70 dark:bg-red-950/30 text-red-600 dark:text-red-400 border-red-200/70",
+    ABSENT: "bg-red-100/70 dark:bg-red-950/30 text-red-600 dark:text-red-400 border-red-200/70",
     EXCUSED: "bg-amber-100/80 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border-amber-200/70",
   };
 

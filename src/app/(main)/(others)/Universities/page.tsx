@@ -20,31 +20,31 @@ function useReveal(t = 0.1) {
   return { ref, v };
 }
 
-function TealText({ children }: { children: React.ReactNode }) {
+function TealText({ children }: { children: React.ReactNode; }) {
   return (
-    <span style={{ background:"linear-gradient(135deg,#0d9488 0%,#14b8a6 50%,#5eead4 100%)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text" }}>
+    <span style={{ background: "linear-gradient(135deg,#0d9488 0%,#14b8a6 50%,#5eead4 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
       {children}
     </span>
   );
 }
 
 const COMPARISON = [
-  { feature: "Max clusters",           free: "3",            pro: "Unlimited",     ent: "Unlimited"  },
-  { feature: "Max members/cluster",    free: "20",           pro: "Unlimited",     ent: "Unlimited"  },
-  { feature: "Multi-tenant org",       free: false,          pro: false,           ent: true         },
-  { feature: "Custom branding",        free: false,          pro: false,           ent: true         },
-  { feature: "Institution admin role", free: false,          pro: false,           ent: true         },
-  { feature: "Audit logs",             free: false,          pro: false,           ent: true         },
-  { feature: "AI Study Companion",     free: false,          pro: true,            ent: true         },
-  { feature: "Advanced analytics",     free: false,          pro: true,            ent: true         },
-  { feature: "Mass certificates",      free: "Manual only",  pro: "Automated",     ent: "Automated"  },
-  { feature: "SSO / SAML",             free: false,          pro: false,           ent: true         },
-  { feature: "SLA uptime guarantee",   free: false,          pro: false,           ent: "99.9%"      },
-  { feature: "Dedicated account mgr",  free: false,          pro: false,           ent: true         },
+  { feature: "Max clusters", free: "3", pro: "Unlimited", ent: "Unlimited" },
+  { feature: "Max members/cluster", free: "20", pro: "Unlimited", ent: "Unlimited" },
+  { feature: "Multi-tenant org", free: false, pro: false, ent: true },
+  { feature: "Custom branding", free: false, pro: false, ent: true },
+  { feature: "Institution admin role", free: false, pro: false, ent: true },
+  { feature: "Audit logs", free: false, pro: false, ent: true },
+  { feature: "AI Study Companion", free: false, pro: true, ent: true },
+  { feature: "Advanced analytics", free: false, pro: true, ent: true },
+  { feature: "Mass certificates", free: "Manual only", pro: "Automated", ent: "Automated" },
+  { feature: "SSO / SAML", free: false, pro: false, ent: true },
+  { feature: "SLA uptime guarantee", free: false, pro: false, ent: "99.9%" },
+  { feature: "Dedicated account mgr", free: false, pro: false, ent: true },
 ];
 
-function CellValue({ val }: { val: string | boolean }) {
-  if (val === true)  return <RiCheckLine className="text-teal-600 dark:text-teal-400 text-lg" />;
+function CellValue({ val }: { val: string | boolean; }) {
+  if (val === true) return <RiCheckLine className="text-teal-600 dark:text-teal-400 text-lg" />;
   if (val === false) return <RiCloseLine className="text-muted-foreground/40 text-lg" />;
   return <span className="text-[13px] font-semibold text-foreground">{val}</span>;
 }
@@ -125,7 +125,7 @@ export default function UniversitiesPage() {
       ══════════════════════════════════════════ */}
       <div className="border-y border-border bg-muted/40">
         <div className="max-w-5xl mx-auto px-6 grid grid-cols-2 lg:grid-cols-4 divide-x divide-border">
-          {[["60+","Countries with active university users"],["240","Avg members per university org"],["99.9%","Platform uptime SLA on Enterprise"],["GDPR","Fully compliant — EU & UK"]].map(([v, l], i) => (
+          {[["60+", "Countries with active university users"], ["240", "Avg members per university org"], ["99.9%", "Platform uptime SLA on Enterprise"], ["GDPR", "Fully compliant — EU & UK"]].map(([v, l], i) => (
             <div key={i} className="flex flex-col items-center py-10 px-4 text-center">
               <p className="text-[2.2rem] font-black text-teal-600 dark:text-teal-400 tabular-nums leading-none mb-1.5">{v}</p>
               <p className="text-[11.5px] font-semibold text-muted-foreground">{l}</p>
@@ -157,10 +157,10 @@ export default function UniversitiesPage() {
             </div>
 
             <div className="flex flex-col divide-y divide-border">
-              {[["Shadow IT risk","Each department runs a different mix of tools — WhatsApp, Notion, Google Drive. IT can't sanction every lecturer's personal choices, creating data and compliance risk."],
-                ["Invisible student engagement","Faculty have no visibility into engagement across modules until the end-of-term grade sheet. Interventions always come too late."],
-                ["Manual certificate bottleneck","Generating verified academic certificates for thousands of students per cohort is a manual administrative bottleneck every single semester."],
-                ["Lost institutional memory","When a research supervisor leaves, their group's history, tasks, and resources disappear with them. The institution has nothing."],
+              {[["Shadow IT risk", "Each department runs a different mix of tools — WhatsApp, Notion, Google Drive. IT can't sanction every lecturer's personal choices, creating data and compliance risk."],
+              ["Invisible student engagement", "Faculty have no visibility into engagement across modules until the end-of-term grade sheet. Interventions always come too late."],
+              ["Manual certificate bottleneck", "Generating verified academic certificates for thousands of students per cohort is a manual administrative bottleneck every single semester."],
+              ["Lost institutional memory", "When a research supervisor leaves, their group's history, tasks, and resources disappear with them. The institution has nothing."],
               ].map(([title, body], i) => (
                 <div key={i}
                   className={cn("py-7 flex gap-5 transition-[opacity,transform] duration-500",
@@ -258,15 +258,15 @@ export default function UniversitiesPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {[
-              { icon:<RiOrganizationChart />, title:"Multi-Tenant Organisation",     body:"Your own scoped environment: custom branding, domain, and organisation-level admin role." },
-              { icon:<RiShieldCheckLine />,   title:"Institutional Audit Logs",      body:"Every action logged with timestamp and user ID for compliance and HR audits." },
-              { icon:<RiBarChartBoxLine />,   title:"Institution-Wide Analytics",    body:"Total users, clusters, sessions, and enrolments — filterable by department or batch." },
-              { icon:<RiGraduationCapLine />, title:"Mass Certificate Issuance",     body:"Thousands of branded certificates at once. Each with a unique verification URL." },
-              { icon:<RiGroupLine />,         title:"Teacher Verification Workflow", body:"All faculty queue for admin approval before full access — control who teaches on your platform." },
-              { icon:<RiSettings3Line />,     title:"Feature Flag Management",       body:"Enable or disable features per role or department. Gradual rollout control built in." },
-              { icon:<RiFileTextLine />,      title:"GDPR & Data Export",            body:"Full JSON/CSV export, scheduled backups, and GDPR-compliant deletion. EU & UK compliant." },
-              { icon:<RiGlobalLine />,        title:"Custom Branding",               body:"Replace Nexora with your logo, accent colour, sender email, and tagline platform-wide." },
-              { icon:<RiSettings3Line />,     title:"Webhook & Integration Support", body:"Connect to SIS, LMS, or HR systems. Google Meet and Zoom integrations built-in." },
+              { icon: <RiOrganizationChart />, title: "Multi-Tenant Organisation", body: "Your own scoped environment: custom branding, domain, and organisation-level admin role." },
+              { icon: <RiShieldCheckLine />, title: "Institutional Audit Logs", body: "Every action logged with timestamp and user ID for compliance and HR audits." },
+              { icon: <RiBarChartBoxLine />, title: "Institution-Wide Analytics", body: "Total users, clusters, sessions, and enrolments — filterable by department or batch." },
+              { icon: <RiGraduationCapLine />, title: "Mass Certificate Issuance", body: "Thousands of branded certificates at once. Each with a unique verification URL." },
+              { icon: <RiGroupLine />, title: "Teacher Verification Workflow", body: "All faculty queue for admin approval before full access — control who teaches on your platform." },
+              { icon: <RiSettings3Line />, title: "Feature Flag Management", body: "Enable or disable features per role or department. Gradual rollout control built in." },
+              { icon: <RiFileTextLine />, title: "GDPR & Data Export", body: "Full JSON/CSV export, scheduled backups, and GDPR-compliant deletion. EU & UK compliant." },
+              { icon: <RiGlobalLine />, title: "Custom Branding", body: "Replace Nexora with your logo, accent colour, sender email, and tagline platform-wide." },
+              { icon: <RiSettings3Line />, title: "Webhook & Integration Support", body: "Connect to SIS, LMS, or HR systems. Google Meet and Zoom integrations built-in." },
             ].map((f, i) => (
               <div key={f.title}
                 className={cn(
@@ -316,9 +316,9 @@ export default function UniversitiesPage() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-            {[["Phase 1","Institutional Setup","Our team configures your Organisation with logo, domain, branding, and admin accounts. SSO setup if required.","1–2 weeks"],
-              ["Phase 2","Pilot Departments","2–3 pilot departments run their first sessions. Faculty create clusters, add students. Gather feedback.","2–4 weeks"],
-              ["Phase 3","Institution-Wide Rollout","All departments onboarded. Bulk import students via CSV. Set feature flags per faculty.","Ongoing"],
+            {[["Phase 1", "Institutional Setup", "Our team configures your Organisation with logo, domain, branding, and admin accounts. SSO setup if required.", "1–2 weeks"],
+            ["Phase 2", "Pilot Departments", "2–3 pilot departments run their first sessions. Faculty create clusters, add students. Gather feedback.", "2–4 weeks"],
+            ["Phase 3", "Institution-Wide Rollout", "All departments onboarded. Bulk import students via CSV. Set feature flags per faculty.", "Ongoing"],
             ].map(([phase, title, desc, timeline], i) => (
               <div key={phase}
                 className={cn(
@@ -355,7 +355,7 @@ export default function UniversitiesPage() {
             r5.v ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10")}>
 
           <div>
-            <div className="flex gap-1 mb-5">{[1,2,3,4,5].map(n => <span key={n} className="text-teal-400 text-lg">★</span>)}</div>
+            <div className="flex gap-1 mb-5">{[1, 2, 3, 4, 5].map(n => <span key={n} className="text-teal-400 text-lg">★</span>)}</div>
             <span className="block text-[72px] leading-none font-serif text-teal-500/20 mb-1 select-none">"</span>
             <p className="text-[clamp(1rem,1.8vw,1.25rem)] font-medium text-zinc-300 leading-[1.8] italic mb-8">
               We needed a platform individual lecturers would actually use — not another system IT

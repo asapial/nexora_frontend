@@ -20,13 +20,13 @@ interface Task {
   id: string; title: string; description: string | null; homework: string | null;
   status: TaskStatus; finalScore: number | null; reviewNote: string | null;
   deadline: string | null; submission: Submission | null;
-  StudySession: { id: string; title: string; cluster: { id: string; name: string } };
+  StudySession: { id: string; title: string; cluster: { id: string; name: string; }; };
 }
 
 const STATUS_STYLE: Record<TaskStatus, string> = {
-  PENDING:   "bg-sky-100/80 dark:bg-sky-950/40 text-sky-700 dark:text-sky-400 border-sky-200/70 dark:border-sky-800/50",
+  PENDING: "bg-sky-100/80 dark:bg-sky-950/40 text-sky-700 dark:text-sky-400 border-sky-200/70 dark:border-sky-800/50",
   SUBMITTED: "bg-teal-100/80 dark:bg-teal-950/50 text-teal-700 dark:text-teal-400 border-teal-200/70 dark:border-teal-800/50",
-  REVIEWED:  "bg-violet-100/80 dark:bg-violet-950/50 text-violet-700 dark:text-violet-400 border-violet-200/70 dark:border-violet-800/50",
+  REVIEWED: "bg-violet-100/80 dark:bg-violet-950/50 text-violet-700 dark:text-violet-400 border-violet-200/70 dark:border-violet-800/50",
 };
 
 function formatDeadline(d: string) {
@@ -38,7 +38,7 @@ function formatDeadline(d: string) {
 }
 
 // Simple mini text formatting toolbar
-function TextToolbar({ onInsert }: { onInsert: (tag: string) => void }) {
+function TextToolbar({ onInsert }: { onInsert: (tag: string) => void; }) {
   return (
     <div className="flex items-center gap-1 px-3 py-1.5 border-b border-border bg-muted/20">
       <button type="button" onClick={() => onInsert("**")}
@@ -58,24 +58,24 @@ function TextToolbar({ onInsert }: { onInsert: (tag: string) => void }) {
 }
 
 function SubmissionPageInner() {
-  const router       = useRouter();
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const taskId       = searchParams.get("taskId");
+  const taskId = searchParams.get("taskId");
 
-  const [task, setTask]         = useState<Task | null>(null);
-  const [loading, setLoading]   = useState(true);
-  const [error, setError]       = useState<string | null>(null);
+  const [task, setTask] = useState<Task | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Submission fields
   const [activeTab, setActiveTab] = useState<"text" | "video" | "pdf">("text");
-  const [textBody, setTextBody]   = useState("");
-  const [videoUrl, setVideoUrl]   = useState("");
-  const [pdfUrl, setPdfUrl]       = useState("");
-  const [fileSize, setFileSize]   = useState("");
+  const [textBody, setTextBody] = useState("");
+  const [videoUrl, setVideoUrl] = useState("");
+  const [pdfUrl, setPdfUrl] = useState("");
+  const [fileSize, setFileSize] = useState("");
 
   const [submitting, setSubmitting] = useState(false);
-  const [submitErr, setSubmitErr]   = useState<string | null>(null);
-  const [success, setSuccess]       = useState(false);
+  const [submitErr, setSubmitErr] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
   const fetchTask = useCallback(async () => {
     if (!taskId) { setError("No task ID provided."); setLoading(false); return; }
@@ -154,7 +154,7 @@ function SubmissionPageInner() {
   }
 
   const statusCls = STATUS_STYLE[task.status];
-  const stLabel   = { PENDING: "Pending", SUBMITTED: "Submitted", REVIEWED: "Reviewed" }[task.status];
+  const stLabel = { PENDING: "Pending", SUBMITTED: "Submitted", REVIEWED: "Reviewed" }[task.status];
   const isEditable = task.status !== "REVIEWED" && (!task.deadline || new Date(task.deadline).getTime() > Date.now());
   const deadlineOverdue = task.deadline && new Date(task.deadline).getTime() < Date.now();
 
@@ -224,9 +224,9 @@ function SubmissionPageInner() {
           {/* Tabs */}
           <div className="flex items-center border-b border-border">
             {([
-              { key: "text",  icon: <RiFileTextLine />, label: "Written" },
-              { key: "video", icon: <RiVideoLine />,    label: "Video URL" },
-              { key: "pdf",   icon: <RiFilePdfLine />,  label: "PDF URL" },
+              { key: "text", icon: <RiFileTextLine />, label: "Written" },
+              { key: "video", icon: <RiVideoLine />, label: "Video URL" },
+              { key: "pdf", icon: <RiFilePdfLine />, label: "PDF URL" },
             ] as const).map(tab => (
               <button key={tab.key} type="button" onClick={() => setActiveTab(tab.key)}
                 className={cn("flex items-center gap-1.5 px-4 py-2.5 text-[12.5px] font-semibold transition-all -mb-px",

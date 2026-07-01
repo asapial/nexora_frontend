@@ -23,18 +23,18 @@ import {
 
 export interface NavDocSubItem {
   title: string;
-  url:   string;
+  url: string;
 }
 
 export interface NavDocItem {
-  title:     string;
-  url:       string;
-  icon:      React.ReactNode;
+  title: string;
+  url: string;
+  icon: React.ReactNode;
   isActive?: boolean;
-  items?:    NavDocSubItem[];
+  items?: NavDocSubItem[];
 }
 
-export function NavDocuments({ items, label }: { items: NavDocItem[]; label?: string }) {
+export function NavDocuments({ items, label }: { items: NavDocItem[]; label?: string; }) {
   const pathname = usePathname();
 
   return (
@@ -51,7 +51,7 @@ export function NavDocuments({ items, label }: { items: NavDocItem[]; label?: st
 
       <SidebarMenu className="gap-0.5">
         {items.map((item) => {
-          const hasChildren  = !!item.items?.length;
+          const hasChildren = !!item.items?.length;
           const isGroupActive =
             pathname === item.url ||
             pathname.startsWith(item.url + "/") ||

@@ -20,23 +20,23 @@ function useReveal(t = 0.1) {
   return { ref, v };
 }
 
-function TealText({ children }: { children: React.ReactNode }) {
+function TealText({ children }: { children: React.ReactNode; }) {
   return (
-    <span style={{ background:"linear-gradient(135deg,#0d9488 0%,#14b8a6 50%,#5eead4 100%)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text" }}>
+    <span style={{ background: "linear-gradient(135deg,#0d9488 0%,#14b8a6 50%,#5eead4 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
       {children}
     </span>
   );
 }
 
 const FEATURES = [
-  { icon: <RiUserHeartLine />,    title: "Individual Student Dashboards", body: "Scores, attendance, homework, badges — all in one sharable view. Parents can see it too." },
-  { icon: <RiCalendarCheckLine />,title: "Homework Auto-Assignment",       body: "Create a session → homework tasks assigned to every student with a submission deadline." },
-  { icon: <RiTimeLine />,         title: "Deadline Countdown Widget",      body: "Live countdown on every student dashboard. Push reminders 24h and 1h before." },
-  { icon: <RiBarChartBoxLine />,  title: "Session Feedback & Ratings",     body: "Students rate sessions 1–5 and leave comments. Tutors see aggregated trends over time." },
-  { icon: <RiFileTextLine />,     title: "Revision Resource Library",      body: "Past papers, notes, and video links organised by topic and session." },
-  { icon: <RiGraduationCapLine />,title: "Term Completion Certificates",   body: "Branded certificates with unique verification URLs issued at end of each term." },
-  { icon: <RiGroupLine />,        title: "Multi-Tutor Centres",            body: "Add co-tutors with edit or view-only access. Each tutor manages their own sessions." },
-  { icon: <RiNotificationLine />, title: "Inactive Student Alerts",        body: "Auto-flag students with zero activity. Act before they fall too far behind." },
+  { icon: <RiUserHeartLine />, title: "Individual Student Dashboards", body: "Scores, attendance, homework, badges — all in one sharable view. Parents can see it too." },
+  { icon: <RiCalendarCheckLine />, title: "Homework Auto-Assignment", body: "Create a session → homework tasks assigned to every student with a submission deadline." },
+  { icon: <RiTimeLine />, title: "Deadline Countdown Widget", body: "Live countdown on every student dashboard. Push reminders 24h and 1h before." },
+  { icon: <RiBarChartBoxLine />, title: "Session Feedback & Ratings", body: "Students rate sessions 1–5 and leave comments. Tutors see aggregated trends over time." },
+  { icon: <RiFileTextLine />, title: "Revision Resource Library", body: "Past papers, notes, and video links organised by topic and session." },
+  { icon: <RiGraduationCapLine />, title: "Term Completion Certificates", body: "Branded certificates with unique verification URLs issued at end of each term." },
+  { icon: <RiGroupLine />, title: "Multi-Tutor Centres", body: "Add co-tutors with edit or view-only access. Each tutor manages their own sessions." },
+  { icon: <RiNotificationLine />, title: "Inactive Student Alerts", body: "Auto-flag students with zero activity. Act before they fall too far behind." },
 ];
 
 export default function TutoringCentresPage() {
@@ -54,9 +54,9 @@ export default function TutoringCentresPage() {
         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-teal-700 via-teal-500 to-teal-300" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_50%_50%_at_50%_30%,rgba(20,184,166,.06),transparent)] pointer-events-none" />
         <svg className="absolute top-0 right-0 opacity-[0.05] pointer-events-none" width="280" height="280" viewBox="0 0 280 280" fill="none">
-          <circle cx="280" cy="0" r="200" stroke="#14b8a6" strokeWidth="1"/>
-          <circle cx="280" cy="0" r="130" stroke="#14b8a6" strokeWidth="1"/>
-          <circle cx="280" cy="0" r="70"  stroke="#14b8a6" strokeWidth="1"/>
+          <circle cx="280" cy="0" r="200" stroke="#14b8a6" strokeWidth="1" />
+          <circle cx="280" cy="0" r="130" stroke="#14b8a6" strokeWidth="1" />
+          <circle cx="280" cy="0" r="70" stroke="#14b8a6" strokeWidth="1" />
         </svg>
 
         <div className="relative z-10 max-w-7xl mx-auto px-6 sm:px-10 lg:px-16">
@@ -114,7 +114,7 @@ export default function TutoringCentresPage() {
                                    bg-teal-950/60 border border-teal-800/50 px-2 py-0.5 rounded-full">Healthy</span>
                 </div>
                 <div className="grid grid-cols-3 gap-2 mb-4">
-                  {[["Tasks","8/10"],["Attend.","95%"],["Avg","82%"]].map(([k, val]) => (
+                  {[["Tasks", "8/10"], ["Attend.", "95%"], ["Avg", "82%"]].map(([k, val]) => (
                     <div key={k} className="bg-white/[0.05] rounded-xl p-2.5 text-center">
                       <p className="text-[17px] font-black text-white leading-none">{val}</p>
                       <p className="text-[10px] text-zinc-500 font-semibold mt-0.5">{k}</p>
@@ -122,16 +122,16 @@ export default function TutoringCentresPage() {
                   ))}
                 </div>
                 <div className="flex gap-1.5 items-center">
-                  {["🏅","⭐","📚"].map((b, i) => <span key={i} className="text-xl">{b}</span>)}
+                  {["🏅", "⭐", "📚"].map((b, i) => <span key={i} className="text-xl">{b}</span>)}
                   <span className="text-[11px] text-zinc-500 ml-1">3 badges earned</span>
                 </div>
               </div>
 
               <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-4">
                 <p className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest mb-3">Recent homework</p>
-                {[["Quadratic equations worksheet","Submitted","teal"],
-                  ["Past paper Nov 2023 Q1–5","Graded 84%","teal"],
-                  ["Revision notes — Chapter 6","Due Friday","zinc"],
+                {[["Quadratic equations worksheet", "Submitted", "teal"],
+                ["Past paper Nov 2023 Q1–5", "Graded 84%", "teal"],
+                ["Revision notes — Chapter 6", "Due Friday", "zinc"],
                 ].map(([name, status, col], i) => (
                   <div key={i} className="flex items-center gap-3 py-2.5 border-b border-white/[0.05] last:border-0">
                     <span className={cn("w-1.5 h-1.5 rounded-full flex-shrink-0",
@@ -151,7 +151,7 @@ export default function TutoringCentresPage() {
       ══════════════════════════════════════════ */}
       <div className="border-y border-border bg-muted/40">
         <div className="max-w-5xl mx-auto px-6 grid grid-cols-2 lg:grid-cols-4 divide-x divide-border">
-          {[["91%","Student satisfaction"],["3×","More visible progress"],["Zero","Admin hrs chasing hw"],["5 min","To set up a group"]].map(([v, l], i) => (
+          {[["91%", "Student satisfaction"], ["3×", "More visible progress"], ["Zero", "Admin hrs chasing hw"], ["5 min", "To set up a group"]].map(([v, l], i) => (
             <div key={i} className="flex flex-col items-center py-10 px-4 text-center">
               <p className="text-[2.2rem] font-black text-teal-600 dark:text-teal-400 tabular-nums leading-none mb-1.5">{v}</p>
               <p className="text-[11.5px] font-semibold text-muted-foreground">{l}</p>
@@ -182,10 +182,10 @@ export default function TutoringCentresPage() {
           </div>
 
           <div className="relative border-l-2 border-teal-200 dark:border-teal-800/50 pl-10 flex flex-col gap-10">
-            {[{ icon:"📱", h:"The notification jungle",     b:"Students submit homework over WhatsApp. Parents ask via email. Tutors track attendance in a notebook. Everything is scattered." },
-              { icon:"📊", h:"The invisible report card",   b:"When parents ask 'How is my child doing?' the honest answer is 'I need to check my notes.' There's no single view of real progress." },
-              { icon:"⏰", h:"The late intervention",       b:"A student misses two sessions. Then three. By the time the tutor notices, the student is weeks behind and starting to disengage." },
-              { icon:"🏅", h:"The certificate crisis",      b:"At term end, the tutor designs a certificate in PowerPoint, fills it per student, and emails them one at a time. Hours gone." },
+            {[{ icon: "📱", h: "The notification jungle", b: "Students submit homework over WhatsApp. Parents ask via email. Tutors track attendance in a notebook. Everything is scattered." },
+            { icon: "📊", h: "The invisible report card", b: "When parents ask 'How is my child doing?' the honest answer is 'I need to check my notes.' There's no single view of real progress." },
+            { icon: "⏰", h: "The late intervention", b: "A student misses two sessions. Then three. By the time the tutor notices, the student is weeks behind and starting to disengage." },
+            { icon: "🏅", h: "The certificate crisis", b: "At term end, the tutor designs a certificate in PowerPoint, fills it per student, and emails them one at a time. Hours gone." },
             ].map((item, i) => (
               <div key={i}
                 className={cn("flex gap-5 relative transition-[opacity,transform] duration-500",
@@ -221,10 +221,10 @@ export default function TutoringCentresPage() {
             </p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {[["One structured dashboard","Every student's scores, attendance, homework, and badges in a single view — sharable with parents in one click."],
-              ["Homework auto-assigned","Create a session and homework tasks appear on every student's dashboard immediately. No individual messages."],
-              ["At-risk alerts","Nexora flags any student with zero activity. You intervene while there's still time to turn it around."],
-              ["Term certificates in seconds","Click 'Issue certificates'. Every student gets a branded PDF with a unique verification URL automatically."],
+            {[["One structured dashboard", "Every student's scores, attendance, homework, and badges in a single view — sharable with parents in one click."],
+            ["Homework auto-assigned", "Create a session and homework tasks appear on every student's dashboard immediately. No individual messages."],
+            ["At-risk alerts", "Nexora flags any student with zero activity. You intervene while there's still time to turn it around."],
+            ["Term certificates in seconds", "Click 'Issue certificates'. Every student gets a branded PDF with a unique verification URL automatically."],
             ].map(([title, body], i) => (
               <div key={i} className="bg-white/15 dark:bg-white/10 backdrop-blur-sm
                                       border border-white/20 rounded-2xl p-6">
@@ -297,10 +297,10 @@ export default function TutoringCentresPage() {
             <p className="text-muted-foreground text-[15.5px] max-w-md mx-auto">If you can use email, you can use Nexora.</p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[["01","Create subject cluster","GCSE Maths — Year 11. Add students by email. Nexora handles onboarding."],
-              ["02","Upload materials","Past papers, notes, video links. Organised by topic."],
-              ["03","Schedule sessions","Homework auto-assigned with deadlines. Students see it immediately."],
-              ["04","Track & celebrate","Review submissions, score with feedback, issue term certificates."],
+            {[["01", "Create subject cluster", "GCSE Maths — Year 11. Add students by email. Nexora handles onboarding."],
+            ["02", "Upload materials", "Past papers, notes, video links. Organised by topic."],
+            ["03", "Schedule sessions", "Homework auto-assigned with deadlines. Students see it immediately."],
+            ["04", "Track & celebrate", "Review submissions, score with feedback, issue term certificates."],
             ].map(([num, title, desc], i) => (
               <div key={num}
                 className={cn("transition-[opacity,transform] duration-500", r3.v ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10")}

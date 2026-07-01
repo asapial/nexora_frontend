@@ -24,13 +24,13 @@ function AmbientBg() {
   );
 }
 
-const CONTENT_CFG: Record<string, { icon: React.ReactNode; color: string }> = {
-  VIDEO: { icon: <RiVideoLine />,    color: "text-blue-600 dark:text-blue-400 bg-blue-100/60 dark:bg-blue-950/40 border-blue-200/60 dark:border-blue-800/50" },
-  TEXT:  { icon: <RiArticleLine />,  color: "text-teal-600 dark:text-teal-400 bg-teal-100/60 dark:bg-teal-950/40 border-teal-200/60 dark:border-teal-800/50" },
-  PDF:   { icon: <RiFileMarkedLine />, color: "text-amber-600 dark:text-amber-400 bg-amber-100/60 dark:bg-amber-950/40 border-amber-200/60 dark:border-amber-800/50" },
+const CONTENT_CFG: Record<string, { icon: React.ReactNode; color: string; }> = {
+  VIDEO: { icon: <RiVideoLine />, color: "text-blue-600 dark:text-blue-400 bg-blue-100/60 dark:bg-blue-950/40 border-blue-200/60 dark:border-blue-800/50" },
+  TEXT: { icon: <RiArticleLine />, color: "text-teal-600 dark:text-teal-400 bg-teal-100/60 dark:bg-teal-950/40 border-teal-200/60 dark:border-teal-800/50" },
+  PDF: { icon: <RiFileMarkedLine />, color: "text-amber-600 dark:text-amber-400 bg-amber-100/60 dark:bg-amber-950/40 border-amber-200/60 dark:border-amber-800/50" },
 };
 
-function RejectModal({ label, onClose, onReject }: { label: string; onClose: () => void; onReject: (n: string) => Promise<void> }) {
+function RejectModal({ label, onClose, onReject }: { label: string; onClose: () => void; onReject: (n: string) => Promise<void>; }) {
   const [note, setNote] = useState(""); const [busy, setBusy] = useState(false); const [err, setErr] = useState("");
   const submit = async () => { if (!note.trim()) { setErr("Note required"); return; } setBusy(true); try { await onReject(note.trim()); onClose(); } catch (e: any) { setErr(e.message); setBusy(false); } };
   return (
@@ -134,7 +134,7 @@ export default function MissionApprovalsPage() {
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <button onClick={() => setExpanded(isExpanded ? null : m.id)} className="w-8 h-8 rounded-lg flex items-center justify-center border border-border text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all">
-                        {isExpanded ? <LucideChevronUp  className="text-sm" /> : <LucideChevronDown  className="text-sm" />}
+                        {isExpanded ? <LucideChevronUp className="text-sm" /> : <LucideChevronDown className="text-sm" />}
                       </button>
                       <button onClick={() => setRejectTarget(m)} className="h-9 px-3 rounded-xl border border-red-200/60 dark:border-red-800/50 bg-red-50/40 dark:bg-red-950/20 text-[12px] font-bold text-red-600 dark:text-red-400 hover:bg-red-100/60 transition-all">Reject</button>
                       <button onClick={() => handleApprove(m.id)} disabled={approving === m.id} className="h-9 px-3 rounded-xl bg-teal-600 dark:bg-teal-500 hover:bg-teal-700 text-white text-[12px] font-bold transition-all disabled:opacity-60 flex items-center gap-1.5">

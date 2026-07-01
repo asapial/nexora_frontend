@@ -24,11 +24,11 @@ interface Testimonial {
   rating: number;
   status: "PENDING" | "APPROVED" | "REJECTED";
   createdAt: string;
-  user: { id: string; name: string; email: string; image?: string | null };
+  user: { id: string; name: string; email: string; image?: string | null; };
 }
 
 // ─── Star row ─────────────────────────────────────────────
-function StarRow({ rating }: { rating: number }) {
+function StarRow({ rating }: { rating: number; }) {
   return (
     <div className="flex items-center gap-0.5">
       {[1, 2, 3, 4, 5].map((s) =>
@@ -132,7 +132,7 @@ function TestimonialRow({
 }
 
 // ─── Empty state ──────────────────────────────────────────
-function EmptyState({ label }: { label: string }) {
+function EmptyState({ label }: { label: string; }) {
   return (
     <div className="flex flex-col items-center justify-center py-16 text-center">
       <RiMessageLine className="text-4xl text-zinc-300 dark:text-zinc-700 mb-3" />

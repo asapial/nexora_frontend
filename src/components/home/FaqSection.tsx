@@ -22,22 +22,22 @@ export interface FaqSectionData {
 }
 
 // ─── Category colour map ──────────────────────────────────
-const CATEGORY_COLORS: Record<string, { pill: string; tag: string }> = {
+const CATEGORY_COLORS: Record<string, { pill: string; tag: string; }> = {
   "Getting Started": {
     pill: "bg-teal-50 dark:bg-teal-950/40 text-teal-700 dark:text-teal-400 border-teal-200/60 dark:border-teal-800/50",
-    tag:  "bg-teal-50 dark:bg-teal-950/50 text-teal-700 dark:text-teal-400",
+    tag: "bg-teal-50 dark:bg-teal-950/50 text-teal-700 dark:text-teal-400",
   },
   "Features": {
     pill: "bg-violet-50 dark:bg-violet-950/40 text-violet-700 dark:text-violet-400 border-violet-200/60 dark:border-violet-800/50",
-    tag:  "bg-violet-50 dark:bg-violet-950/50 text-violet-700 dark:text-violet-400",
+    tag: "bg-violet-50 dark:bg-violet-950/50 text-violet-700 dark:text-violet-400",
   },
   "Pricing": {
     pill: "bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border-amber-200/60 dark:border-amber-800/50",
-    tag:  "bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400",
+    tag: "bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400",
   },
   "Technical": {
     pill: "bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-400 border-sky-200/60 dark:border-sky-800/50",
-    tag:  "bg-sky-50 dark:bg-sky-950/50 text-sky-700 dark:text-sky-400",
+    tag: "bg-sky-50 dark:bg-sky-950/50 text-sky-700 dark:text-sky-400",
   },
 };
 
@@ -45,13 +45,13 @@ function getCategoryStyle(cat: string) {
   return (
     CATEGORY_COLORS[cat] ?? {
       pill: "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700",
-      tag:  "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400",
+      tag: "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400",
     }
   );
 }
 
 // ─── Default data ──────────────────────────────────────────
-const DEFAULT_DATA: FaqSectionData = {
+export const DEFAULT_DATA: FaqSectionData = {
   eyebrow: "FAQ",
   headline: "Got questions?",
   subtext:
@@ -60,7 +60,7 @@ const DEFAULT_DATA: FaqSectionData = {
   contactLink: "#contact",
 };
 
-const DEFAULT_ITEMS: FaqItem[] = [
+export const DEFAULT_ITEMS: FaqItem[] = [
   {
     id: "f1",
     question: "How do I create my first cluster?",

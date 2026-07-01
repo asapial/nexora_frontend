@@ -18,14 +18,14 @@ type Session = {
   scheduledAt: string;
   durationMins?: number;
   status: string;
-  cluster: { id: string; name: string };
+  cluster: { id: string; name: string; };
   attendanceCount: number;
   attendanceRate: number;
   taskCount: number;
   taskSubmissionRate: number;
 };
 
-type Cluster = { id: string; name: string };
+type Cluster = { id: string; name: string; };
 
 const fmtDate = (d: string) =>
   new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
@@ -40,7 +40,7 @@ function SkeletonRow() {
   );
 }
 
-function RateBar({ value }: { value: number }) {
+function RateBar({ value }: { value: number; }) {
   const col =
     value >= 80 ? "bg-teal-500" : value >= 50 ? "bg-amber-500" : "bg-rose-500";
   return (
@@ -167,24 +167,24 @@ export default function TeacherSessionHistoryPage() {
         {loading
           ? Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} />)
           : filtered.length === 0
-          ? (
-            <div className="py-16 text-center">
-              <RiCalendarLine className="text-4xl text-muted-foreground/20 mx-auto mb-3" />
-              <p className="text-[13.5px] font-medium text-muted-foreground">No sessions found</p>
-            </div>
-          )
-          : filtered.map(s => (
-            <div key={s.id} className="grid grid-cols-[1fr_120px_80px_1fr_1fr] gap-4 px-5 py-4 border-b border-border/60 last:border-0 hover:bg-muted/10 transition-colors items-center">
-              <div className="min-w-0">
-                <p className="text-[13px] font-semibold text-foreground truncate">{s.title}</p>
-                <p className="text-[11.5px] text-muted-foreground truncate">{s.cluster.name}</p>
+            ? (
+              <div className="py-16 text-center">
+                <RiCalendarLine className="text-4xl text-muted-foreground/20 mx-auto mb-3" />
+                <p className="text-[13.5px] font-medium text-muted-foreground">No sessions found</p>
               </div>
-              <p className="text-[12.5px] text-muted-foreground">{fmtDate(s.scheduledAt)}</p>
-              <p className="text-[12.5px] text-muted-foreground">{s.durationMins ? `${s.durationMins}m` : "—"}</p>
-              <RateBar value={s.attendanceRate} />
-              <RateBar value={s.taskSubmissionRate} />
-            </div>
-          ))}
+            )
+            : filtered.map(s => (
+              <div key={s.id} className="grid grid-cols-[1fr_120px_80px_1fr_1fr] gap-4 px-5 py-4 border-b border-border/60 last:border-0 hover:bg-muted/10 transition-colors items-center">
+                <div className="min-w-0">
+                  <p className="text-[13px] font-semibold text-foreground truncate">{s.title}</p>
+                  <p className="text-[11.5px] text-muted-foreground truncate">{s.cluster.name}</p>
+                </div>
+                <p className="text-[12.5px] text-muted-foreground">{fmtDate(s.scheduledAt)}</p>
+                <p className="text-[12.5px] text-muted-foreground">{s.durationMins ? `${s.durationMins}m` : "—"}</p>
+                <RateBar value={s.attendanceRate} />
+                <RateBar value={s.taskSubmissionRate} />
+              </div>
+            ))}
       </div>
 
       {!loading && filtered.length > 0 && (

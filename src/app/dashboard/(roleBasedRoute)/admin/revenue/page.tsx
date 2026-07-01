@@ -11,14 +11,14 @@ import { adminApi } from "../../../../../lib/api";
 import { toast } from "sonner";
 import RefreshIcon from "@/components/shared/RefreshIcon";
 
-const fmtUSD  = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n ?? 0);
+const fmtUSD = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n ?? 0);
 const fmtDate = (d: string) => new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 
 export default function AdminRevenuePage() {
-  const [revenue, setRevenue]         = useState<any>(null);
+  const [revenue, setRevenue] = useState<any>(null);
   const [transactions, setTransactions] = useState<any[]>([]);
-  const [loading,      setLoading]    = useState(true);
-  const [txLoading,    setTxLoading]  = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [txLoading, setTxLoading] = useState(true);
 
   const loadRevenue = useCallback(async () => {
     setLoading(true);
@@ -39,11 +39,11 @@ export default function AdminRevenuePage() {
 
   useEffect(() => { loadRevenue(); loadTransactions(); }, [loadRevenue, loadTransactions]);
 
-  const platformEarnings   = revenue?.platformEarnings   ?? 0;
-  const teacherPayouts     = revenue?.teacherPayouts      ?? 0;
-  const grossRevenue       = revenue?.grossRevenue        ?? (platformEarnings + teacherPayouts);
-  const perCourse          = (revenue?.perCourse         ?? []) as any[];
-  const perTeacher         = (revenue?.perTeacher        ?? []) as any[];
+  const platformEarnings = revenue?.platformEarnings ?? 0;
+  const teacherPayouts = revenue?.teacherPayouts ?? 0;
+  const grossRevenue = revenue?.grossRevenue ?? (platformEarnings + teacherPayouts);
+  const perCourse = (revenue?.perCourse ?? []) as any[];
+  const perTeacher = (revenue?.perTeacher ?? []) as any[];
 
   return (
     <div className="flex flex-col gap-6 p-5 lg:p-7 pt-6 max-w-6xl mx-auto w-full">
@@ -65,9 +65,9 @@ export default function AdminRevenuePage() {
       {/* Top revenue stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
-          { icon: <RiMoneyDollarCircleLine />, l: "Gross Revenue",      v: fmtUSD(grossRevenue),      cls: "text-teal-600 dark:text-teal-400 bg-teal-100/60 dark:bg-teal-950/40 border-teal-200/60 dark:border-teal-800/40", desc: "Total paid by students" },
-          { icon: <RiArrowUpLine />,           l: "Platform Earnings",  v: fmtUSD(platformEarnings),  cls: "text-violet-600 dark:text-violet-400 bg-violet-100/60 dark:bg-violet-950/40 border-violet-200/60 dark:border-violet-800/40", desc: "Platform's cut" },
-          { icon: <RiUserLine />,              l: "Teacher Payouts",    v: fmtUSD(teacherPayouts),    cls: "text-amber-600 dark:text-amber-400 bg-amber-100/60 dark:bg-amber-950/40 border-amber-200/60 dark:border-amber-800/40", desc: "Teachers' earnings" },
+          { icon: <RiMoneyDollarCircleLine />, l: "Gross Revenue", v: fmtUSD(grossRevenue), cls: "text-teal-600 dark:text-teal-400 bg-teal-100/60 dark:bg-teal-950/40 border-teal-200/60 dark:border-teal-800/40", desc: "Total paid by students" },
+          { icon: <RiArrowUpLine />, l: "Platform Earnings", v: fmtUSD(platformEarnings), cls: "text-violet-600 dark:text-violet-400 bg-violet-100/60 dark:bg-violet-950/40 border-violet-200/60 dark:border-violet-800/40", desc: "Platform's cut" },
+          { icon: <RiUserLine />, l: "Teacher Payouts", v: fmtUSD(teacherPayouts), cls: "text-amber-600 dark:text-amber-400 bg-amber-100/60 dark:bg-amber-950/40 border-amber-200/60 dark:border-amber-800/40", desc: "Teachers' earnings" },
         ].map(s => (
           <div key={s.l} className="rounded-2xl border border-border bg-card p-5">
             <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center text-base border mb-3", s.cls)}>{s.icon}</div>

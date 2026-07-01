@@ -15,13 +15,13 @@ export function TagArrayEditor({
   placeholder = "Type and press Enter to add",
   onSave,
 }: {
-  label:        string;
-  values:       string[];
+  label: string;
+  values: string[];
   placeholder?: string;
-  onSave:       (tags: string[]) => void;
+  onSave: (tags: string[]) => void;
 }) {
-  const [tags,    setTags]    = useState<string[]>(values ?? []);
-  const [input,   setInput]   = useState("");
+  const [tags, setTags] = useState<string[]>(values ?? []);
+  const [input, setInput] = useState("");
   const [editing, setEditing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 

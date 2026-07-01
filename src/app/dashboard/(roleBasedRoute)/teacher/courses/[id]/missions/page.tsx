@@ -23,20 +23,20 @@ function AmbientBg() {
   );
 }
 
-const CONTENT_CFG: Record<MissionContentType, { icon: React.ReactNode; label: string; color: string }> = {
-  VIDEO: { icon: <RiVideoLine />,    label: "Video", color: "text-blue-600 dark:text-blue-400 bg-blue-100/60 dark:bg-blue-950/40 border-blue-200/60 dark:border-blue-800/50" },
-  TEXT:  { icon: <RiArticleLine />,  label: "Text",  color: "text-teal-600 dark:text-teal-400 bg-teal-100/60 dark:bg-teal-950/40 border-teal-200/60 dark:border-teal-800/50" },
-  PDF:   { icon: <RiFileMarkedLine />, label: "PDF",   color: "text-amber-600 dark:text-amber-400 bg-amber-100/60 dark:bg-amber-950/40 border-amber-200/60 dark:border-amber-800/50" },
+const CONTENT_CFG: Record<MissionContentType, { icon: React.ReactNode; label: string; color: string; }> = {
+  VIDEO: { icon: <RiVideoLine />, label: "Video", color: "text-blue-600 dark:text-blue-400 bg-blue-100/60 dark:bg-blue-950/40 border-blue-200/60 dark:border-blue-800/50" },
+  TEXT: { icon: <RiArticleLine />, label: "Text", color: "text-teal-600 dark:text-teal-400 bg-teal-100/60 dark:bg-teal-950/40 border-teal-200/60 dark:border-teal-800/50" },
+  PDF: { icon: <RiFileMarkedLine />, label: "PDF", color: "text-amber-600 dark:text-amber-400 bg-amber-100/60 dark:bg-amber-950/40 border-amber-200/60 dark:border-amber-800/50" },
 };
 
 const STATUS_CFG = {
-  DRAFT:            { label:"Draft",    badge:"text-muted-foreground bg-muted/40 border-border",                                                                        dot:"bg-muted-foreground/40" },
-  PENDING_APPROVAL: { label:"Pending",  badge:"text-amber-600 dark:text-amber-400 bg-amber-50/60 dark:bg-amber-950/30 border-amber-200/60 dark:border-amber-800/50",   dot:"bg-amber-500 animate-pulse" },
-  PUBLISHED:        { label:"Published",badge:"text-teal-600 dark:text-teal-400 bg-teal-50/60 dark:bg-teal-950/30 border-teal-200/60 dark:border-teal-800/50",         dot:"bg-teal-500" },
-  REJECTED:         { label:"Rejected", badge:"text-red-600 dark:text-red-400 bg-red-50/40 dark:bg-red-950/20 border-red-200/60 dark:border-red-800/50",               dot:"bg-red-500" },
+  DRAFT: { label: "Draft", badge: "text-muted-foreground bg-muted/40 border-border", dot: "bg-muted-foreground/40" },
+  PENDING_APPROVAL: { label: "Pending", badge: "text-amber-600 dark:text-amber-400 bg-amber-50/60 dark:bg-amber-950/30 border-amber-200/60 dark:border-amber-800/50", dot: "bg-amber-500 animate-pulse" },
+  PUBLISHED: { label: "Published", badge: "text-teal-600 dark:text-teal-400 bg-teal-50/60 dark:bg-teal-950/30 border-teal-200/60 dark:border-teal-800/50", dot: "bg-teal-500" },
+  REJECTED: { label: "Rejected", badge: "text-red-600 dark:text-red-400 bg-red-50/40 dark:bg-red-950/20 border-red-200/60 dark:border-red-800/50", dot: "bg-red-500" },
 };
 
-function StatusBadge({ status }: { status: string }) {
+function StatusBadge({ status }: { status: string; }) {
   const cfg = (STATUS_CFG as any)[status] ?? STATUS_CFG.DRAFT;
   return <span className={cn("inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border", cfg.badge)}><span className={cn("w-1.5 h-1.5 rounded-full flex-shrink-0", cfg.dot)} />{cfg.label}</span>;
 }
@@ -44,7 +44,7 @@ function StatusBadge({ status }: { status: string }) {
 const iCls = "w-full h-10 px-3.5 rounded-xl text-[13px] font-medium bg-muted/40 border border-border text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-teal-400/20 focus:border-teal-400/70 transition-all";
 
 // ─── Mission Modal ────────────────────────────────────────
-function MissionModal({ mission, onClose, onSave }: { mission?: CourseMission; onClose: () => void; onSave: (d: { title: string; description: string }) => Promise<void> }) {
+function MissionModal({ mission, onClose, onSave }: { mission?: CourseMission; onClose: () => void; onSave: (d: { title: string; description: string; }) => Promise<void>; }) {
   const [title, setTitle] = useState(mission?.title ?? "");
   const [description, setDescription] = useState(mission?.description ?? "");
   const [error, setError] = useState("");
@@ -95,7 +95,7 @@ function MissionModal({ mission, onClose, onSave }: { mission?: CourseMission; o
 }
 
 // ─── Add Content Modal ────────────────────────────────────
-function AddContentModal({ missionId, onClose, onAdd }: { missionId: string; onClose: () => void; onAdd: (item: MissionContent) => void }) {
+function AddContentModal({ missionId, onClose, onAdd }: { missionId: string; onClose: () => void; onAdd: (item: MissionContent) => void; }) {
   const [type, setType] = useState<MissionContentType>("VIDEO");
   const [title, setTitle] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
@@ -194,7 +194,7 @@ function AddContentModal({ missionId, onClose, onAdd }: { missionId: string; onC
 // ─── Main Page ────────────────────────────────────────────
 export default function ManageMissionsPage() {
   const router = useRouter();
-  const { id: courseId } = useParams() as { id: string };
+  const { id: courseId } = useParams() as { id: string; };
   const [missions, setMissions] = useState<CourseMission[]>([]);
   const [contents, setContents] = useState<Record<string, MissionContent[]>>({});
   const [loading, setLoading] = useState(true);
@@ -228,13 +228,13 @@ export default function ManageMissionsPage() {
     if (next) await loadContents(next);
   };
 
-  const handleCreate = async (data: { title: string; description: string }) => {
+  const handleCreate = async (data: { title: string; description: string; }) => {
     const r = await courseApi.createMission(courseId, data);
     setMissions(p => [...p, r.data]);
     toast.success("Mission created!", { position: "top-right" });
   };
 
-  const handleUpdate = async (data: { title: string; description: string }) => {
+  const handleUpdate = async (data: { title: string; description: string; }) => {
     if (!editingMission) return;
     const r = await courseApi.updateMission(courseId, editingMission.id, data);
     setMissions(p => p.map(m => m.id === editingMission.id ? { ...m, ...r.data } : m));

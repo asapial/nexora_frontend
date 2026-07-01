@@ -32,10 +32,10 @@ import {
 import { toast } from "sonner";
 
 export interface NavUserData {
-  name:    string;
-  email:   string;
+  name: string;
+  email: string;
   avatar?: string;
-  role?:   string;
+  role?: string;
 }
 
 // ─── Avatar ───────────────────────────────────────────────
@@ -70,7 +70,7 @@ function UserAvatar({
 
       <div className="relative w-full h-full rounded-full p-[2px] bg-gradient-to-br from-teal-400 to-teal-600">
         <div className="w-full h-full rounded-full overflow-hidden bg-background flex items-center justify-center">
-          
+
           {src ? (
             <img
               src={src}
@@ -95,7 +95,7 @@ function UserAvatar({
       {isActive && (
         <span
           className="
-            absolute 
+            absolute
             bottom-0 right-0
             translate-x-1/4 translate-y-1/4
             w-2.5 h-2.5
@@ -111,7 +111,7 @@ function UserAvatar({
 }
 
 // ─── Component ────────────────────────────────────────────
-export function NavUser({ user }: { user: NavUserData }) {
+export function NavUser({ user }: { user: NavUserData; }) {
   const { isMobile } = useSidebar();
   const { theme, setTheme } = useTheme();
 
@@ -248,15 +248,15 @@ export function NavUser({ user }: { user: NavUserData }) {
             {/* Sign out */}
             <DropdownMenuItem
               className="gap-2.5 px-4 py-2.5 cursor-pointer text-red-600 dark:text-red-400 focus:text-red-600 dark:focus:text-red-400 focus:bg-red-50 dark:focus:bg-red-950/30"
-              onClick={async () => { 
-                const res = await fetch("/api/auth/logout", { method: "POST", credentials: "include" }); 
+              onClick={async () => {
+                const res = await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
                 const data = await res.json();
-                if(data.success){
-                  toast.success("Logout Successfylly",{position:"top-right"});
-                  window.location.href="/"
-                  
+                if (data.success) {
+                  toast.success("Logout Successfylly", { position: "top-right" });
+                  window.location.href = "/";
+
                 }
-              
+
               }}
             >
               <RiLogoutBoxLine className="text-base" />

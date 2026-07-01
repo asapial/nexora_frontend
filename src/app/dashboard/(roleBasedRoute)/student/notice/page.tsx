@@ -17,13 +17,13 @@ import RefreshIcon from "@/components/shared/RefreshIcon";
 type Urgency = "INFO" | "IMPORTANT" | "CRITICAL";
 type TabKey = "all" | "students" | "personal";
 
-const TABS: { key: TabKey; label: string }[] = [
-  { key: "all",      label: "All Notices" },
+const TABS: { key: TabKey; label: string; }[] = [
+  { key: "all", label: "All Notices" },
   { key: "students", label: "Students Only" },
   { key: "personal", label: "Personal" },
 ];
 
-interface Cluster { id: string; name: string }
+interface Cluster { id: string; name: string; }
 interface Notice {
   id: string;
   title: string;
@@ -35,11 +35,11 @@ interface Notice {
   publishedAt: string | null;
   createdAt: string;
   isRead: boolean;
-  author: { name: string; email: string } | null;
-  clusters: { cluster: Cluster }[];
+  author: { name: string; email: string; } | null;
+  clusters: { cluster: Cluster; }[];
 }
 
-const URGENCY: Record<Urgency, { icon: React.ReactNode; badge: string; dot: string }> = {
+const URGENCY: Record<Urgency, { icon: React.ReactNode; badge: string; dot: string; }> = {
   INFO: {
     icon: <RiInformationLine />,
     badge: "bg-sky-100/80 dark:bg-sky-950/50 text-sky-700 dark:text-sky-400 border-sky-200/70 dark:border-sky-800/50",
@@ -72,7 +72,7 @@ export default function NoticeBoardPage() {
   const [loading, setLoading] = useState(true);
   const [markingId, setMarkingId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabKey>("all");
-  const [filter, setFilter] = useState<{ urgency: string; unread: string }>({
+  const [filter, setFilter] = useState<{ urgency: string; unread: string; }>({
     urgency: "",
     unread: "",
   });
@@ -158,7 +158,7 @@ export default function NoticeBoardPage() {
         <div className="flex items-center gap-1.5 text-[12px] font-semibold text-muted-foreground mr-1">
           <RiFilterLine /> Filter:
         </div>
-        {(["" , "INFO", "IMPORTANT", "CRITICAL"] as const).map((u) => (
+        {(["", "INFO", "IMPORTANT", "CRITICAL"] as const).map((u) => (
           <button
             key={u}
             onClick={() => setFilter((f) => ({ ...f, urgency: u }))}
@@ -193,136 +193,136 @@ export default function NoticeBoardPage() {
       <div className="flex flex-col gap-3">
         {loading
           ? Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="rounded-2xl border border-border bg-card p-5 animate-pulse">
-                <div className="flex gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-muted flex-shrink-0" />
-                  <div className="flex-1 space-y-2">
-                    <div className="h-4 bg-muted rounded w-3/4" />
-                    <div className="h-3 bg-muted rounded w-1/2" />
-                    <div className="h-3 bg-muted rounded w-full" />
-                  </div>
+            <div key={i} className="rounded-2xl border border-border bg-card p-5 animate-pulse">
+              <div className="flex gap-3">
+                <div className="w-8 h-8 rounded-lg bg-muted flex-shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 bg-muted rounded w-3/4" />
+                  <div className="h-3 bg-muted rounded w-1/2" />
+                  <div className="h-3 bg-muted rounded w-full" />
                 </div>
               </div>
-            ))
-          : filtered.length === 0
-          ? (
-            <div className="flex flex-col items-center justify-center py-20 text-center">
-              <RiMegaphoneLine className="text-4xl text-muted-foreground/30 mb-3" />
-              <p className="text-[14px] font-semibold text-foreground mb-1">No notices</p>
-              <p className="text-[12.5px] text-muted-foreground">
-                {activeTab === "personal"
-                  ? "No personal notices from admin yet."
-                  : activeTab === "students"
-                  ? "No student-specific announcements."
-                  : "No announcements match your current filter."}
-              </p>
             </div>
-          )
-          : filtered.map((n) => {
-            const u = URGENCY[n.urgency] ?? URGENCY.INFO;
-            const isPersonal = !!n.targetUserId;
-            return (
-              <div
-                key={n.id}
-                className={cn(
-                  "rounded-2xl border bg-card p-5 transition-all duration-200",
-                  n.isRead
-                    ? "border-border opacity-70"
-                    : "border-border/80 shadow-sm shadow-black/[0.03] dark:shadow-black/10"
-                )}
-              >
-                <div className="flex items-start gap-3">
-                  {/* Urgency icon */}
-                  <div
-                    className={cn(
-                      "mt-0.5 w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center text-sm border",
-                      u.badge
-                    )}
-                  >
-                    {u.icon}
-                  </div>
+          ))
+          : filtered.length === 0
+            ? (
+              <div className="flex flex-col items-center justify-center py-20 text-center">
+                <RiMegaphoneLine className="text-4xl text-muted-foreground/30 mb-3" />
+                <p className="text-[14px] font-semibold text-foreground mb-1">No notices</p>
+                <p className="text-[12.5px] text-muted-foreground">
+                  {activeTab === "personal"
+                    ? "No personal notices from admin yet."
+                    : activeTab === "students"
+                      ? "No student-specific announcements."
+                      : "No announcements match your current filter."}
+                </p>
+              </div>
+            )
+            : filtered.map((n) => {
+              const u = URGENCY[n.urgency] ?? URGENCY.INFO;
+              const isPersonal = !!n.targetUserId;
+              return (
+                <div
+                  key={n.id}
+                  className={cn(
+                    "rounded-2xl border bg-card p-5 transition-all duration-200",
+                    n.isRead
+                      ? "border-border opacity-70"
+                      : "border-border/80 shadow-sm shadow-black/[0.03] dark:shadow-black/10"
+                  )}
+                >
+                  <div className="flex items-start gap-3">
+                    {/* Urgency icon */}
+                    <div
+                      className={cn(
+                        "mt-0.5 w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center text-sm border",
+                        u.badge
+                      )}
+                    >
+                      {u.icon}
+                    </div>
 
-                  <div className="flex-1 min-w-0">
-                    {/* Title row */}
-                    <div className="flex items-start justify-between gap-2 mb-1.5">
-                      <p
-                        className={cn(
-                          "text-[13.5px] font-bold leading-snug",
-                          n.isRead ? "text-foreground/60" : "text-foreground"
-                        )}
-                      >
-                        {n.title}
-                        {!n.isRead && (
-                          <span
-                            className={cn(
-                              "inline-block ml-2 w-1.5 h-1.5 rounded-full align-middle",
-                              u.dot
-                            )}
-                          />
-                        )}
-                      </p>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        {isPersonal && (
-                          <span className="text-[9.5px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-full border bg-violet-100/80 dark:bg-violet-950/50 text-violet-700 dark:text-violet-400 border-violet-200/70 dark:border-violet-800/50 flex items-center gap-0.5">
-                            <RiUserLine className="text-[9px]" /> Personal
-                          </span>
-                        )}
-                        {n.isGlobal && !isPersonal && (
-                          <span className="text-[9.5px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-full border bg-violet-100/80 dark:bg-violet-950/50 text-violet-700 dark:text-violet-400 border-violet-200/70 dark:border-violet-800/50">
-                            Platform
-                          </span>
-                        )}
-                        <span
+                    <div className="flex-1 min-w-0">
+                      {/* Title row */}
+                      <div className="flex items-start justify-between gap-2 mb-1.5">
+                        <p
                           className={cn(
-                            "text-[9.5px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-full border",
-                            u.badge
+                            "text-[13.5px] font-bold leading-snug",
+                            n.isRead ? "text-foreground/60" : "text-foreground"
                           )}
                         >
-                          {n.urgency}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Body */}
-                    <p className="text-[12.5px] text-muted-foreground leading-relaxed mb-3">
-                      {n.body}
-                    </p>
-
-                    {/* Clusters */}
-                    {n.clusters.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 mb-3">
-                        {n.clusters.map(({ cluster }) => (
+                          {n.title}
+                          {!n.isRead && (
+                            <span
+                              className={cn(
+                                "inline-block ml-2 w-1.5 h-1.5 rounded-full align-middle",
+                                u.dot
+                              )}
+                            />
+                          )}
+                        </p>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          {isPersonal && (
+                            <span className="text-[9.5px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-full border bg-violet-100/80 dark:bg-violet-950/50 text-violet-700 dark:text-violet-400 border-violet-200/70 dark:border-violet-800/50 flex items-center gap-0.5">
+                              <RiUserLine className="text-[9px]" /> Personal
+                            </span>
+                          )}
+                          {n.isGlobal && !isPersonal && (
+                            <span className="text-[9.5px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-full border bg-violet-100/80 dark:bg-violet-950/50 text-violet-700 dark:text-violet-400 border-violet-200/70 dark:border-violet-800/50">
+                              Platform
+                            </span>
+                          )}
                           <span
-                            key={cluster.id}
-                            className="text-[10.5px] font-medium px-2 py-0.5 rounded-full bg-muted border border-border text-muted-foreground"
+                            className={cn(
+                              "text-[9.5px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-full border",
+                              u.badge
+                            )}
                           >
-                            {cluster.name}
+                            {n.urgency}
                           </span>
-                        ))}
+                        </div>
                       </div>
-                    )}
 
-                    {/* Footer */}
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] text-muted-foreground/55">
-                        {n.author?.name ?? "System"} · {timeAgo(n.createdAt)}
-                      </span>
-                      {!n.isRead && (
-                        <button
-                          onClick={() => markRead(n.id)}
-                          disabled={markingId === n.id}
-                          className="flex items-center gap-1.5 text-[11.5px] font-semibold text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 transition-colors disabled:opacity-40"
-                        >
-                          <RiCheckboxCircleLine className="text-sm" />
-                          {markingId === n.id ? "Marking…" : "Mark as read"}
-                        </button>
+                      {/* Body */}
+                      <p className="text-[12.5px] text-muted-foreground leading-relaxed mb-3">
+                        {n.body}
+                      </p>
+
+                      {/* Clusters */}
+                      {n.clusters.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mb-3">
+                          {n.clusters.map(({ cluster }) => (
+                            <span
+                              key={cluster.id}
+                              className="text-[10.5px] font-medium px-2 py-0.5 rounded-full bg-muted border border-border text-muted-foreground"
+                            >
+                              {cluster.name}
+                            </span>
+                          ))}
+                        </div>
                       )}
+
+                      {/* Footer */}
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] text-muted-foreground/55">
+                          {n.author?.name ?? "System"} · {timeAgo(n.createdAt)}
+                        </span>
+                        {!n.isRead && (
+                          <button
+                            onClick={() => markRead(n.id)}
+                            disabled={markingId === n.id}
+                            className="flex items-center gap-1.5 text-[11.5px] font-semibold text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 transition-colors disabled:opacity-40"
+                          >
+                            <RiCheckboxCircleLine className="text-sm" />
+                            {markingId === n.id ? "Marking…" : "Mark as read"}
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
       </div>
     </div>
   );
