@@ -8,8 +8,8 @@ import { NextRequest, NextResponse } from "next/server";
  * on the frontend domain (avoids the cross-origin cookie problem between
  * backend and frontend when they are on different domains in production).
  *
- * This route is intentionally placed OUTSIDE /api/ so Next.js rewrite rules
- * (/api/auth/:path* and /api/:path*) do NOT proxy it to the backend.
+ * This route is intentionally placed outside /api/ so backend API proxying
+ * cannot intercept the final cookie-setting redirect.
  */
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
@@ -71,4 +71,3 @@ export async function GET(request: NextRequest) {
 
   return response;
 }
-

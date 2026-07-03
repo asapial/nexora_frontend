@@ -179,11 +179,13 @@ function InlineCategoryCreator({ clusters, onCancel, onCreated }: {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: normalizedName, color, isGlobal: false, ...(scope === "CLUSTER" ? { clusterId } : {}) }),
       });
-      const json = await response.json();
-      if (!response.ok || !json.success) throw new Error(json.message || "Could not create category");
+      const json = await response.json().catch(() => null);
+      if (!response.ok || !json?.success) throw new Error(json?.message || "Could not create category");
       onCreated(json.data as Category);
     } catch (error: unknown) {
-      setCategoryError(error instanceof Error ? error.message : "Could not create category");
+      const message = error instanceof Error ? error.message : "Could not create category";
+      setCategoryError(message);
+      toast.error(message);
     } finally {
       setSaving(false);
     }
@@ -228,12 +230,14 @@ export default function TeacherResourceUploadPage() {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch("/api/resource/categories", { credentials: "include" });
+        const res = await fetch("/api/teacher/categories", { credentials: "include" });
         const json = await res.json();
         if (!cancelled && json.success && Array.isArray(json.data)) {
           setCategories(json.data.map((c: Category) => ({ id: c.id, name: c.name, color: c.color, clusterId: c.clusterId })));
         }
-      } catch { /* ignore */ }
+      } catch {
+        if (!cancelled) toast.error("Could not load your categories");
+      }
       finally { if (!cancelled) setCategoriesLoading(false); }
     })();
     // Fetch teacher's clusters

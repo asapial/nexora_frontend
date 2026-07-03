@@ -112,9 +112,9 @@ export default function AdminCourseDetailPage() {
   const handleToggleFeatured = async () => {
     setTogglingFeatured(true);
     try {
-      const res = await fetch(`/api/admin/courses/${id}/featured`, { method: "POST", credentials: "include" });
-      const d = await res.json();
-      if (d.success) { fetchCourse(); toast.success("Featured status toggled."); }
+      await adminApi.toggleFeatured(id);
+      fetchCourse();
+      toast.success("Featured status toggled.");
     } catch { toast.error("Failed"); }
     finally { setTogglingFeatured(false); }
   };

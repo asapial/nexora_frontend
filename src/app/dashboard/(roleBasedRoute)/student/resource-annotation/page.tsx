@@ -6,6 +6,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import {
   RiAddLine,
   RiBookOpenLine,
+  RiBrainLine,
   RiCheckLine,
   RiCloseLine,
   RiDeleteBinLine,
@@ -13,17 +14,19 @@ import {
   RiExternalLinkLine,
   RiFileTextLine,
   RiFocus3Line,
-  RiInformationLine,
+  RiLinksLine,
   RiLayoutLeftLine,
   RiLayoutRightLine,
   RiLoader4Line,
+  RiMindMap,
+  RiPlayCircleLine,
   RiRefreshLine,
   RiSearchLine,
   RiShareLine,
   RiStickyNoteLine,
 } from "react-icons/ri";
 import { toast } from "sonner";
-import { annotationApi } from "@/lib/api";
+import { annotationApi, resourceAiApi } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import NexoraPdfReader from "@/components/resource/NexoraPdfReader";
 
@@ -46,6 +49,52 @@ type Annotation = {
   userId: string;
   createdAt: string;
   user?: { name: string; image?: string };
+};
+
+type ResourceAiStatus = {
+  status: string;
+  processingError?: string | null;
+  lastProcessedAt?: string | null;
+  text?: { status: string; pageCount?: number | null };
+  summary?: { status: string; isVisible?: boolean };
+  citations?: { status: string; count: number };
+};
+
+type ResourceSummary = {
+  professionalSummary: string;
+  goals?: string | null;
+  methods?: string | null;
+  results?: string | null;
+  conclusions?: string | null;
+  keyContributions: string[];
+  limitations: string[];
+  keywords: string[];
+  isVisible?: boolean;
+};
+
+type CitationTarget = {
+  type: "internal" | "external" | "unresolved";
+  id?: string;
+  title?: string;
+  authors?: string | string[] | null;
+  publicationYear?: number | null;
+  year?: number | null;
+  doi?: string | null;
+  url?: string | null;
+};
+
+type ResourceCitation = {
+  id: string;
+  confidenceScore?: number | null;
+  rawReference?: string | null;
+  referenceIndex?: number | null;
+  resolverSource?: string | null;
+  target: CitationTarget;
+};
+
+type ResourceGraph = {
+  nodes: Array<{ id: string; type: string; label: string; data?: Record<string, unknown> }>;
+  edges: Array<{ id: string; source: string; target: string; confidenceScore?: number | null; label?: string }>;
 };
 
 const signedUrl = (resource: Resource, inline = true) => {
@@ -98,9 +147,16 @@ export default function ResourceAnnotationPage() {
   const [pdfFetchKey, setPdfFetchKey] = useState(0);
   const [readerLoading, setReaderLoading] = useState(false);
   const [readerError, setReaderError] = useState(false);
-  const [showReaderHelp, setShowReaderHelp] = useState(false);
   const [documentsOpen, setDocumentsOpen] = useState(true);
   const [notesOpen, setNotesOpen] = useState(true);
+  const [aiOpen, setAiOpen] = useState(true);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiProcessing, setAiProcessing] = useState(false);
+  const [aiTab, setAiTab] = useState<"summary" | "citations" | "graph">("summary");
+  const [aiStatus, setAiStatus] = useState<ResourceAiStatus | null>(null);
+  const [aiSummary, setAiSummary] = useState<ResourceSummary | null>(null);
+  const [citations, setCitations] = useState<ResourceCitation[]>([]);
+  const [graph, setGraph] = useState<ResourceGraph | null>(null);
 
   const loadAnnotations = useCallback(async (resource: Resource) => {
     setLoadingAnnotations(true);
@@ -118,6 +174,37 @@ export default function ResourceAnnotationPage() {
     }
   }, []);
 
+  const loadAiFeatures = useCallback(async (resource: Resource) => {
+    if (!isPdf(resource)) {
+      setAiStatus(null);
+      setAiSummary(null);
+      setCitations([]);
+      setGraph(null);
+      return;
+    }
+    setAiLoading(true);
+    try {
+      const [statusResponse, summaryResponse, citationsResponse, graphResponse] = await Promise.all([
+        resourceAiApi.status(resource.id),
+        resourceAiApi.summary(resource.id),
+        resourceAiApi.citations(resource.id),
+        resourceAiApi.graph(resource.id, { includeExternal: "true", minConfidence: "0", limit: "50" }),
+      ]);
+      setAiStatus(statusResponse.data ?? null);
+      setAiSummary(summaryResponse.data?.summary ?? null);
+      setCitations(Array.isArray(citationsResponse.data) ? citationsResponse.data : []);
+      setGraph(graphResponse.data ?? null);
+    } catch (error: unknown) {
+      setAiStatus(null);
+      setAiSummary(null);
+      setCitations([]);
+      setGraph(null);
+      toast.error(error instanceof Error ? error.message : "Could not load AI reading features");
+    } finally {
+      setAiLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     annotationApi.getResources()
       .then((response) => {
@@ -126,12 +213,13 @@ export default function ResourceAnnotationPage() {
         setResources(rows);
         setSelected(initial);
         if (initial) void loadAnnotations(initial);
+        if (initial) void loadAiFeatures(initial);
       })
       .catch((error: unknown) => {
         toast.error(error instanceof Error ? error.message : "Could not load your accessible resources");
       })
       .finally(() => setLoadingResources(false));
-  }, [initialResourceId, loadAnnotations]);
+  }, [initialResourceId, loadAiFeatures, loadAnnotations]);
 
   useEffect(() => {
     if (!selected) return;
@@ -206,6 +294,23 @@ export default function ResourceAnnotationPage() {
   const chooseResource = (resource: Resource) => {
     setSelected(resource);
     void loadAnnotations(resource);
+    void loadAiFeatures(resource);
+  };
+
+  const processAi = async (mode: "full" | "summary" | "citations" = "full") => {
+    if (!selected) return;
+    setAiProcessing(true);
+    try {
+      if (mode === "summary") await resourceAiApi.regenerateSummary(selected.id);
+      else if (mode === "citations") await resourceAiApi.reanalyzeCitations(selected.id);
+      else await resourceAiApi.process(selected.id);
+      toast.success("AI reading features updated");
+      await loadAiFeatures(selected);
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "AI processing failed");
+    } finally {
+      setAiProcessing(false);
+    }
   };
 
   const deleteAnnotation = async (id: string) => {
@@ -244,34 +349,30 @@ export default function ResourceAnnotationPage() {
   const readerUrl = selected ? pdfObjectUrl : "";
 
   return (
-    <div className="mx-auto flex min-h-[calc(100vh-3.5rem)] w-full max-w-[1800px] flex-col gap-4 p-4 lg:p-6">
-      <header className="rounded-3xl border border-teal-500/20 bg-gradient-to-br from-teal-500/10 via-card to-violet-500/[.06] p-5 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <p className="text-[9px] font-black uppercase tracking-[.16em] text-teal-600">Nexora reading workspace</p>
-            <h1 className="mt-1 text-xl font-black">Read, connect, and remember</h1>
-            <p className="mt-1 text-[11px] text-muted-foreground">A focused PDF reader with private notes, shared insights, and remembered progress.</p>
-          </div>
-          <div className="flex gap-2">
-            <Link href={libraryHref} className="flex h-10 items-center gap-2 rounded-xl border border-border bg-card px-4 text-[10px] font-bold hover:bg-muted"><RiBookOpenLine />Resource library</Link>
-            <Link href={uploadHref} className="flex h-10 items-center gap-2 rounded-xl bg-teal-600 px-4 text-[10px] font-bold text-white hover:bg-teal-700"><RiAddLine />Add related document</Link>
-          </div>
-        </div>
-      </header>
+    <div className="flex min-h-[calc(100vh-3.5rem)] bg-zinc-100 text-foreground dark:bg-zinc-950">
+      <aside className="flex w-12 shrink-0 flex-col items-center gap-1 border-r border-border bg-background/95 py-2">
+        <RailButton title="Documents" active={documentsOpen} onClick={() => setDocumentsOpen((value) => !value)}><RiBookOpenLine /></RailButton>
+        <RailButton title="Notes" active={notesOpen} onClick={() => setNotesOpen((value) => !value)}><RiStickyNoteLine /></RailButton>
+        <RailButton title="AI reading" active={aiOpen} onClick={() => setAiOpen((value) => !value)}><RiBrainLine /></RailButton>
+        <RailButton title="Focus" active={focusMode} onClick={() => setFocusMode((value) => !value)}><RiFocus3Line /></RailButton>
+        <span className="my-1 h-px w-6 bg-border" />
+        <Link href={libraryHref} title="Resource library" className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"><RiBookOpenLine /></Link>
+        <Link href={uploadHref} title="Upload resource" className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"><RiAddLine /></Link>
+      </aside>
 
       <div className={cn(
-        "grid min-h-[760px] flex-1 gap-4",
+        "grid min-w-0 flex-1",
         focusMode || (!documentsOpen && !notesOpen)
           ? "grid-cols-1"
           : documentsOpen && notesOpen
-            ? "xl:grid-cols-[280px_minmax(0,1fr)_320px]"
+            ? "xl:grid-cols-[260px_minmax(0,1fr)_300px]"
             : documentsOpen
-              ? "xl:grid-cols-[280px_minmax(0,1fr)]"
-              : "xl:grid-cols-[minmax(0,1fr)_320px]",
+              ? "xl:grid-cols-[260px_minmax(0,1fr)]"
+              : "xl:grid-cols-[minmax(0,1fr)_300px]",
       )}>
         {!focusMode && documentsOpen && <DocumentLibrary resources={visibleResources} selected={selected} search={search} loading={loadingResources} onSearch={setSearch} onChoose={chooseResource} />}
 
-        <main className="flex min-h-0 flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
+        <main className="flex min-h-0 min-w-0 flex-col overflow-hidden bg-background">
           {selected ? <ReaderWorkspace
             resource={selected}
             readerUrl={readerUrl}
@@ -281,20 +382,29 @@ export default function ResourceAnnotationPage() {
             zoom={zoom}
             rotation={rotation}
             focusMode={focusMode}
-            showHelp={showReaderHelp}
             documentsOpen={documentsOpen}
             notesOpen={notesOpen}
             onGoToPage={goToPage}
             onZoom={setZoom}
             onRotate={() => setRotation((value) => (value + 90) % 360)}
             onToggleFocus={() => setFocusMode((value) => !value)}
-            onToggleHelp={() => setShowReaderHelp((value) => !value)}
             onToggleDocuments={() => setDocumentsOpen((value) => !value)}
             onToggleNotes={() => setNotesOpen((value) => !value)}
             onLoaded={() => setReaderLoading(false)}
             onError={() => { setReaderLoading(false); setReaderError(true); }}
             onRetry={retryReader}
             onAddNote={() => setShowNote(true)}
+            aiOpen={aiOpen}
+            aiLoading={aiLoading}
+            aiProcessing={aiProcessing}
+            aiTab={aiTab}
+            aiStatus={aiStatus}
+            aiSummary={aiSummary}
+            citations={citations}
+            graph={graph}
+            onToggleAi={() => setAiOpen((value) => !value)}
+            onAiTab={setAiTab}
+            onProcessAi={processAi}
           /> : <EmptyState />}
         </main>
 
@@ -324,24 +434,23 @@ function DocumentLibrary({ resources, selected, search, loading, onSearch, onCho
   onSearch: (value: string) => void;
   onChoose: (resource: Resource) => void;
 }) {
-  return <aside className="flex min-h-0 flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
-    <div className="border-b border-border p-4">
-      <h2 className="text-[12px] font-black">Accessible documents</h2>
-      <p className="mt-1 text-[9px] text-muted-foreground">Public, personal, and cluster resources.</p>
-      <div className="relative mt-3"><RiSearchLine className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" /><input value={search} onChange={(event) => onSearch(event.target.value)} placeholder="Search documents" className="h-9 w-full rounded-xl border border-border bg-muted/20 pl-9 pr-3 text-[10px] outline-none focus:border-teal-500/50" /></div>
+  return <aside className="flex min-h-0 flex-col overflow-hidden border-r border-border bg-background">
+    <div className="border-b border-border p-3">
+      <div className="flex h-8 items-center gap-2 text-[11px] font-semibold"><RiBookOpenLine className="text-muted-foreground" />Documents</div>
+      <div className="relative mt-2"><RiSearchLine className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" /><input value={search} onChange={(event) => onSearch(event.target.value)} placeholder="Search" className="h-8 w-full rounded-md border border-border bg-muted/20 pl-8 pr-2 text-[11px] outline-none focus:border-teal-500/50" /></div>
     </div>
-    <div className="flex-1 space-y-1 overflow-y-auto p-2">
-      {loading ? Array.from({ length: 7 }).map((_, index) => <div key={index} className="h-16 animate-pulse rounded-xl bg-muted" />) : resources.length ? resources.map((resource) => (
-        <button key={resource.id} onClick={() => onChoose(resource)} className={cn("flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-colors", selected?.id === resource.id ? "border-teal-500/35 bg-teal-500/10" : "border-transparent hover:border-border hover:bg-muted/30")}>
-          <span className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-[8px] font-black uppercase", isPdf(resource) ? "bg-rose-500/10 text-rose-600" : "bg-sky-500/10 text-sky-600")}>{isPdf(resource) ? "PDF" : resource.fileType.slice(0, 4)}</span>
-          <span className="min-w-0"><span className="block truncate text-[10px] font-black">{resource.title}</span><span className="mt-1 block text-[8px] font-bold uppercase text-muted-foreground">{resource.visibility ?? "Accessible"}</span></span>
+    <div className="flex-1 space-y-0.5 overflow-y-auto p-1.5">
+      {loading ? Array.from({ length: 7 }).map((_, index) => <div key={index} className="h-12 animate-pulse rounded-md bg-muted" />) : resources.length ? resources.map((resource) => (
+        <button key={resource.id} onClick={() => onChoose(resource)} className={cn("flex w-full items-center gap-2 rounded-md p-2 text-left transition-colors", selected?.id === resource.id ? "bg-teal-500/10 text-teal-700 dark:text-teal-200" : "hover:bg-muted")}>
+          <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[8px] font-black uppercase", isPdf(resource) ? "bg-rose-500/10 text-rose-600" : "bg-sky-500/10 text-sky-600")}>{isPdf(resource) ? "PDF" : resource.fileType.slice(0, 4)}</span>
+          <span className="min-w-0"><span className="block truncate text-[11px] font-semibold">{resource.title}</span><span className="mt-0.5 block text-[8px] font-bold uppercase text-muted-foreground">{resource.visibility ?? "Accessible"}</span></span>
         </button>
-      )) : <p className="p-5 text-center text-[9px] text-muted-foreground">No accessible documents found.</p>}
+      )) : <p className="p-4 text-center text-[10px] text-muted-foreground">No documents</p>}
     </div>
   </aside>;
 }
 
-function ReaderWorkspace({ resource, readerUrl, readerLoading, readerError, currentPage, zoom, rotation, focusMode, showHelp, documentsOpen, notesOpen, onGoToPage, onZoom, onRotate, onToggleFocus, onToggleHelp, onToggleDocuments, onToggleNotes, onLoaded, onError, onRetry, onAddNote }: {
+function ReaderWorkspace({ resource, readerUrl, readerLoading, readerError, currentPage, zoom, rotation, focusMode, documentsOpen, notesOpen, aiOpen, aiLoading, aiProcessing, aiTab, aiStatus, aiSummary, citations, graph, onGoToPage, onZoom, onRotate, onToggleFocus, onToggleDocuments, onToggleNotes, onToggleAi, onAiTab, onProcessAi, onLoaded, onError, onRetry, onAddNote }: {
   resource: Resource;
   readerUrl: string;
   readerLoading: boolean;
@@ -350,16 +459,25 @@ function ReaderWorkspace({ resource, readerUrl, readerLoading, readerError, curr
   zoom: number;
   rotation: number;
   focusMode: boolean;
-  showHelp: boolean;
   documentsOpen: boolean;
   notesOpen: boolean;
+  aiOpen: boolean;
+  aiLoading: boolean;
+  aiProcessing: boolean;
+  aiTab: "summary" | "citations" | "graph";
+  aiStatus: ResourceAiStatus | null;
+  aiSummary: ResourceSummary | null;
+  citations: ResourceCitation[];
+  graph: ResourceGraph | null;
   onGoToPage: (page: number) => void;
   onZoom: React.Dispatch<React.SetStateAction<number>>;
   onRotate: () => void;
   onToggleFocus: () => void;
-  onToggleHelp: () => void;
   onToggleDocuments: () => void;
   onToggleNotes: () => void;
+  onToggleAi: () => void;
+  onAiTab: (tab: "summary" | "citations" | "graph") => void;
+  onProcessAi: (mode?: "full" | "summary" | "citations") => void;
   onLoaded: () => void;
   onError: () => void;
   onRetry: () => void;
@@ -367,24 +485,39 @@ function ReaderWorkspace({ resource, readerUrl, readerLoading, readerError, curr
 }) {
   const pdf = isPdf(resource);
   return <>
-    <div className="flex flex-wrap items-center gap-2 border-b border-border p-3">
-      <div className="min-w-[180px] flex-1"><h2 className="truncate text-[12px] font-black">{resource.title}</h2><p className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground">{resource.fileType} · {resource.visibility ?? "Accessible"}</p></div>
-      {pdf && <span className="rounded-xl border border-teal-500/20 bg-teal-500/10 px-3 py-2 text-[8px] font-black uppercase tracking-wider text-teal-600">Nexora native PDF reader</span>}
+    <div className="flex h-12 items-center gap-1 border-b border-border bg-background/95 px-2 backdrop-blur">
+      <div className="flex min-w-0 flex-1 items-center gap-2 px-1">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-rose-500/10 text-rose-600"><RiFileTextLine /></span>
+        <div className="min-w-0">
+          <h2 className="truncate text-[12px] font-semibold">{resource.title}</h2>
+          <p className="text-[8px] font-bold uppercase text-muted-foreground">{resource.fileType} / {resource.visibility ?? "Accessible"}</p>
+        </div>
+      </div>
       <ToolbarButton title={documentsOpen ? "Collapse accessible documents" : "Show accessible documents"} active={documentsOpen} onClick={onToggleDocuments}><RiLayoutLeftLine /></ToolbarButton>
       <ToolbarButton title={notesOpen ? "Collapse notes" : "Show notes"} active={notesOpen} onClick={onToggleNotes}><RiLayoutRightLine /></ToolbarButton>
+      {pdf && <ToolbarButton title={aiOpen ? "Hide AI reading panel" : "Show AI reading panel"} active={aiOpen} onClick={onToggleAi}><RiBrainLine /></ToolbarButton>}
       <ToolbarButton title="Focus reading mode (F)" active={focusMode} onClick={onToggleFocus}><RiFocus3Line /></ToolbarButton>
-      <ToolbarButton title="Reader shortcuts" active={showHelp} onClick={onToggleHelp}><RiInformationLine /></ToolbarButton>
-      <a href={signedUrl(resource, false)} className="flex h-9 items-center gap-1.5 rounded-xl border border-border px-3 text-[9px] font-bold hover:bg-muted"><RiDownloadLine />Download</a>
-      <button onClick={onAddNote} className="flex h-9 items-center gap-1.5 rounded-xl bg-teal-600 px-3 text-[9px] font-bold text-white hover:bg-teal-700"><RiStickyNoteLine />Add note</button>
+      <a href={signedUrl(resource, false)} title="Download" className="flex h-8 w-8 items-center justify-center rounded-md border border-border text-muted-foreground hover:bg-muted hover:text-foreground"><RiDownloadLine /></a>
+      <button onClick={onAddNote} title="Add note" className="flex h-8 w-8 items-center justify-center rounded-md bg-teal-600 text-white hover:bg-teal-700"><RiStickyNoteLine /></button>
     </div>
-    {showHelp && <div className="flex flex-wrap gap-x-5 gap-y-2 border-b border-border bg-sky-500/[.06] px-4 py-3 text-[9px] text-muted-foreground"><span><strong className="text-foreground">← / →</strong> page</span><span><strong className="text-foreground">+ / -</strong> zoom</span><span><strong className="text-foreground">R</strong> rotate</span><span><strong className="text-foreground">F</strong> focus</span><span><strong className="text-foreground">N</strong> note</span><span><strong className="text-foreground">Ctrl / Cmd + F</strong> search inside paper</span><span>Your last page is remembered.</span></div>}
-    <div className="relative flex-1 overflow-auto bg-zinc-100 p-4 dark:bg-zinc-950">
-      {pdf ? <div className="mx-auto flex min-h-[680px] items-start justify-center">
-        <div className="relative min-h-[680px] w-full overflow-hidden rounded-xl bg-zinc-950 shadow-xl">
+    <div className="relative flex-1 overflow-auto bg-zinc-100 p-3 dark:bg-zinc-950">
+      {pdf ? <div className={cn("mx-auto grid min-h-[680px] items-start gap-4", aiOpen ? "xl:grid-cols-[minmax(0,1fr)_360px]" : "grid-cols-1")}>
+        <div className="relative min-h-[680px] w-full overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm dark:border-white/10 dark:bg-zinc-950">
           {readerUrl && <NexoraPdfReader source={readerUrl} title={resource.title} page={currentPage} zoom={zoom} rotation={rotation} onPageChange={onGoToPage} onZoomChange={onZoom} onRotationChange={onRotate} onLoaded={onLoaded} onError={onError} />}
           {readerLoading && <ReaderLoading />}
           {readerError && <ReaderError onRetry={onRetry} />}
         </div>
+        {aiOpen && <AiReadingPanel
+          loading={aiLoading}
+          processing={aiProcessing}
+          activeTab={aiTab}
+          status={aiStatus}
+          summary={aiSummary}
+          citations={citations}
+          graph={graph}
+          onTab={onAiTab}
+          onProcess={onProcessAi}
+        />}
       </div> : <NativeDocument resource={resource} />}
     </div>
   </>;
@@ -408,7 +541,11 @@ function NotesPanel({ activeTab, annotations, sharedAnnotations, currentNotes, l
 }
 
 function ToolbarButton({ children, title, active, onClick }: { children: React.ReactNode; title: string; active?: boolean; onClick: () => void }) {
-  return <button title={title} onClick={onClick} className={cn("flex h-9 w-9 items-center justify-center rounded-xl border text-sm", active ? "border-teal-500/30 bg-teal-500/10 text-teal-600" : "border-border hover:bg-muted")}>{children}</button>;
+  return <button title={title} onClick={onClick} className={cn("flex h-9 w-9 items-center justify-center rounded-lg border text-sm transition-colors", active ? "border-teal-500/30 bg-teal-500/10 text-teal-600" : "border-border text-muted-foreground hover:bg-muted hover:text-foreground")}>{children}</button>;
+}
+
+function RailButton({ children, title, active, onClick }: { children: React.ReactNode; title: string; active?: boolean; onClick: () => void }) {
+  return <button title={title} onClick={onClick} className={cn("flex h-9 w-9 items-center justify-center rounded-lg text-sm transition-colors", active ? "bg-teal-500/10 text-teal-600" : "text-muted-foreground hover:bg-muted hover:text-foreground")}>{children}</button>;
 }
 
 function ReaderLoading() {
@@ -417,6 +554,150 @@ function ReaderLoading() {
 
 function ReaderError({ onRetry }: { onRetry: () => void }) {
   return <div className="absolute inset-0 flex items-center justify-center bg-white p-8 text-center"><div><RiFileTextLine className="mx-auto text-5xl text-rose-300" /><p className="mt-4 text-[12px] font-black text-zinc-800">The paper could not be opened</p><p className="mt-2 max-w-sm text-[9px] leading-5 text-zinc-500">Retry the secure in-app reader. The paper will not be sent to the browser download manager.</p><div className="mt-4 flex justify-center"><button onClick={onRetry} className="flex h-9 items-center gap-2 rounded-xl bg-teal-600 px-4 text-[9px] font-bold text-white"><RiRefreshLine />Retry</button></div></div></div>;
+}
+
+function AiReadingPanel({ loading, processing, activeTab, status, summary, citations, graph, onTab, onProcess }: {
+  loading: boolean;
+  processing: boolean;
+  activeTab: "summary" | "citations" | "graph";
+  status: ResourceAiStatus | null;
+  summary: ResourceSummary | null;
+  citations: ResourceCitation[];
+  graph: ResourceGraph | null;
+  onTab: (tab: "summary" | "citations" | "graph") => void;
+  onProcess: (mode?: "full" | "summary" | "citations") => void;
+}) {
+  return <aside className="flex max-h-[760px] min-h-[680px] flex-col overflow-hidden rounded-xl border border-white/10 bg-zinc-950 text-zinc-100 shadow-xl">
+    <div className="border-b border-white/10 p-3">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wider text-teal-300"><RiBrainLine />AI reading</p>
+          <p className="mt-1 text-[8px] text-zinc-500">Verify generated content with the original PDF.</p>
+        </div>
+        <button disabled={processing} onClick={() => onProcess(activeTab === "summary" ? "summary" : activeTab === "citations" ? "citations" : "full")} className="flex h-8 items-center gap-1.5 rounded-lg bg-teal-600 px-3 text-[8px] font-black text-white disabled:opacity-50">
+          {processing ? <RiLoader4Line className="animate-spin" /> : <RiPlayCircleLine />}Process
+        </button>
+      </div>
+      <div className="mt-3 grid grid-cols-3 rounded-lg border border-white/10 p-1">
+        {([
+          ["summary", <RiBrainLine key="s" />, "Summary"],
+          ["citations", <RiLinksLine key="c" />, "Refs"],
+          ["graph", <RiMindMap key="g" />, "Graph"],
+        ] as const).map(([tab, icon, label]) => (
+          <button key={tab} onClick={() => onTab(tab)} className={cn("flex h-8 items-center justify-center gap-1 rounded-md text-[8px] font-black", activeTab === tab ? "bg-white text-zinc-950" : "text-zinc-400 hover:bg-white/10")}>{icon}{label}</button>
+        ))}
+      </div>
+      <StatusStrip status={status} loading={loading} />
+    </div>
+    <div className="flex-1 overflow-y-auto p-3">
+      {loading ? <AiSkeleton /> : activeTab === "summary" ? <SummaryPanel summary={summary} onRegenerate={() => onProcess("summary")} processing={processing} /> : activeTab === "citations" ? <CitationList citations={citations} onReanalyze={() => onProcess("citations")} processing={processing} /> : <CitationGraph graph={graph} citations={citations} />}
+    </div>
+  </aside>;
+}
+
+function StatusStrip({ status, loading }: { status: ResourceAiStatus | null; loading: boolean }) {
+  const label = loading ? "Loading" : status?.status ?? "Not processed";
+  const tone = label === "FAILED" ? "border-rose-500/30 bg-rose-500/10 text-rose-300" : label.includes("READY") || label === "GRAPH_READY" ? "border-teal-500/30 bg-teal-500/10 text-teal-300" : "border-amber-500/30 bg-amber-500/10 text-amber-200";
+  return <div className={cn("mt-3 rounded-lg border px-3 py-2 text-[8px] font-black uppercase tracking-wider", tone)}>
+    <div className="flex items-center justify-between gap-2"><span>{label.replaceAll("_", " ")}</span><span>{status?.citations?.count ?? 0} refs</span></div>
+    {status?.processingError && <p className="mt-1 normal-case tracking-normal text-rose-200">{status.processingError}</p>}
+  </div>;
+}
+
+function AiSkeleton() {
+  return <div className="space-y-3">{Array.from({ length: 5 }).map((_, index) => <div key={index} className="h-20 animate-pulse rounded-lg bg-white/10" />)}</div>;
+}
+
+function SummaryPanel({ summary, processing, onRegenerate }: { summary: ResourceSummary | null; processing: boolean; onRegenerate: () => void }) {
+  if (!summary) {
+    return <EmptyAiState icon={<RiBrainLine />} title="No summary yet" text="Process this PDF to create a structured academic summary." actionLabel="Generate summary" loading={processing} onAction={onRegenerate} />;
+  }
+  const sections = [
+    ["Goals", summary.goals],
+    ["Methods", summary.methods],
+    ["Results", summary.results],
+    ["Conclusions", summary.conclusions],
+  ].filter(([, value]) => value);
+  return <div className="space-y-3">
+    <div className="rounded-lg border border-teal-500/20 bg-teal-500/10 p-3">
+      <p className="text-[8px] font-black uppercase text-teal-300">Professional summary</p>
+      <p className="mt-2 text-[10px] leading-5 text-zinc-100">{summary.professionalSummary}</p>
+    </div>
+    {sections.map(([label, value]) => <section key={label} className="rounded-lg border border-white/10 p-3"><p className="text-[8px] font-black uppercase text-zinc-500">{label}</p><p className="mt-1 text-[9px] leading-5 text-zinc-300">{value}</p></section>)}
+    <ChipSection label="Contributions" items={summary.keyContributions} />
+    <ChipSection label="Limitations" items={summary.limitations} />
+    <ChipSection label="Keywords" items={summary.keywords} compact />
+    <button disabled={processing} onClick={onRegenerate} className="flex h-9 w-full items-center justify-center gap-2 rounded-lg border border-white/10 text-[8px] font-black hover:bg-white/10 disabled:opacity-50">{processing ? <RiLoader4Line className="animate-spin" /> : <RiRefreshLine />}Regenerate summary</button>
+  </div>;
+}
+
+function ChipSection({ label, items, compact = false }: { label: string; items: string[]; compact?: boolean }) {
+  if (!items.length) return null;
+  return <section className="rounded-lg border border-white/10 p-3"><p className="text-[8px] font-black uppercase text-zinc-500">{label}</p><div className="mt-2 flex flex-wrap gap-1.5">{items.map((item) => <span key={item} className={cn("rounded-full border border-white/10 bg-white/5 text-zinc-300", compact ? "px-2 py-1 text-[8px]" : "px-2.5 py-1.5 text-[9px]")}>{item}</span>)}</div></section>;
+}
+
+function CitationList({ citations, processing, onReanalyze }: { citations: ResourceCitation[]; processing: boolean; onReanalyze: () => void }) {
+  if (!citations.length) return <EmptyAiState icon={<RiLinksLine />} title="No references extracted" text="Process or reanalyze the PDF to parse its reference section." actionLabel="Analyze references" loading={processing} onAction={onReanalyze} />;
+  return <div className="space-y-2">
+    <button disabled={processing} onClick={onReanalyze} className="mb-2 flex h-9 w-full items-center justify-center gap-2 rounded-lg border border-white/10 text-[8px] font-black hover:bg-white/10 disabled:opacity-50">{processing ? <RiLoader4Line className="animate-spin" /> : <RiRefreshLine />}Reanalyze citations</button>
+    {citations.map((citation) => <article key={citation.id} className="rounded-lg border border-white/10 p-3">
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-[10px] font-black leading-4 text-zinc-100">{citation.target.title ?? "Unresolved reference"}</p>
+        <span className="shrink-0 rounded-full bg-white/10 px-2 py-1 text-[7px] font-black uppercase text-zinc-400">{Math.round((citation.confidenceScore ?? 0) * 100)}%</span>
+      </div>
+      <p className="mt-1 text-[8px] uppercase text-zinc-500">{citation.target.type}{citation.target.publicationYear || citation.target.year ? ` · ${citation.target.publicationYear ?? citation.target.year}` : ""}</p>
+      {citation.target.doi && <p className="mt-2 break-all text-[8px] text-teal-300">doi:{citation.target.doi}</p>}
+      {citation.target.url && <a href={citation.target.url} target="_blank" rel="noreferrer" className="mt-2 inline-flex text-[8px] font-black text-sky-300 hover:text-sky-200">Open source</a>}
+      {citation.rawReference && <p className="mt-2 line-clamp-3 text-[8px] leading-4 text-zinc-500">{citation.rawReference}</p>}
+    </article>)}
+  </div>;
+}
+
+function CitationGraph({ graph, citations }: { graph: ResourceGraph | null; citations: ResourceCitation[] }) {
+  const nodes = graph?.nodes ?? [];
+  const edges = graph?.edges ?? [];
+  if (!nodes.length || edges.length === 0) return <EmptyAiState icon={<RiMindMap />} title="Graph unavailable" text={citations.length ? "No graph edges matched the current filters." : "Analyze references to build a connected-paper graph."} />;
+  const center = { x: 160, y: 150 };
+  const related = nodes.filter((node) => node.type !== "current-resource");
+  const positions = new Map<string, { x: number; y: number }>();
+  positions.set(nodes[0].id, center);
+  related.forEach((node, index) => {
+    const angle = (index / Math.max(related.length, 1)) * Math.PI * 2 - Math.PI / 2;
+    positions.set(node.id, { x: center.x + Math.cos(angle) * 110, y: center.y + Math.sin(angle) * 105 });
+  });
+  return <div className="space-y-3">
+    <div className="rounded-lg border border-white/10 bg-white/[.03] p-2">
+      <svg viewBox="0 0 320 300" className="h-[300px] w-full">
+        {edges.map((edge) => {
+          const source = positions.get(edge.source);
+          const target = positions.get(edge.target);
+          if (!source || !target) return null;
+          return <line key={edge.id} x1={source.x} y1={source.y} x2={target.x} y2={target.y} stroke={edge.confidenceScore && edge.confidenceScore < 0.7 ? "#f59e0b" : "#14b8a6"} strokeWidth="1.4" strokeDasharray={edge.confidenceScore && edge.confidenceScore < 0.7 ? "4 4" : undefined} />;
+        })}
+        {nodes.map((node) => {
+          const pos = positions.get(node.id);
+          if (!pos) return null;
+          const current = node.type === "current-resource";
+          return <g key={node.id}>
+            <circle cx={pos.x} cy={pos.y} r={current ? 28 : 20} fill={current ? "#14b8a6" : node.type === "internal-resource" ? "#38bdf8" : "#18181b"} stroke={current ? "#99f6e4" : "#71717a"} strokeWidth="2" />
+            <text x={pos.x} y={pos.y + (current ? 42 : 34)} textAnchor="middle" fill="#e4e4e7" fontSize="8" fontWeight="700">{node.label.slice(0, 24)}</text>
+          </g>;
+        })}
+      </svg>
+    </div>
+    <div className="grid grid-cols-3 gap-2 text-center text-[8px] font-black uppercase text-zinc-400"><span>{nodes.length} nodes</span><span>{edges.length} edges</span><span>1 hop</span></div>
+  </div>;
+}
+
+function EmptyAiState({ icon, title, text, actionLabel, loading, onAction }: { icon: React.ReactNode; title: string; text: string; actionLabel?: string; loading?: boolean; onAction?: () => void }) {
+  return <div className="flex min-h-80 items-center justify-center rounded-lg border border-dashed border-white/15 p-6 text-center">
+    <div>
+      <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-xl text-zinc-400">{icon}</div>
+      <p className="mt-3 text-[11px] font-black">{title}</p>
+      <p className="mx-auto mt-1 max-w-52 text-[9px] leading-4 text-zinc-500">{text}</p>
+      {actionLabel && onAction && <button disabled={loading} onClick={onAction} className="mt-4 inline-flex h-9 items-center gap-2 rounded-lg bg-teal-600 px-4 text-[8px] font-black text-white disabled:opacity-50">{loading ? <RiLoader4Line className="animate-spin" /> : <RiPlayCircleLine />}{actionLabel}</button>}
+    </div>
+  </div>;
 }
 
 function NativeDocument({ resource }: { resource: Resource }) {

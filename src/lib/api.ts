@@ -36,6 +36,7 @@ export const courseApi = {
   get: (id: string) => apiFetch<any>(`${T}/courses/${id}`),
   create: (body: any) => apiFetch<any>(`${T}/courses`, { method: "POST", body: JSON.stringify(body) }),
   update: (id: string, body: any) => apiFetch<any>(`${T}/courses/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  delete: (id: string) => apiFetch<any>(`${T}/courses/${id}`, { method: "DELETE" }),
   submit: (id: string) => apiFetch<any>(`${T}/courses/${id}/submit`, { method: "POST" }),
   close: (id: string) => apiFetch<any>(`${T}/courses/${id}/close`, { method: "POST" }),
   finish: (id: string) => apiFetch<any>(`${T}/courses/${id}/finish`, { method: "POST" }),
@@ -275,6 +276,22 @@ export const annotationApi = {
   create: (body: any) => apiFetch<any>(`${S}/annotations`, { method: "POST", body: JSON.stringify(body) }),
   update: (id: string, body: any) => apiFetch<any>(`${S}/annotations/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   delete: (id: string) => apiFetch<any>(`${S}/annotations/${id}`, { method: "DELETE" }),
+};
+
+export const resourceAiApi = {
+  status: (resourceId: string) => apiFetch<any>(`/api/resource/${resourceId}/processing-status`),
+  summary: (resourceId: string) => apiFetch<any>(`/api/resource/${resourceId}/summary`),
+  citations: (resourceId: string) => apiFetch<any[]>(`/api/resource/${resourceId}/citations`),
+  graph: (resourceId: string, p?: { includeExternal?: string; minConfidence?: string; limit?: string }) =>
+    apiFetch<any>(`/api/resource/${resourceId}/graph${qs(p)}`),
+  process: (resourceId: string, body?: { regenerateSummary?: boolean; reanalyzeCitations?: boolean }) =>
+    apiFetch<any>(`/api/resource/${resourceId}/process-ai`, { method: "POST", body: JSON.stringify(body ?? {}) }),
+  regenerateSummary: (resourceId: string) =>
+    apiFetch<any>(`/api/resource/${resourceId}/summary/regenerate`, { method: "POST" }),
+  reanalyzeCitations: (resourceId: string) =>
+    apiFetch<any>(`/api/resource/${resourceId}/citations/reanalyze`, { method: "POST" }),
+  setSummaryVisibility: (resourceId: string, isVisible: boolean) =>
+    apiFetch<any>(`/api/resource/${resourceId}/summary/visibility`, { method: "PATCH", body: JSON.stringify({ isVisible }) }),
 };
 
 // ─── Admin Platform APIs ──────────────────────────────────

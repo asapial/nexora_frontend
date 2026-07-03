@@ -236,7 +236,7 @@ export default function MyCoursesPage() {
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this course?")) return;
     try {
-      await fetch(`/api/teacher/courses/${id}`, { method: "DELETE", credentials: "include" });
+      await courseApi.delete(id);
       setCourses(p => p.filter(c => c.id !== id));
     } catch { alert("Failed to delete."); }
   };

@@ -15,6 +15,7 @@ export const userService = {
           Cookie: cookieStore.toString(),
         },
         cache: "no-store",
+        signal: AbortSignal.timeout(5_000),
       });
 
       const session = await res.json();
