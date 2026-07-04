@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import Link from "next/link";
 import {
   RiSparklingFill,
   RiMailLine,
@@ -306,7 +307,7 @@ export default function ContactPage() {
               </div>
               <p className="text-[13px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
                 Check our{" "}
-                <a href="/#faq" className="text-teal-600 dark:text-teal-400 font-semibold hover:underline">FAQ section</a>
+                <Link href="/#faq" className="text-teal-600 dark:text-teal-400 font-semibold hover:underline">FAQ section</Link>
                 {" "}— most common questions are answered there instantly.
               </p>
             </div>

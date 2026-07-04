@@ -4,17 +4,23 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   RiArrowLeftSLine,
   RiArrowRightSLine,
+  RiExpandHeightLine,
+  RiExpandWidthLine,
+  RiEyeLine,
   RiFileList2Line,
   RiFocus3Line,
   RiFullscreenLine,
   RiLoader4Line,
+  RiMoonClearLine,
   RiPagesLine,
   RiRefreshLine,
   RiSearchLine,
   RiScrollToBottomLine,
-  RiSubtractLine,
+  RiSunLine,
   RiZoomInLine,
+  RiZoomOutLine,
 } from "react-icons/ri";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 type PdfDocument = Awaited<ReturnType<typeof import("pdfjs-dist")["getDocument"]>>["promise"] extends Promise<infer T> ? T : never;
@@ -36,6 +42,12 @@ type NexoraPdfReaderProps = {
 };
 
 type SearchResult = { page: number; snippet: string };
+
+const modeOptions: Array<{ mode: ReaderMode; label: string; icon: React.ReactNode }> = [
+  { mode: "paper", label: "Paper view", icon: <RiSunLine /> },
+  { mode: "soft", label: "Warm view", icon: <RiEyeLine /> },
+  { mode: "night", label: "Night view", icon: <RiMoonClearLine /> },
+];
 
 export default function NexoraPdfReader({
   source,
@@ -66,6 +78,9 @@ export default function NexoraPdfReader({
   const [searching, setSearching] = useState(false);
   const [results, setResults] = useState<SearchResult[]>([]);
   const [containerSize, setContainerSize] = useState({ width: 900, height: 700 });
+
+  const pageCount = pdf?.numPages ?? 0;
+  const pageProgress = pageCount ? (page / pageCount) * 100 : 0;
 
   useEffect(() => {
     onLoadedRef.current = onLoaded;
@@ -121,7 +136,7 @@ export default function NexoraPdfReader({
       const pdfPage = await pdf.getPage(Math.min(Math.max(page, 1), pdf.numPages));
       const natural = pdfPage.getViewport({ scale: 1, rotation });
       const widthScale = Math.max(0.25, (containerSize.width - 64) / natural.width);
-      const pageScale = Math.max(0.25, Math.min(widthScale, (containerSize.height - 64) / natural.height));
+      const pageScale = Math.max(0.25, Math.min(widthScale, (containerSize.height - 96) / natural.height));
       const scale = fitMode === "width" ? widthScale : fitMode === "page" ? pageScale : zoom / 100;
       const viewport = pdfPage.getViewport({ scale, rotation });
       const ratio = Math.min(window.devicePixelRatio || 1, 2);
@@ -183,79 +198,256 @@ export default function NexoraPdfReader({
     setSearching(false);
   };
 
-  const goToPage = (next: number) => onPageChange(Math.min(Math.max(next, 1), pdf?.numPages ?? 1));
+  const goToPage = useCallback((next: number) => {
+    onPageChange(Math.min(Math.max(next, 1), pageCount || 1));
+  }, [onPageChange, pageCount]);
+
   const toggleFullscreen = async () => {
     if (!rootRef.current) return;
     if (document.fullscreenElement) await document.exitFullscreen();
     else await rootRef.current.requestFullscreen();
   };
 
-  return <div ref={rootRef} className="flex h-full min-h-[720px] flex-col bg-zinc-950 text-zinc-100">
-    <div className="flex flex-wrap items-center gap-2 border-b border-white/10 bg-zinc-950/95 p-2.5">
-      <button onClick={() => setSidebar(sidebar === "pages" ? null : "pages")} className={toolClass(sidebar === "pages")} title="Page thumbnails"><RiFileList2Line /></button>
-      <button onClick={() => setSidebar(sidebar === "search" ? null : "search")} className={toolClass(sidebar === "search")} title="Search document"><RiSearchLine /></button>
-      <span className="mx-1 h-6 w-px bg-white/10" />
-      <button onClick={() => goToPage(page - 1)} className={toolClass()} title="Previous page"><RiArrowLeftSLine /></button>
-      <span className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-[10px] font-black">Page {page} / {pdf?.numPages ?? "..."}</span>
-      <button onClick={() => goToPage(page + 1)} className={toolClass()} title="Next page"><RiArrowRightSLine /></button>
-      <span className="mx-1 h-6 w-px bg-white/10" />
-      <button onClick={() => setReadingLayout("page")} className={toolClass(readingLayout === "page")} title="Read one page at a time"><RiPagesLine />Page</button>
-      <button onClick={() => { setReadingLayout("scroll"); if (fitMode === "page") setFitMode("width"); }} className={toolClass(readingLayout === "scroll")} title="Read by continuously scrolling pages"><RiScrollToBottomLine />Scroll</button>
-      <span className="mx-1 h-6 w-px bg-white/10" />
-      <button onClick={() => { setFitMode("custom"); onZoomChange(Math.max(50, zoom - 10)); }} className={toolClass()} title="Zoom out"><RiSubtractLine /></button>
-      <button onClick={() => { setFitMode("custom"); onZoomChange(100); }} className={toolClass(fitMode === "custom")}>{zoom}%</button>
-      <button onClick={() => { setFitMode("custom"); onZoomChange(Math.min(250, zoom + 10)); }} className={toolClass()} title="Zoom in"><RiZoomInLine /></button>
-      <button onClick={() => setFitMode("width")} className={toolClass(fitMode === "width")}>Fit width</button>
-      <button onClick={() => setFitMode("page")} className={toolClass(fitMode === "page")}>Fit page</button>
-      <button onClick={() => onRotationChange((rotation + 90) % 360)} className={toolClass()} title="Rotate"><RiRefreshLine /></button>
-      <span className="mx-1 h-6 w-px bg-white/10" />
-      {(["paper", "soft", "night"] as ReaderMode[]).map((mode) => <button key={mode} onClick={() => setReaderMode(mode)} className={toolClass(readerMode === mode)}>{mode}</button>)}
-      <div className="flex-1" />
-      <button onClick={toggleFullscreen} className={toolClass()} title="Fullscreen"><RiFullscreenLine /></button>
-    </div>
+  const stageClass = cn(
+    readerMode === "paper" && "bg-[#eef0f3]",
+    readerMode === "soft" && "bg-[#eee7d8]",
+    readerMode === "night" && "bg-[#111114]",
+  );
+  const pageToneClass = cn(
+    readerMode === "soft" && "brightness-[.96] sepia-[.16]",
+    readerMode === "night" && "invert hue-rotate-180 brightness-[.84] contrast-[.92]",
+  );
 
-    <div className="h-1 bg-white/5"><div className="h-full bg-teal-500 transition-all" style={{ width: `${pdf ? (page / pdf.numPages) * 100 : 0}%` }} /></div>
+  return (
+    <TooltipProvider delayDuration={120}>
+      <div ref={rootRef} className="flex h-full min-h-[720px] flex-col overflow-hidden bg-white text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
+        <div className="flex h-12 shrink-0 items-center gap-2 border-b border-zinc-200/80 bg-white/95 px-2.5 backdrop-blur dark:border-white/10 dark:bg-zinc-950/95">
+          <div className="flex items-center rounded-md border border-zinc-200 bg-zinc-50 p-0.5 dark:border-white/10 dark:bg-white/[.04]">
+            <IconButton active={sidebar === "pages"} title="Page thumbnails" onClick={() => setSidebar(sidebar === "pages" ? null : "pages")}>
+              <RiFileList2Line />
+            </IconButton>
+            <IconButton active={sidebar === "search"} title="Search document" onClick={() => setSidebar(sidebar === "search" ? null : "search")}>
+              <RiSearchLine />
+            </IconButton>
+          </div>
 
-    <div className="flex min-h-0 flex-1">
-      {sidebar && <aside className="w-56 shrink-0 overflow-y-auto border-r border-white/10 bg-zinc-950 p-3">
-        {sidebar === "pages" ? <div className="space-y-3">
-          <p className="text-[9px] font-black uppercase tracking-wider text-zinc-500">{pdf?.numPages ?? 0} pages</p>
-          {pdf && Array.from({ length: pdf.numPages }, (_, index) => <Thumbnail key={index + 1} pdf={pdf} page={index + 1} active={page === index + 1} onClick={() => goToPage(index + 1)} />)}
-        </div> : <div>
-          <form onSubmit={(event) => { event.preventDefault(); void searchDocument(); }} className="flex gap-1.5">
-            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search this paper" className="h-9 min-w-0 flex-1 rounded-lg border border-white/10 bg-white/5 px-2 text-[9px] outline-none focus:border-teal-500/50" />
-            <button className="flex h-9 w-9 items-center justify-center rounded-lg bg-teal-600"><RiSearchLine /></button>
-          </form>
-          <p className="my-3 text-[8px] font-bold uppercase text-zinc-500">{searching ? "Searching..." : `${results.length} matching pages`}</p>
-          <div className="space-y-2">{results.map((result) => <button key={result.page} onClick={() => goToPage(result.page)} className="w-full rounded-xl border border-white/10 bg-white/[.03] p-2.5 text-left hover:border-teal-500/40"><span className="text-[8px] font-black text-teal-400">Page {result.page}</span><span className="mt-1 block text-[8px] leading-4 text-zinc-400">...{result.snippet}...</span></button>)}</div>
-        </div>}
-      </aside>}
+          <div className="min-w-0 flex-1 px-1">
+            <p className="truncate text-[12px] font-semibold leading-4">{title}</p>
+            <p className="text-[9px] font-medium text-zinc-500 dark:text-zinc-400">
+              Page {page} of {pageCount || "..."}
+            </p>
+          </div>
 
-      <div ref={viewportRef} className={cn("relative flex min-h-0 flex-1 items-start justify-center overflow-auto p-8", readerMode === "paper" && "bg-zinc-800", readerMode === "soft" && "bg-[#ddd5c3]", readerMode === "night" && "bg-black")}>
-        {readingLayout === "page" ? <div className={cn("relative shadow-2xl", readerMode === "soft" && "brightness-[.94] sepia-[.22]", readerMode === "night" && "invert hue-rotate-180 brightness-[.82] contrast-[.9]")}>
-          <canvas ref={canvasRef} aria-label={`${title}, page ${page}`} className="block bg-white" />
-          {(loading || rendering) && <div className="absolute inset-0 flex min-h-96 items-center justify-center bg-white/80 text-zinc-700"><div className="text-center"><RiLoader4Line className="mx-auto animate-spin text-2xl text-teal-600" /><p className="mt-2 text-[9px] font-black">{loading ? "Opening paper..." : "Rendering page..."}</p></div></div>}
-        </div> : pdf ? <div className="flex w-full flex-col items-center gap-5 pb-8">
-          {Array.from({ length: pdf.numPages }, (_, index) => (
-            <ContinuousPage
-              key={index + 1}
-              pdf={pdf}
-              page={index + 1}
-              active={page === index + 1}
-              containerWidth={containerSize.width}
-              fitMode={fitMode}
+          <div className="hidden items-center rounded-md border border-zinc-200 bg-zinc-50 p-0.5 sm:flex dark:border-white/10 dark:bg-white/[.04]">
+            {modeOptions.map((option) => (
+              <IconButton key={option.mode} active={readerMode === option.mode} title={option.label} onClick={() => setReaderMode(option.mode)}>
+                {option.icon}
+              </IconButton>
+            ))}
+          </div>
+
+          <IconButton title="Rotate page" onClick={() => onRotationChange((rotation + 90) % 360)}>
+            <RiRefreshLine />
+          </IconButton>
+          <IconButton title="Fullscreen" onClick={toggleFullscreen}>
+            <RiFullscreenLine />
+          </IconButton>
+        </div>
+
+        <div className="h-0.5 bg-zinc-200 dark:bg-white/10">
+          <div className="h-full bg-teal-500 transition-all" style={{ width: `${pageProgress}%` }} />
+        </div>
+
+        <div className="flex min-h-0 flex-1">
+          {sidebar && (
+            <aside className="w-64 shrink-0 overflow-y-auto border-r border-zinc-200 bg-white/95 p-3 dark:border-white/10 dark:bg-zinc-950/95 sm:w-56">
+              {sidebar === "pages" ? (
+                <div className="space-y-3">
+                  <PanelHeading icon={<RiFileList2Line />} label={`${pageCount || 0} pages`} />
+                  {pdf && Array.from({ length: pdf.numPages }, (_, index) => (
+                    <Thumbnail key={index + 1} pdf={pdf} page={index + 1} active={page === index + 1} onClick={() => goToPage(index + 1)} />
+                  ))}
+                </div>
+              ) : (
+                <div>
+                  <PanelHeading icon={<RiSearchLine />} label="Search" />
+                  <form onSubmit={(event) => { event.preventDefault(); void searchDocument(); }} className="relative mt-3">
+                    <RiSearchLine className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-400" />
+                    <input
+                      value={query}
+                      onChange={(event) => setQuery(event.target.value)}
+                      placeholder="Find in document"
+                      className="h-9 w-full rounded-md border border-zinc-200 bg-zinc-50 pl-8 pr-9 text-[11px] outline-none transition-colors focus:border-teal-500/60 dark:border-white/10 dark:bg-white/[.04]"
+                    />
+                    <button type="submit" title="Search" className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-md bg-zinc-900 text-white transition-colors hover:bg-teal-600 dark:bg-white dark:text-zinc-950">
+                      <RiArrowRightSLine />
+                    </button>
+                  </form>
+                  <p className="my-3 text-[9px] font-semibold uppercase tracking-wide text-zinc-500">
+                    {searching ? "Searching..." : `${results.length} matching pages`}
+                  </p>
+                  <div className="space-y-2">
+                    {results.map((result) => (
+                      <button key={result.page} onClick={() => goToPage(result.page)} className="w-full rounded-md border border-zinc-200 bg-zinc-50 p-2.5 text-left transition-colors hover:border-teal-500/50 dark:border-white/10 dark:bg-white/[.04]">
+                        <span className="text-[9px] font-semibold text-teal-600 dark:text-teal-300">Page {result.page}</span>
+                        <span className="mt-1 block text-[9px] leading-4 text-zinc-500 dark:text-zinc-400">...{result.snippet}...</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </aside>
+          )}
+
+          <div className="relative min-h-0 flex-1">
+            <div ref={viewportRef} className={cn("flex h-full min-h-0 flex-1 items-start justify-center overflow-auto px-4 py-8 pb-24 sm:px-8", stageClass)}>
+              {readingLayout === "page" ? (
+                <div className={cn("relative max-w-full bg-white shadow-[0_18px_60px_rgba(15,23,42,0.22)] ring-1 ring-zinc-950/10", pageToneClass)}>
+                  <canvas ref={canvasRef} aria-label={`${title}, page ${page}`} className="block bg-white" />
+                  {(loading || rendering) && (
+                    <div className="absolute inset-0 flex min-h-96 items-center justify-center bg-white/85 text-zinc-700 backdrop-blur-sm">
+                      <div className="text-center">
+                        <RiLoader4Line className="mx-auto animate-spin text-2xl text-teal-600" />
+                        <p className="mt-2 text-[10px] font-semibold">{loading ? "Opening document" : "Rendering page"}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : pdf ? (
+                <div className="flex w-full flex-col items-center gap-5 pb-8">
+                  {Array.from({ length: pdf.numPages }, (_, index) => (
+                    <ContinuousPage
+                      key={index + 1}
+                      pdf={pdf}
+                      page={index + 1}
+                      active={page === index + 1}
+                      containerWidth={containerSize.width}
+                      fitMode={fitMode}
+                      zoom={zoom}
+                      rotation={rotation}
+                      readerMode={readerMode}
+                      scrollRoot={viewportRef}
+                      onVisible={goToPage}
+                    />
+                  ))}
+                </div>
+              ) : null}
+
+              {!loading && !pdf && (
+                <div className="flex min-h-96 items-center justify-center text-center">
+                  <div>
+                    <RiFocus3Line className="mx-auto text-4xl text-rose-400" />
+                    <p className="mt-3 text-[11px] font-semibold">Nexora could not render this PDF.</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <FloatingControls
+              page={page}
+              pageCount={pageCount}
               zoom={zoom}
-              rotation={rotation}
-              readerMode={readerMode}
-              scrollRoot={viewportRef}
-              onVisible={goToPage}
+              fitMode={fitMode}
+              readingLayout={readingLayout}
+              onPrevious={() => goToPage(page - 1)}
+              onNext={() => goToPage(page + 1)}
+              onZoomOut={() => {
+                setFitMode("custom");
+                onZoomChange(Math.max(50, zoom - 10));
+              }}
+              onZoomReset={() => {
+                setFitMode("custom");
+                onZoomChange(100);
+              }}
+              onZoomIn={() => {
+                setFitMode("custom");
+                onZoomChange(Math.min(250, zoom + 10));
+              }}
+              onFitWidth={() => setFitMode("width")}
+              onFitPage={() => setFitMode("page")}
+              onPageLayout={() => setReadingLayout("page")}
+              onScrollLayout={() => {
+                setReadingLayout("scroll");
+                if (fitMode === "page") setFitMode("width");
+              }}
             />
-          ))}
-        </div> : null}
-        {!loading && !pdf && <div className="flex min-h-96 items-center justify-center text-center"><div><RiFocus3Line className="mx-auto text-4xl text-rose-400" /><p className="mt-3 text-[10px] font-black">Nexora could not render this PDF.</p></div></div>}
+          </div>
+        </div>
+      </div>
+    </TooltipProvider>
+  );
+}
+
+function FloatingControls({
+  page,
+  pageCount,
+  zoom,
+  fitMode,
+  readingLayout,
+  onPrevious,
+  onNext,
+  onZoomOut,
+  onZoomReset,
+  onZoomIn,
+  onFitWidth,
+  onFitPage,
+  onPageLayout,
+  onScrollLayout,
+}: {
+  page: number;
+  pageCount: number;
+  zoom: number;
+  fitMode: FitMode;
+  readingLayout: ReadingLayout;
+  onPrevious: () => void;
+  onNext: () => void;
+  onZoomOut: () => void;
+  onZoomReset: () => void;
+  onZoomIn: () => void;
+  onFitWidth: () => void;
+  onFitPage: () => void;
+  onPageLayout: () => void;
+  onScrollLayout: () => void;
+}) {
+  return (
+    <div className="pointer-events-none absolute inset-x-0 bottom-4 z-10 flex justify-center px-3">
+      <div className="pointer-events-auto flex max-w-full flex-wrap items-center justify-center gap-1 rounded-lg border border-zinc-200/80 bg-white/90 p-1 shadow-[0_12px_36px_rgba(15,23,42,0.16)] backdrop-blur dark:border-white/10 dark:bg-zinc-950/90">
+        <IconButton title="Previous page" onClick={onPrevious}>
+          <RiArrowLeftSLine />
+        </IconButton>
+        <span className="flex h-8 min-w-20 items-center justify-center rounded-md bg-zinc-100 px-2 text-[10px] font-semibold text-zinc-700 dark:bg-white/10 dark:text-zinc-200">
+          {page} / {pageCount || "..."}
+        </span>
+        <IconButton title="Next page" onClick={onNext}>
+          <RiArrowRightSLine />
+        </IconButton>
+        <Divider />
+        <IconButton title="Zoom out" onClick={onZoomOut}>
+          <RiZoomOutLine />
+        </IconButton>
+        <TextControl title="Actual size" active={fitMode === "custom"} onClick={onZoomReset}>
+          {zoom}%
+        </TextControl>
+        <IconButton title="Zoom in" onClick={onZoomIn}>
+          <RiZoomInLine />
+        </IconButton>
+        <Divider />
+        <IconButton active={fitMode === "width"} title="Fit width" onClick={onFitWidth}>
+          <RiExpandWidthLine />
+        </IconButton>
+        <IconButton active={fitMode === "page"} title="Fit page" onClick={onFitPage}>
+          <RiExpandHeightLine />
+        </IconButton>
+        <Divider />
+        <IconButton active={readingLayout === "page"} title="Single page" onClick={onPageLayout}>
+          <RiPagesLine />
+        </IconButton>
+        <IconButton active={readingLayout === "scroll"} title="Continuous scroll" onClick={onScrollLayout}>
+          <RiScrollToBottomLine />
+        </IconButton>
       </div>
     </div>
-  </div>;
+  );
 }
 
 function ContinuousPage({ pdf, page, active, containerWidth, fitMode, zoom, rotation, readerMode, scrollRoot, onVisible }: {
@@ -329,12 +521,24 @@ function ContinuousPage({ pdf, page, active, containerWidth, fitMode, zoom, rota
     };
   }, [containerWidth, fitMode, nearViewport, page, pdf, rotation, zoom]);
 
-  return <section ref={wrapperRef} aria-label={`Page ${page}`} className="relative max-w-full" style={{ width: size.width, minHeight: size.height }}>
-    <div className={cn("absolute -left-14 top-2 rounded-lg border px-2 py-1 text-[8px] font-black", active ? "border-teal-400/50 bg-teal-500/20 text-teal-200" : "border-white/10 bg-zinc-950/70 text-zinc-400")}>{page}</div>
-    <div className={cn("overflow-hidden bg-white shadow-2xl", active && "ring-2 ring-teal-500/50", readerMode === "soft" && "brightness-[.94] sepia-[.22]", readerMode === "night" && "invert hue-rotate-180 brightness-[.82] contrast-[.9]")} style={{ width: size.width, minHeight: size.height }}>
-      {nearViewport ? <canvas ref={canvasRef} className="block bg-white" /> : <div className="flex h-full min-h-96 items-center justify-center bg-white text-[9px] font-black text-zinc-400">Page {page}</div>}
-    </div>
-  </section>;
+  return (
+    <section ref={wrapperRef} aria-label={`Page ${page}`} className="relative max-w-full scroll-mt-8" style={{ width: size.width, minHeight: size.height }}>
+      <div className={cn("absolute -left-12 top-2 hidden h-7 min-w-8 items-center justify-center rounded-md border px-2 text-[9px] font-semibold sm:flex", active ? "border-teal-500/40 bg-teal-500/15 text-teal-700 dark:text-teal-200" : "border-zinc-200 bg-white/80 text-zinc-500 dark:border-white/10 dark:bg-zinc-950/75")}>
+        {page}
+      </div>
+      <div
+        className={cn(
+          "overflow-hidden bg-white shadow-[0_18px_60px_rgba(15,23,42,0.2)] ring-1 ring-zinc-950/10",
+          active && "ring-2 ring-teal-500/50",
+          readerMode === "soft" && "brightness-[.96] sepia-[.16]",
+          readerMode === "night" && "invert hue-rotate-180 brightness-[.84] contrast-[.92]",
+        )}
+        style={{ width: size.width, minHeight: size.height }}
+      >
+        {nearViewport ? <canvas ref={canvasRef} className="block bg-white" /> : <div className="flex h-full min-h-96 items-center justify-center bg-white text-[10px] font-semibold text-zinc-400">Page {page}</div>}
+      </div>
+    </section>
+  );
 }
 
 function Thumbnail({ pdf, page, active, onClick }: { pdf: PdfDocument; page: number; active: boolean; onClick: () => void }) {
@@ -358,9 +562,72 @@ function Thumbnail({ pdf, page, active, onClick }: { pdf: PdfDocument; page: num
       renderTask?.cancel();
     };
   }, [page, pdf]);
-  return <button onClick={onClick} className={cn("w-full rounded-xl border p-2 transition-colors", active ? "border-teal-500 bg-teal-500/10" : "border-white/10 hover:border-white/25")}><canvas ref={canvasRef} className="mx-auto max-w-full bg-white shadow" /><span className="mt-2 block text-[8px] font-black text-zinc-400">Page {page}</span></button>;
+
+  return (
+    <button onClick={onClick} className={cn("group w-full rounded-md border p-2 transition-colors", active ? "border-teal-500 bg-teal-500/10" : "border-zinc-200 bg-zinc-50 hover:border-zinc-300 dark:border-white/10 dark:bg-white/[.04] dark:hover:border-white/20")}>
+      <canvas ref={canvasRef} className="mx-auto max-w-full bg-white shadow-sm" />
+      <span className={cn("mt-2 block text-[9px] font-semibold", active ? "text-teal-700 dark:text-teal-300" : "text-zinc-500")}>Page {page}</span>
+    </button>
+  );
 }
 
-function toolClass(active = false) {
-  return cn("flex h-8 items-center justify-center gap-1 rounded-lg border px-2.5 text-[8px] font-black capitalize transition-colors", active ? "border-teal-500/50 bg-teal-500/15 text-teal-300" : "border-white/10 bg-white/[.03] text-zinc-300 hover:bg-white/10");
+function IconButton({ children, title, active = false, onClick }: { children: React.ReactNode; title: string; active?: boolean; onClick: () => void }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          aria-label={title}
+          title={title}
+          onClick={onClick}
+          className={cn(
+            "flex h-8 w-8 items-center justify-center rounded-md text-[16px] transition-colors",
+            active
+              ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-950"
+              : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-400 dark:hover:bg-white/10 dark:hover:text-white",
+          )}
+        >
+          {children}
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="top">{title}</TooltipContent>
+    </Tooltip>
+  );
+}
+
+function TextControl({ children, title, active = false, onClick }: { children: React.ReactNode; title: string; active?: boolean; onClick: () => void }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          aria-label={title}
+          title={title}
+          onClick={onClick}
+          className={cn(
+            "flex h-8 min-w-12 items-center justify-center rounded-md px-2 text-[10px] font-semibold transition-colors",
+            active
+              ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-950"
+              : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-950 dark:text-zinc-300 dark:hover:bg-white/10 dark:hover:text-white",
+          )}
+        >
+          {children}
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="top">{title}</TooltipContent>
+    </Tooltip>
+  );
+}
+
+function PanelHeading({ icon, label }: { icon: React.ReactNode; label: string }) {
+  return (
+    <div className="flex h-8 items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+      <span className="text-[15px]">{icon}</span>
+      <span>{label}</span>
+    </div>
+  );
+}
+
+function Divider() {
+  return <span className="mx-0.5 h-5 w-px bg-zinc-200 dark:bg-white/10" />;
 }
