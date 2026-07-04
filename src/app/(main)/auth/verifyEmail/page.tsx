@@ -159,13 +159,18 @@ export default function VerifyEmailPage({
         credentials: "include"
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => null);
       console.log(data);
 
-      if (data.success) {
-        setSuccess(true);
-        router.push('/');
+      if (!res.ok || !data?.success) {
+        setError(data?.message ?? "Invalid or expired code. Please try again.");
+        setDigits(Array(OTP_LENGTH).fill(""));
+        inputRefs.current[0]?.focus();
+        return;
       }
+
+      setSuccess(true);
+      router.push('/');
 
     } catch {
       setError("Invalid or expired code. Please try again.");
@@ -178,6 +183,13 @@ export default function VerifyEmailPage({
 
   const handleResend = async () => {
     if (resendCooldown > 0) return;
+    if (!email) {
+      const message = "We could not find your account email. Please sign in again.";
+      setError(message);
+      toast.error(message, { position: "top-right" });
+      return;
+    }
+
     setIsResending(true);
     try {
 
@@ -191,22 +203,25 @@ export default function VerifyEmailPage({
         }),
         credentials: "include"
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => null);
 
-      if (data.success) {
-        toast.success("Verification email has been resent.", { position: "top-right" });
-        setError("");
-        setDigits(Array(OTP_LENGTH).fill(""));
-        startCooldown();
-        inputRefs.current[0]?.focus();
+      if (!res.ok || !data?.success) {
+        const message = data?.message ?? "Verification email could not be sent. Please try again.";
+        setError(message);
+        toast.error(message, { position: "top-right" });
+        return;
       }
 
-      if (!data.success) {
-        if (data.message === "This email is already verified. No need to resend a verification code.") {
-          setError("This email is already verified. No need to resend a verification code.");
-        }
-      }
+      toast.success("Verification email has been resent.", { position: "top-right" });
+      setError("");
+      setDigits(Array(OTP_LENGTH).fill(""));
+      startCooldown();
+      inputRefs.current[0]?.focus();
 
+    } catch {
+      const message = "Verification email could not be sent. Please try again.";
+      setError(message);
+      toast.error(message, { position: "top-right" });
     } finally {
       setIsResending(false);
     }

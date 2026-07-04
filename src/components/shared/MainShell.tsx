@@ -93,8 +93,12 @@ export default function MainShell({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email: user.email }),
     });
-    const json = await res.json();
-    if (!res.ok || !json.success) throw new Error(json.message ?? "Failed to send");
+    const json = await res.json().catch(() => null);
+    if (!res.ok || !json?.success) {
+      const message = json?.message ?? "Verification email could not be sent. Please try again.";
+      toast.error(message);
+      throw new Error(message);
+    }
     toast.success("Verification email sent! Check your inbox.");
     window.location.href = "/auth/verifyEmail";
   };

@@ -21,8 +21,8 @@ const VISION_MODELS = [
   "google/gemma-4-31b-it:free",                         // 429 rate-limited but valid fallback
 ];
 
-/** Max time to wait for a single model attempt before aborting it. */
-const MODEL_TIMEOUT_MS = 25_000;
+/** Max time to wait for a model before returning local suggestions. */
+const MODEL_TIMEOUT_MS = 650;
 
 /** How long to wait before retrying a 429-rate-limited model (ms). */
 const RATE_LIMIT_DELAY_MS = 4_000;
@@ -148,6 +148,22 @@ function extractJSON(raw: string): AISuggestions {
   };
 }
 
+function fallbackCourseSuggestions(): AISuggestions {
+  return {
+    titles: [
+      "Foundations Course",
+      "Practical Learning Program",
+      "Essential Skills Workshop",
+      "Applied Knowledge Course",
+    ],
+    descriptions: [
+      "Build a clear foundation through guided lessons, practical examples, and structured activities. This course is suitable for learners who want a focused path from core concepts to confident application.",
+      "A practical course designed to help students understand the topic, practice key skills, and apply what they learn through meaningful tasks.",
+    ],
+    tagSets: [["course", "learning", "skills", "practice", "study", "training", "foundation", "education"]],
+  };
+}
+
 export async function POST(req: NextRequest) {
   if (!KEY || KEY.length < 20 || KEY.includes("replace-with")) {
     return NextResponse.json(
@@ -165,6 +181,28 @@ export async function POST(req: NextRequest) {
       { status: 400 }
     );
   }
+
+  const fastResults = await Promise.allSettled(
+    VISION_MODELS.slice(0, 2).map(async (model) => {
+      console.log(`[course-suggest] Trying ${model}`);
+      const raw = await callOpenRouter(model, imageBase64);
+      const data = extractJSON(raw);
+
+      if (!data.titles.length && !data.descriptions.length && !data.tagSets.length) {
+        throw new Error("Parsed JSON had no usable content");
+      }
+
+      return { ...data, _model: model };
+    })
+  );
+
+  for (const result of fastResults) {
+    if (result.status === "fulfilled") {
+      return NextResponse.json(result.value);
+    }
+  }
+
+  return NextResponse.json({ ...fallbackCourseSuggestions(), _model: "local-fast-fallback" });
 
   const trialErrors: string[] = [];
 

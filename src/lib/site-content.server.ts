@@ -14,6 +14,33 @@ interface ApiSection {
 }
 
 export const SITE_CONTENT_REVALIDATE_SECONDS = 600;
+const SITE_CONTENT_TIMEOUT_MS = 2_500;
+
+function isProductionBuild() {
+  return (
+    process.env.NEXT_PHASE === "phase-production-build" ||
+    process.env.npm_lifecycle_event === "build"
+  );
+}
+
+async function withTimeout<T>(work: (signal: AbortSignal) => Promise<T>, timeoutMs: number) {
+  const controller = new AbortController();
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+
+  try {
+    return await Promise.race([
+      work(controller.signal),
+      new Promise<never>((_, reject) => {
+        timeout = setTimeout(() => {
+          controller.abort();
+          reject(new Error("Site content request timed out"));
+        }, timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeout) clearTimeout(timeout);
+  }
+}
 
 export async function getSiteContent(): Promise<SiteContentSection[]> {
   let savedSections: ApiSection[] = [];
@@ -21,15 +48,19 @@ export async function getSiteContent(): Promise<SiteContentSection[]> {
   try {
     const backendUrl = process.env.BACKEND_URL ?? process.env.NEXT_PUBLIC_BACKEND_URL;
     if (!backendUrl) throw new Error("Backend URL is not configured");
+    if (isProductionBuild()) throw new Error("Skip live site content during production build");
 
-    const response = await fetch(`${backendUrl}/api/homePage/content`, {
-      next: {
-        revalidate: SITE_CONTENT_REVALIDATE_SECONDS,
-        tags: ["site-content"],
-      },
-      // Abort after 10 s so a cold/slow backend never hangs the build.
-      signal: AbortSignal.timeout(10_000),
-    });
+    const response = await withTimeout(
+      (signal) =>
+        fetch(`${backendUrl}/api/homePage/content`, {
+          next: {
+            revalidate: SITE_CONTENT_REVALIDATE_SECONDS,
+            tags: ["site-content"],
+          },
+          signal,
+        }),
+      SITE_CONTENT_TIMEOUT_MS,
+    );
 
     if (!response.ok) throw new Error("Could not load site content");
     const payload = await response.json();

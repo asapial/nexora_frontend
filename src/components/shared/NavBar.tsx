@@ -230,6 +230,7 @@ function AccountDropdown({ user, onSignOut, onChangePassword, onVerifyEmail, onC
   const handleVerify = async () => {
     setSendingVerify(true);
     try { await onVerifyEmail?.(); setVerifyDone(true); }
+    catch { return; }
     finally { setSendingVerify(false); }
   };
 
@@ -413,7 +414,7 @@ function MobileAccountSection({ user, onSignOut, onChangePassword, onVerifyEmail
         <div className="px-3 py-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200/70 dark:border-amber-800/50">
           <div className="flex items-center gap-2 mb-1.5"><RiAlertLine className="text-amber-500 text-sm flex-shrink-0" /><p className="text-[12px] font-bold text-amber-700 dark:text-amber-300">Email not verified</p></div>
           <button
-            onClick={async () => { setSendingVerify(true); try { await onVerifyEmail?.(); setVerifyDone(true); } finally { setSendingVerify(false); } }}
+            onClick={async () => { setSendingVerify(true); try { await onVerifyEmail?.(); setVerifyDone(true); } catch { return; } finally { setSendingVerify(false); } }}
             disabled={sendingVerify || verifyDone}
             className={cn("w-full h-8 rounded-lg text-[12px] font-bold transition-all flex items-center justify-center gap-1.5 disabled:opacity-60", verifyDone ? "bg-teal-100 dark:bg-teal-950/40 text-teal-700 dark:text-teal-300 cursor-default" : "bg-amber-500 hover:bg-amber-600 text-white")}
           >

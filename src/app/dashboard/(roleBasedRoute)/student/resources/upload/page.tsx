@@ -7,6 +7,12 @@ import {
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import {
+  assertPdfUploadLimit,
+  getPdfMetadataSuggestions,
+  isPdfFile,
+  uploadFileDirectToCloudinary,
+} from "@/lib/resourceUpload";
 
 type Visibility = "PUBLIC" | "CLUSTER" | "PRIVATE";
 interface Cluster { id: string; name: string; memberCount?: number; }
@@ -252,6 +258,28 @@ export default function TeacherResourceUploadPage() {
   const setVisibility = (visibility: Visibility) => setForm((current) => ({ ...current, visibility, clusterIds: visibility === "CLUSTER" ? current.clusterIds : [] }));
   const toggleCluster = (id: string) => setForm((current) => ({ ...current, clusterIds: current.clusterIds.includes(id) ? current.clusterIds.filter((clusterId) => clusterId !== id) : [...current.clusterIds, id] }));
 
+  const selectFile = (nextFile: File | null) => {
+    setSuggestions(null);
+    setSelAuthorIdx(null);
+    setSelTagIdx(null);
+
+    if (!nextFile) {
+      setFile(null);
+      return;
+    }
+
+    try {
+      assertPdfUploadLimit(nextFile);
+      setFile(nextFile);
+      setError(null);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Could not select this file.";
+      setFile(null);
+      setError(message);
+      toast.error(message);
+    }
+  };
+
   const handleSuggest = async () => {
     if (!file) return;
     setIsSuggesting(true);
@@ -260,19 +288,8 @@ export default function TeacherResourceUploadPage() {
     setSelAuthorIdx(null);
     setSelTagIdx(null);
     try {
-      const fd = new FormData();
-      fd.append("file", file);
-      const res = await fetch("/api/resource/suggest-metadata", { method: "POST", credentials: "include", body: fd });
-
-      let json;
-      try {
-        json = await res.json();
-      } catch {
-        throw new Error("The server encountered an unexpected error. Please try again later.");
-      }
-
-      if (!res.ok) throw new Error(json?.message || "Failed to extract metadata");
-      setSuggestions(json.data as AiSuggestions);
+      const nextSuggestions = await getPdfMetadataSuggestions(file);
+      setSuggestions(nextSuggestions);
       toast.success("AI generated 4 suggestions for each field — pick the best ones!");
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : "AI extraction failed. Make sure the PDF contains readable text.";
@@ -294,18 +311,41 @@ export default function TeacherResourceUploadPage() {
     if (form.visibility === "CLUSTER" && form.clusterIds.length === 0) { setError("Select at least one cluster."); return; }
     setSubmitting(true); setError(null);
     try {
-      const fd = new FormData();
-      fd.append("file", file);
-      fd.append("title", form.title);
-      if (form.description) fd.append("description", form.description);
-      form.authors.forEach(a => fd.append("authors[]", a));
-      form.tags.forEach(t => fd.append("tags[]", t));
-      if (form.year) fd.append("year", form.year);
-      fd.append("visibility", form.visibility);
-      if (form.categoryId) fd.append("categoryId", form.categoryId);
-      if (form.visibility === "CLUSTER") form.clusterIds.forEach((id) => fd.append("clusterIds[]", id));
+      let res: Response;
 
-      const res = await fetch("/api/resource", { method: "POST", credentials: "include", body: fd });
+      if (isPdfFile(file)) {
+        const uploaded = await uploadFileDirectToCloudinary(file);
+        res = await fetch("/api/resource", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...uploaded,
+            title: form.title,
+            description: form.description || undefined,
+            authors: form.authors,
+            tags: form.tags,
+            year: form.year || undefined,
+            visibility: form.visibility,
+            categoryId: form.categoryId || undefined,
+            clusterIds: form.visibility === "CLUSTER" ? form.clusterIds : [],
+          }),
+        });
+      } else {
+        const fd = new FormData();
+        fd.append("file", file);
+        fd.append("title", form.title);
+        if (form.description) fd.append("description", form.description);
+        form.authors.forEach(a => fd.append("authors[]", a));
+        form.tags.forEach(t => fd.append("tags[]", t));
+        if (form.year) fd.append("year", form.year);
+        fd.append("visibility", form.visibility);
+        if (form.categoryId) fd.append("categoryId", form.categoryId);
+        if (form.visibility === "CLUSTER") form.clusterIds.forEach((id) => fd.append("clusterIds[]", id));
+
+        res = await fetch("/api/resource", { method: "POST", credentials: "include", body: fd });
+      }
+
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Upload failed");
       setSuccess(true);
@@ -354,21 +394,21 @@ export default function TeacherResourceUploadPage() {
               dragging ? "border-teal-500/60 bg-teal-50/50 dark:bg-teal-950/20" : "border-border hover:border-teal-400/50 hover:bg-muted/20")}
             onDragOver={e => { e.preventDefault(); setDragging(true); }}
             onDragLeave={() => setDragging(false)}
-            onDrop={e => { e.preventDefault(); setDragging(false); const f = e.dataTransfer.files?.[0]; if (f) { setFile(f); setSuggestions(null); } }}>
+            onDrop={e => { e.preventDefault(); setDragging(false); selectFile(e.dataTransfer.files?.[0] ?? null); }}>
             {file ? (
               <><RiFileAddLine className="text-3xl text-teal-500" />
                 <p className="text-[13px] font-semibold text-foreground">{file.name}</p>
-                <p className="text-[11.5px] text-muted-foreground">{(file.size / 1024).toFixed(1)} KB · {file.type === "application/pdf" ? "PDF — AI suggestions available" : file.type}</p></>
+                <p className="text-[11.5px] text-muted-foreground">{(file.size / 1024).toFixed(1)} KB · {isPdfFile(file) ? "PDF — AI suggestions available" : file.type}</p></>
             ) : (
               <><RiUploadCloud2Line className="text-3xl text-muted-foreground/40" />
                 <p className="text-[13px] font-semibold text-foreground">Drop a file or click to browse</p>
                 <p className="text-[11.5px] text-muted-foreground">PDF (with AI suggestions), video, image, document…</p></>
             )}
-            <input type="file" accept="application/pdf,image/*,video/*,.doc,.docx" className="hidden" onChange={e => { setFile(e.target.files?.[0] ?? null); setSuggestions(null); setSelAuthorIdx(null); setSelTagIdx(null); }} />
+            <input type="file" accept="application/pdf,image/*,video/*,.doc,.docx" className="hidden" onChange={e => selectFile(e.target.files?.[0] ?? null)} />
           </label>
 
           {/* AI Trigger button — only for PDFs */}
-          {file && file.type === "application/pdf" && (
+          {file && isPdfFile(file) && (
             <button
               type="button"
               onClick={handleSuggest}
