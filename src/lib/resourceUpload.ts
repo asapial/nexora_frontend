@@ -36,6 +36,13 @@ export function assertPdfUploadLimit(file: File) {
   }
 }
 
+export async function computeFileHash(file: File) {
+  const digest = await crypto.subtle.digest("SHA-256", await file.arrayBuffer());
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+}
+
 const compactInlineText = (value: string) => value.replace(/[ \t]+/g, " ").trim();
 const compactBlockText = (value: string) =>
   value
@@ -117,6 +124,7 @@ export async function getPdfMetadataSuggestions(file: File): Promise<AiSuggestio
 
 export async function uploadFileDirectToCloudinary(file: File) {
   assertPdfUploadLimit(file);
+  const fileHash = isPdfFile(file) ? await computeFileHash(file) : undefined;
 
   const signatureResponse = await fetch("/api/resource/upload-signature", {
     method: "POST",
@@ -155,5 +163,6 @@ export async function uploadFileDirectToCloudinary(file: File) {
   return {
     fileUrl: uploadJson.secure_url,
     fileType: file.type || uploadJson.resource_type || "application/octet-stream",
+    fileHash,
   };
 }

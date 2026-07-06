@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   RiGraduationCapLine,
   RiUserLine,
@@ -134,7 +133,6 @@ function DemoCard({
 
 // ─── Page ─────────────────────────────────────────────────
 export default function WatchDemoPage() {
-  const router = useRouter();
   const [loadingRole, setLoadingRole] = useState<DemoRole | null>(null);
 
   const handleDemoLogin = async (role: DemoRole) => {
@@ -151,7 +149,7 @@ export default function WatchDemoPage() {
         throw new Error(data.message || data.error?.message || "Login failed");
       }
       toast.success(`Logged in as demo ${role}!`);
-      router.push("/dashboard");
+      window.location.replace("/dashboard");
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Demo login failed. Please try again.");
     } finally {

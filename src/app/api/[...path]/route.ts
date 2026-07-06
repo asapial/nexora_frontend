@@ -34,8 +34,13 @@ function getBackendUrl() {
   return process.env.BACKEND_URL ?? process.env.NEXT_PUBLIC_BACKEND_URL;
 }
 
-function getTimeoutMs(method: string) {
-  return method === "GET" || method === "HEAD" ? 12_000 : 60_000;
+function isLongRunningAiPath(pathname: string) {
+  return /^\/api\/resource\/[^/]+\/(?:process-ai|summary\/regenerate|citations\/reanalyze)$/.test(pathname);
+}
+
+function getTimeoutMs(request: NextRequest) {
+  if (isLongRunningAiPath(request.nextUrl.pathname)) return 180_000;
+  return request.method === "GET" || request.method === "HEAD" ? 12_000 : 60_000;
 }
 
 function getSetCookieHeaders(headers: Headers) {
@@ -192,7 +197,7 @@ async function fetchBackend(
   bodySource: Request = request,
 ) {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), getTimeoutMs(request.method));
+  const timeout = setTimeout(() => controller.abort(), getTimeoutMs(request));
 
   try {
     const init: RequestInit & { duplex?: "half" } = {

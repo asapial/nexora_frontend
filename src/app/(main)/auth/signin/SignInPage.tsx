@@ -182,6 +182,27 @@ export default function SignInPage({ data }: { data: SignInPageData; }) {
     return e;
   };
 
+  const waitForAuthenticatedSession = async () => {
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const res = await fetch("/api/auth/me", {
+        credentials: "include",
+        cache: "no-store",
+      }).catch(() => null);
+
+      if (res?.ok) {
+        const json = await res.json().catch(() => null);
+        if (json?.success) return;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 250 * (attempt + 1)));
+    }
+  };
+
+  const redirectToDashboard = async () => {
+    await waitForAuthenticatedSession();
+    window.location.replace("/dashboard");
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
@@ -230,7 +251,7 @@ export default function SignInPage({ data }: { data: SignInPageData; }) {
       }
 
       toast.success("User login successfully", { position: "top-right" });
-      window.location.href = "/dashboard";
+      await redirectToDashboard();
 
     } catch (err: unknown) {
       let msg = "Something went wrong. Please try again.";
@@ -270,7 +291,7 @@ export default function SignInPage({ data }: { data: SignInPageData; }) {
         return;
       }
       toast.success("Login successful!", { position: "top-right" });
-      window.location.href = "/dashboard";
+      await redirectToDashboard();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to verify code. Please try again.";
       setTotpError(msg);

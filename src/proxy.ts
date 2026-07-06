@@ -9,10 +9,15 @@ type SessionPayload = {
   };
 };
 
+type SessionState = "authenticated" | "unauthenticated" | "unknown";
+
 type SessionResult = {
   data: SessionPayload | null;
   setCookies: string[];
+  state: SessionState;
 };
+
+const SESSION_CHECK_TIMEOUT_MS = 12_000;
 
 function getBackendUrl() {
   return process.env.BACKEND_URL ?? process.env.NEXT_PUBLIC_BACKEND_URL;
@@ -95,15 +100,31 @@ function withAuthCookies(response: NextResponse, setCookies: string[]) {
   return response;
 }
 
+function hasAuthCookie(cookieHeader: string) {
+  return /(?:^|;\s*)(accessToken|refreshToken)=/.test(cookieHeader);
+}
+
+function isTransientAuthFailure(status: number) {
+  return status === 408 || status === 429 || status >= 500;
+}
+
 async function fetchSession(cookieHeader: string): Promise<SessionResult> {
   const backendUrl = getBackendUrl();
-  if (!backendUrl) return { data: null, setCookies: [] };
+  const hasCookie = hasAuthCookie(cookieHeader);
+
+  if (!backendUrl) {
+    return {
+      data: null,
+      setCookies: [],
+      state: hasCookie ? "unknown" : "unauthenticated",
+    };
+  }
 
   const fetchMe = async (cookies: string) => {
     const res = await fetch(new URL("/api/auth/me", backendUrl), {
       headers: { Cookie: cookies },
       cache: "no-store",
-      signal: AbortSignal.timeout(5_000),
+      signal: AbortSignal.timeout(SESSION_CHECK_TIMEOUT_MS),
     });
 
     const json = await res.json().catch(() => null);
@@ -114,38 +135,64 @@ async function fetchSession(cookieHeader: string): Promise<SessionResult> {
     const first = await fetchMe(cookieHeader);
 
     if (first.res.ok && first.json?.success) {
-      return { data: first.json.data ?? null, setCookies: getSetCookieHeaders(first.res.headers) };
+      return {
+        data: first.json.data ?? null,
+        setCookies: getSetCookieHeaders(first.res.headers),
+        state: "authenticated",
+      };
+    }
+
+    if (hasCookie && isTransientAuthFailure(first.res.status)) {
+      return {
+        data: null,
+        setCookies: getSetCookieHeaders(first.res.headers),
+        state: "unknown",
+      };
     }
 
     if (first.res.status !== 401 || !cookieHeader.includes("refreshToken=")) {
-      return { data: null, setCookies: [] };
+      return { data: null, setCookies: [], state: "unauthenticated" };
     }
 
     const refreshRes = await fetch(new URL("/api/auth/refresh-token", backendUrl), {
       method: "POST",
       headers: { Cookie: cookieHeader },
       cache: "no-store",
-      signal: AbortSignal.timeout(5_000),
+      signal: AbortSignal.timeout(SESSION_CHECK_TIMEOUT_MS),
     });
 
     const refreshSetCookies = getSetCookieHeaders(refreshRes.headers);
+
+    if (hasCookie && isTransientAuthFailure(refreshRes.status)) {
+      return { data: null, setCookies: refreshSetCookies, state: "unknown" };
+    }
+
     if (!refreshRes.ok) {
-      return { data: null, setCookies: refreshSetCookies };
+      return { data: null, setCookies: refreshSetCookies, state: "unauthenticated" };
     }
 
     const refreshedCookieHeader = mergeCookieHeader(cookieHeader, refreshSetCookies);
     const retry = await fetchMe(refreshedCookieHeader);
 
     if (!retry.res.ok || !retry.json?.success) {
-      return { data: null, setCookies: refreshSetCookies };
+      if (hasCookie && isTransientAuthFailure(retry.res.status)) {
+        return { data: null, setCookies: refreshSetCookies, state: "unknown" };
+      }
+
+      return { data: null, setCookies: refreshSetCookies, state: "unauthenticated" };
     }
 
     return {
       data: retry.json.data ?? null,
       setCookies: [...refreshSetCookies, ...getSetCookieHeaders(retry.res.headers)],
+      state: "authenticated",
     };
   } catch {
-    return { data: null, setCookies: [] };
+    return {
+      data: null,
+      setCookies: [],
+      state: hasCookie ? "unknown" : "unauthenticated",
+    };
   }
 }
 
@@ -164,6 +211,10 @@ export async function proxy(request: NextRequest) {
   }
 
   const authResult = await fetchSession(request.headers.get("cookie") ?? "");
+
+  if (authResult.state === "unknown") {
+    return withAuthCookies(NextResponse.next(), authResult.setCookies);
+  }
 
   if (authResult.data?.userData?.role) {
     isAuthenticated = true;

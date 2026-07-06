@@ -1,10 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import {
+  Background,
+  Controls,
+  MarkerType,
+  MiniMap,
+  Position,
+  ReactFlow,
+  type Edge,
+  type Node,
+} from "@xyflow/react";
+import {
   RiAddLine,
+  RiAlertLine,
   RiBookOpenLine,
   RiBrainLine,
   RiCheckLine,
@@ -23,7 +34,9 @@ import {
   RiRefreshLine,
   RiSearchLine,
   RiShareLine,
+  RiSparklingLine,
   RiStickyNoteLine,
+  RiTimeLine,
 } from "react-icons/ri";
 import { toast } from "sonner";
 import { annotationApi, resourceAiApi } from "@/lib/api";
@@ -69,6 +82,17 @@ type ResourceSummary = {
   keyContributions: string[];
   limitations: string[];
   keywords: string[];
+  // Native Bangla (বাংলা) mirrors — always populated server-side either by the
+  // bilingual AI prompt, the translation fallback, or an English→Bangla mirror
+  // so the UI never renders an empty Bangla column.
+  professionalSummaryBn?: string | null;
+  goalsBn?: string | null;
+  methodsBn?: string | null;
+  resultsBn?: string | null;
+  conclusionsBn?: string | null;
+  keyContributionsBn?: string[];
+  limitationsBn?: string[];
+  keywordsBn?: string[];
   isVisible?: boolean;
 };
 
@@ -97,6 +121,43 @@ type ResourceGraph = {
   edges: Array<{ id: string; source: string; target: string; confidenceScore?: number | null; label?: string }>;
 };
 
+type AiFeatureErrors = Partial<Record<"status" | "summary" | "citations" | "graph", string>>;
+type LoadAiOptions = { preserveContent?: boolean; silent?: boolean };
+
+// The backend getSummary() returns this envelope inside response.data:
+type SummaryEnvelope = {
+  resourceId: string;
+  status: string;
+  processingError: string | null;
+  summaryStatus: "COMPLETED" | "HIDDEN" | "PENDING" | "FAILED" | string;
+  summary: ResourceSummary | null;
+};
+
+// ─── AI status classification ────────────────────────────────────────────────
+// Processing: backend is actively working — show spinner
+const AI_PROCESSING_STATUSES = new Set(["TEXT_PROCESSING", "SUMMARY_PROCESSING", "CITATION_PROCESSING"]);
+// Ready states that are NOT yet final (pipeline still has more steps)
+const AI_INTERMEDIATE_STATUSES = new Set(["TEXT_EXTRACTED", "SUMMARY_READY"]);
+// Terminal: job is done (either success or failure) — stop polling
+const AI_TERMINAL_STATUSES = new Set(["GRAPH_READY", "CITATIONS_READY", "FAILED"]);
+// Any "good" terminal state
+const AI_READY_STATUSES = new Set(["SUMMARY_READY", "CITATIONS_READY", "GRAPH_READY"]);
+
+const isAiProcessingStatus = (status?: string | null) =>
+  Boolean(status && (AI_PROCESSING_STATUSES.has(status) || AI_INTERMEDIATE_STATUSES.has(status)));
+const isAiReadyStatus = (status?: string | null) => Boolean(status && AI_READY_STATUSES.has(status));
+const isAiTerminalStatus = (status?: string | null) => Boolean(status && AI_TERMINAL_STATUSES.has(status));
+
+
+const aiStatusLabel = (status?: string | null) => {
+  if (status === "TEXT_PROCESSING" || status === "TEXT_EXTRACTED") return "Extracting text";
+  if (status === "SUMMARY_PROCESSING") return "Generating summary";
+  if (status === "CITATION_PROCESSING") return "Analyzing references";
+  if (isAiReadyStatus(status)) return "Ready";
+  if (status === "FAILED") return "Failed";
+  return "Not processed";
+};
+
 const signedUrl = (resource: Resource, inline = true) => {
   const params = new URLSearchParams({ url: resource.fileUrl, filename: resource.title });
   if (inline) params.set("inline", "true");
@@ -115,6 +176,125 @@ const readerDataUrl = (resource: Resource) => {
 
 const isPdf = (resource: Resource) =>
   resource.fileType.toLowerCase().includes("pdf") || resource.fileUrl.toLowerCase().endsWith(".pdf");
+
+const errorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error && error.message ? error.message : fallback;
+
+// ─── Defensive data extractors ──────────────────────────────────────────────
+// These handle varied backend response shapes to prevent silent failures.
+
+function extractSummary(data: unknown): ResourceSummary | null {
+  if (!data || typeof data !== "object") return null;
+  const obj = data as Record<string, unknown>;
+  // Backend may return { summary: {...} } OR the summary object directly
+  const candidate = (obj.summary && typeof obj.summary === "object")
+    ? obj.summary as Record<string, unknown>
+    : obj;
+  if (typeof candidate.professionalSummary === "string") {
+    return candidate as unknown as ResourceSummary;
+  }
+  return null;
+}
+
+function extractCitations(data: unknown): ResourceCitation[] {
+  if (Array.isArray(data)) return data as ResourceCitation[];
+  if (data && typeof data === "object") {
+    const obj = data as Record<string, unknown>;
+    if (Array.isArray(obj.citations)) return obj.citations as ResourceCitation[];
+    if (Array.isArray(obj.data)) return obj.data as ResourceCitation[];
+  }
+  return [];
+}
+
+function extractGraph(data: unknown): ResourceGraph | null {
+  if (!data || typeof data !== "object") return null;
+  const obj = data as Record<string, unknown>;
+  // May be { nodes, edges } directly, or { graph: { nodes, edges } }
+  if (Array.isArray(obj.nodes) && Array.isArray(obj.edges)) {
+    return { nodes: obj.nodes as ResourceGraph["nodes"], edges: obj.edges as ResourceGraph["edges"] };
+  }
+  if (obj.graph && typeof obj.graph === "object") {
+    const g = obj.graph as Record<string, unknown>;
+    if (Array.isArray(g.nodes) && Array.isArray(g.edges)) {
+      return { nodes: g.nodes as ResourceGraph["nodes"], edges: g.edges as ResourceGraph["edges"] };
+    }
+  }
+  return null;
+}
+
+// ─── Force-layout simulation for citation graph ─────────────────────────────
+type NodePos = { x: number; y: number; vx: number; vy: number };
+
+function runForceLayout(
+  nodes: ResourceGraph["nodes"],
+  edges: ResourceGraph["edges"],
+  width: number,
+  height: number,
+  iterations = 120
+): Map<string, { x: number; y: number }> {
+  const cx = width / 2;
+  const cy = height / 2;
+  const positions = new Map<string, NodePos>();
+  const currentNode = nodes.find((n) => n.type === "current-resource") ?? nodes[0];
+
+  nodes.forEach((node, i) => {
+    if (node.id === currentNode?.id) {
+      positions.set(node.id, { x: cx, y: cy, vx: 0, vy: 0 });
+    } else {
+      const angle = (i / nodes.length) * Math.PI * 2;
+      const r = Math.min(cx, cy) * 0.62;
+      positions.set(node.id, {
+        x: cx + Math.cos(angle) * r + (Math.random() - 0.5) * 12,
+        y: cy + Math.sin(angle) * r + (Math.random() - 0.5) * 12,
+        vx: 0,
+        vy: 0,
+      });
+    }
+  });
+
+  for (let iter = 0; iter < iterations; iter++) {
+    const nodeList = Array.from(positions.entries());
+    for (let a = 0; a < nodeList.length; a++) {
+      for (let b = a + 1; b < nodeList.length; b++) {
+        const [, posA] = nodeList[a];
+        const [, posB] = nodeList[b];
+        const dx = posB.x - posA.x;
+        const dy = posB.y - posA.y;
+        const dist = Math.max(Math.sqrt(dx * dx + dy * dy), 1);
+        const force = 2400 / (dist * dist);
+        posA.vx -= (dx / dist) * force;
+        posA.vy -= (dy / dist) * force;
+        posB.vx += (dx / dist) * force;
+        posB.vy += (dy / dist) * force;
+      }
+    }
+    edges.forEach((edge) => {
+      const src = positions.get(edge.source);
+      const tgt = positions.get(edge.target);
+      if (!src || !tgt) return;
+      const dx = tgt.x - src.x;
+      const dy = tgt.y - src.y;
+      const dist = Math.max(Math.sqrt(dx * dx + dy * dy), 1);
+      const displacement = dist - 85;
+      const force = 0.04 * displacement;
+      const fx = (dx / dist) * force;
+      const fy = (dy / dist) * force;
+      if (edge.source !== currentNode?.id) { src.vx += fx; src.vy += fy; }
+      if (edge.target !== currentNode?.id) { tgt.vx -= fx; tgt.vy -= fy; }
+    });
+    positions.forEach((pos, id) => {
+      if (id === currentNode?.id) return;
+      pos.vx += (cx - pos.x) * 0.005;
+      pos.vy += (cy - pos.y) * 0.005;
+      pos.vx *= 0.82;
+      pos.vy *= 0.82;
+      pos.x = Math.max(28, Math.min(width - 28, pos.x + pos.vx));
+      pos.y = Math.max(28, Math.min(height - 28, pos.y + pos.vy));
+    });
+  }
+
+  return new Map(Array.from(positions.entries()).map(([id, p]) => [id, { x: p.x, y: p.y }]));
+}
 
 export default function ResourceAnnotationPage() {
   const pathname = usePathname();
@@ -157,6 +337,8 @@ export default function ResourceAnnotationPage() {
   const [aiSummary, setAiSummary] = useState<ResourceSummary | null>(null);
   const [citations, setCitations] = useState<ResourceCitation[]>([]);
   const [graph, setGraph] = useState<ResourceGraph | null>(null);
+  const [aiErrors, setAiErrors] = useState<AiFeatureErrors>({});
+  const [summaryEnvelope, setSummaryEnvelope] = useState<SummaryEnvelope | null>(null);
 
   const loadAnnotations = useCallback(async (resource: Resource) => {
     setLoadingAnnotations(true);
@@ -174,34 +356,76 @@ export default function ResourceAnnotationPage() {
     }
   }, []);
 
-  const loadAiFeatures = useCallback(async (resource: Resource) => {
+  const loadAiFeatures = useCallback(async (resource: Resource, options: LoadAiOptions = {}) => {
+    const { preserveContent = false, silent = false } = options;
     if (!isPdf(resource)) {
       setAiStatus(null);
       setAiSummary(null);
       setCitations([]);
       setGraph(null);
+      setAiErrors({});
       return;
     }
-    setAiLoading(true);
-    try {
-      const [statusResponse, summaryResponse, citationsResponse, graphResponse] = await Promise.all([
-        resourceAiApi.status(resource.id),
-        resourceAiApi.summary(resource.id),
-        resourceAiApi.citations(resource.id),
-        resourceAiApi.graph(resource.id, { includeExternal: "true", minConfidence: "0", limit: "50" }),
-      ]);
-      setAiStatus(statusResponse.data ?? null);
-      setAiSummary(summaryResponse.data?.summary ?? null);
-      setCitations(Array.isArray(citationsResponse.data) ? citationsResponse.data : []);
-      setGraph(graphResponse.data ?? null);
-    } catch (error: unknown) {
+    if (!silent) setAiLoading(true);
+    if (!preserveContent) {
       setAiStatus(null);
       setAiSummary(null);
+      setSummaryEnvelope(null);
       setCitations([]);
       setGraph(null);
-      toast.error(error instanceof Error ? error.message : "Could not load AI reading features");
-    } finally {
-      setAiLoading(false);
+      setAiErrors({});
+    }
+
+    const [statusResult, summaryResult, citationsResult, graphResult] = await Promise.allSettled([
+      resourceAiApi.status(resource.id),
+      resourceAiApi.summary(resource.id),
+      resourceAiApi.citations(resource.id),
+      resourceAiApi.graph(resource.id, { includeExternal: "true", minConfidence: "0", limit: "50" }),
+    ]);
+
+    const nextErrors: AiFeatureErrors = {};
+
+    if (statusResult.status === "fulfilled") {
+      setAiStatus(statusResult.value.data ?? null);
+    } else {
+      nextErrors.status = errorMessage(statusResult.reason, "Could not load AI status");
+      setAiStatus(null);
+    }
+
+    if (summaryResult.status === "fulfilled") {
+      // Backend returns { resourceId, status, summaryStatus, summary: {...} | null }
+      // summary is null when: (a) never processed, (b) isVisible=false (HIDDEN by teacher)
+      const env = summaryResult.value.data as SummaryEnvelope | null;
+      setSummaryEnvelope(env ?? null);
+      setAiSummary(env?.summary ?? null);
+    } else {
+      nextErrors.summary = errorMessage(summaryResult.reason, "Could not load AI summary");
+      setAiSummary(null);
+      setSummaryEnvelope(null);
+    }
+
+    if (citationsResult.status === "fulfilled") {
+      // Use defensive extractor to handle array or { citations: [...] } wrappers
+      setCitations(extractCitations(citationsResult.value.data));
+    } else {
+      nextErrors.citations = errorMessage(citationsResult.reason, "Could not load AI references");
+      setCitations([]);
+    }
+
+    if (graphResult.status === "fulfilled") {
+      const extracted = extractGraph(graphResult.value.data);
+      // Only store graph if it has edges (a graph with only the current node is not useful)
+      setGraph(extracted && (extracted.edges.length > 0) ? extracted : null);
+    } else {
+      nextErrors.graph = errorMessage(graphResult.reason, "Could not load citation graph");
+      setGraph(null);
+    }
+
+    setAiErrors(nextErrors);
+    if (!silent) setAiLoading(false);
+
+    if (!silent && Object.keys(nextErrors).length) {
+      toast.error("Some AI reading features could not load");
     }
   }, []);
 
@@ -267,6 +491,46 @@ export default function ResourceAnnotationPage() {
     };
   }, [selected, pdfFetchKey]);
 
+  // ─── Stable polling ref ────────────────────────────────────────────────────
+  // We use a ref-based interval so it is set ONCE when processing starts and
+  // cleared ONCE when a terminal status arrives — not cleared/reset on every
+  // render caused by aiStatus state updates (which was the previous bug).
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollSelectedRef = useRef<Resource | null>(null);
+
+  const stopPolling = useCallback(() => {
+    if (pollIntervalRef.current !== null) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
+  }, []);
+
+  const startPolling = useCallback((resource: Resource) => {
+    stopPolling(); // clear any previous interval first
+    pollSelectedRef.current = resource;
+    // Small initial delay so the backend has time to write the new status to DB
+    const kickoff = setTimeout(() => {
+      pollIntervalRef.current = setInterval(() => {
+        const res = pollSelectedRef.current;
+        if (!res) { stopPolling(); return; }
+        void loadAiFeatures(res, { preserveContent: true, silent: true });
+      }, 2500);
+    }, 800);
+    // Also store kickoff so we can cancel it too
+    return () => { clearTimeout(kickoff); stopPolling(); };
+  }, [loadAiFeatures, stopPolling]);
+
+  // Stop polling whenever a terminal status arrives in aiStatus
+  useEffect(() => {
+    if (!selected || !isPdf(selected)) { stopPolling(); return; }
+    const s = aiStatus?.status;
+    if (isAiTerminalStatus(s)) {
+      stopPolling();
+      setAiProcessing(false);
+    }
+  }, [aiStatus?.status, selected, stopPolling]);
+
+
   const goToPage = useCallback((page: number) => {
     if (!selected) return;
     const nextPage = Math.max(1, Math.floor(page));
@@ -292,7 +556,9 @@ export default function ResourceAnnotationPage() {
   }, [currentPage, goToPage]);
 
   const chooseResource = (resource: Resource) => {
+    stopPolling();
     setSelected(resource);
+    setAiProcessing(false);
     void loadAnnotations(resource);
     void loadAiFeatures(resource);
   };
@@ -304,12 +570,18 @@ export default function ResourceAnnotationPage() {
       if (mode === "summary") await resourceAiApi.regenerateSummary(selected.id);
       else if (mode === "citations") await resourceAiApi.reanalyzeCitations(selected.id);
       else await resourceAiApi.process(selected.id);
-      toast.success("AI reading features updated");
-      await loadAiFeatures(selected);
+      toast.success("AI reading started — processing in background");
+      // Start the stable polling loop — keeps running until terminal status arrives
+      startPolling(selected);
+      // Immediately refresh once (with a short delay) to update the stepper UI
+      setTimeout(() => {
+        void loadAiFeatures(selected, { preserveContent: true, silent: true });
+      }, 600);
     } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : "AI processing failed");
-    } finally {
       setAiProcessing(false);
+      stopPolling();
+      toast.error(errorMessage(error, "AI processing failed"));
+      await loadAiFeatures(selected, { preserveContent: true, silent: true });
     }
   };
 
@@ -349,15 +621,15 @@ export default function ResourceAnnotationPage() {
   const readerUrl = selected ? pdfObjectUrl : "";
 
   return (
-    <div className="flex min-h-[calc(100vh-3.5rem)] bg-zinc-100 text-foreground dark:bg-zinc-950">
-      <aside className="flex w-12 shrink-0 flex-col items-center gap-1 border-r border-border bg-background/95 py-2">
+    <div className="flex min-h-[calc(100vh-3.5rem)] bg-zinc-50 text-foreground dark:bg-zinc-950">
+      <aside className="flex w-11 shrink-0 flex-col items-center gap-0.5 border-r border-border bg-background py-2">
         <RailButton title="Documents" active={documentsOpen} onClick={() => setDocumentsOpen((value) => !value)}><RiBookOpenLine /></RailButton>
         <RailButton title="Notes" active={notesOpen} onClick={() => setNotesOpen((value) => !value)}><RiStickyNoteLine /></RailButton>
-        <RailButton title="AI reading" active={aiOpen} onClick={() => setAiOpen((value) => !value)}><RiBrainLine /></RailButton>
-        <RailButton title="Focus" active={focusMode} onClick={() => setFocusMode((value) => !value)}><RiFocus3Line /></RailButton>
-        <span className="my-1 h-px w-6 bg-border" />
-        <Link href={libraryHref} title="Resource library" className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"><RiBookOpenLine /></Link>
-        <Link href={uploadHref} title="Upload resource" className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"><RiAddLine /></Link>
+        <RailButton title="AI Reading" active={aiOpen} onClick={() => setAiOpen((value) => !value)}><RiBrainLine /></RailButton>
+        <RailButton title="Focus mode (F)" active={focusMode} onClick={() => setFocusMode((value) => !value)}><RiFocus3Line /></RailButton>
+        <span className="my-1.5 h-px w-5 bg-border" />
+        <Link href={libraryHref} title="Resource library" className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"><RiBookOpenLine /></Link>
+        <Link href={uploadHref} title="Upload resource" className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"><RiAddLine /></Link>
       </aside>
 
       <div className={cn(
@@ -365,10 +637,10 @@ export default function ResourceAnnotationPage() {
         focusMode || (!documentsOpen && !notesOpen)
           ? "grid-cols-1"
           : documentsOpen && notesOpen
-            ? "xl:grid-cols-[260px_minmax(0,1fr)_300px]"
+            ? "xl:grid-cols-[240px_minmax(0,1fr)_280px]"
             : documentsOpen
-              ? "xl:grid-cols-[260px_minmax(0,1fr)]"
-              : "xl:grid-cols-[minmax(0,1fr)_300px]",
+              ? "xl:grid-cols-[240px_minmax(0,1fr)]"
+              : "xl:grid-cols-[minmax(0,1fr)_280px]",
       )}>
         {!focusMode && documentsOpen && <DocumentLibrary resources={visibleResources} selected={selected} search={search} loading={loadingResources} onSearch={setSearch} onChoose={chooseResource} />}
 
@@ -400,8 +672,11 @@ export default function ResourceAnnotationPage() {
             aiTab={aiTab}
             aiStatus={aiStatus}
             aiSummary={aiSummary}
+            summaryEnvelope={summaryEnvelope}
             citations={citations}
             graph={graph}
+            aiErrors={aiErrors}
+            teacherMode={teacherMode}
             onToggleAi={() => setAiOpen((value) => !value)}
             onAiTab={setAiTab}
             onProcessAi={processAi}
@@ -434,23 +709,43 @@ function DocumentLibrary({ resources, selected, search, loading, onSearch, onCho
   onSearch: (value: string) => void;
   onChoose: (resource: Resource) => void;
 }) {
-  return <aside className="flex min-h-0 flex-col overflow-hidden border-r border-border bg-background">
-    <div className="border-b border-border p-3">
-      <div className="flex h-8 items-center gap-2 text-[11px] font-semibold"><RiBookOpenLine className="text-muted-foreground" />Documents</div>
-      <div className="relative mt-2"><RiSearchLine className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" /><input value={search} onChange={(event) => onSearch(event.target.value)} placeholder="Search" className="h-8 w-full rounded-md border border-border bg-muted/20 pl-8 pr-2 text-[11px] outline-none focus:border-teal-500/50" /></div>
-    </div>
-    <div className="flex-1 space-y-0.5 overflow-y-auto p-1.5">
-      {loading ? Array.from({ length: 7 }).map((_, index) => <div key={index} className="h-12 animate-pulse rounded-md bg-muted" />) : resources.length ? resources.map((resource) => (
-        <button key={resource.id} onClick={() => onChoose(resource)} className={cn("flex w-full items-center gap-2 rounded-md p-2 text-left transition-colors", selected?.id === resource.id ? "bg-teal-500/10 text-teal-700 dark:text-teal-200" : "hover:bg-muted")}>
-          <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[8px] font-black uppercase", isPdf(resource) ? "bg-rose-500/10 text-rose-600" : "bg-sky-500/10 text-sky-600")}>{isPdf(resource) ? "PDF" : resource.fileType.slice(0, 4)}</span>
-          <span className="min-w-0"><span className="block truncate text-[11px] font-semibold">{resource.title}</span><span className="mt-0.5 block text-[8px] font-bold uppercase text-muted-foreground">{resource.visibility ?? "Accessible"}</span></span>
-        </button>
-      )) : <p className="p-4 text-center text-[10px] text-muted-foreground">No documents</p>}
-    </div>
-  </aside>;
+  return (
+    <aside className="flex min-h-0 flex-col overflow-hidden border-r border-border bg-background">
+      <div className="border-b border-border p-3">
+        <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Documents</p>
+        <div className="relative">
+          <RiSearchLine className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[12px] text-muted-foreground" />
+          <input value={search} onChange={(event) => onSearch(event.target.value)} placeholder="Search…"
+            className="h-8 w-full rounded-md border border-border bg-muted/30 pl-8 pr-3 text-[11px] outline-none transition-colors focus:border-teal-500/60 focus:bg-background" />
+        </div>
+      </div>
+      <div className="flex-1 space-y-0.5 overflow-y-auto p-1.5">
+        {loading
+          ? Array.from({ length: 6 }).map((_, index) => <div key={index} className="h-12 animate-pulse rounded-md bg-muted" />)
+          : resources.length
+            ? resources.map((resource) => (
+                <button key={resource.id} onClick={() => onChoose(resource)}
+                  className={cn("flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-left transition-all",
+                    selected?.id === resource.id
+                      ? "bg-teal-50 text-teal-700 dark:bg-teal-950/40 dark:text-teal-300"
+                      : "text-foreground hover:bg-muted/60"
+                  )}>
+                  <span className={cn("flex h-7 w-7 shrink-0 items-center justify-center rounded text-[8px] font-black uppercase tracking-wider",
+                    isPdf(resource) ? "bg-rose-100 text-rose-600 dark:bg-rose-950/50" : "bg-sky-100 text-sky-600 dark:bg-sky-950/50"
+                  )}>{isPdf(resource) ? "PDF" : resource.fileType.slice(0, 4)}</span>
+                  <span className="min-w-0">
+                    <span className="block truncate text-[11px] font-medium">{resource.title}</span>
+                    <span className="mt-0.5 block text-[9px] uppercase tracking-wide text-muted-foreground">{resource.visibility ?? "Accessible"}</span>
+                  </span>
+                </button>
+              ))
+            : <p className="p-6 text-center text-[10px] text-muted-foreground">No documents found</p>}
+      </div>
+    </aside>
+  );
 }
 
-function ReaderWorkspace({ resource, readerUrl, readerLoading, readerError, currentPage, zoom, rotation, focusMode, documentsOpen, notesOpen, aiOpen, aiLoading, aiProcessing, aiTab, aiStatus, aiSummary, citations, graph, onGoToPage, onZoom, onRotate, onToggleFocus, onToggleDocuments, onToggleNotes, onToggleAi, onAiTab, onProcessAi, onLoaded, onError, onRetry, onAddNote }: {
+function ReaderWorkspace({ resource, readerUrl, readerLoading, readerError, currentPage, zoom, rotation, focusMode, documentsOpen, notesOpen, aiOpen, aiLoading, aiProcessing, aiTab, aiStatus, aiSummary, summaryEnvelope, citations, graph, aiErrors, teacherMode, onGoToPage, onZoom, onRotate, onToggleFocus, onToggleDocuments, onToggleNotes, onToggleAi, onAiTab, onProcessAi, onLoaded, onError, onRetry, onAddNote }: {
   resource: Resource;
   readerUrl: string;
   readerLoading: boolean;
@@ -467,8 +762,11 @@ function ReaderWorkspace({ resource, readerUrl, readerLoading, readerError, curr
   aiTab: "summary" | "citations" | "graph";
   aiStatus: ResourceAiStatus | null;
   aiSummary: ResourceSummary | null;
+  summaryEnvelope: SummaryEnvelope | null;
   citations: ResourceCitation[];
   graph: ResourceGraph | null;
+  aiErrors: AiFeatureErrors;
+  teacherMode: boolean;
   onGoToPage: (page: number) => void;
   onZoom: React.Dispatch<React.SetStateAction<number>>;
   onRotate: () => void;
@@ -484,43 +782,55 @@ function ReaderWorkspace({ resource, readerUrl, readerLoading, readerError, curr
   onAddNote: () => void;
 }) {
   const pdf = isPdf(resource);
-  return <>
-    <div className="flex h-12 items-center gap-1 border-b border-border bg-background/95 px-2 backdrop-blur">
-      <div className="flex min-w-0 flex-1 items-center gap-2 px-1">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-rose-500/10 text-rose-600"><RiFileTextLine /></span>
-        <div className="min-w-0">
-          <h2 className="truncate text-[12px] font-semibold">{resource.title}</h2>
-          <p className="text-[8px] font-bold uppercase text-muted-foreground">{resource.fileType} / {resource.visibility ?? "Accessible"}</p>
+  return (
+    <>
+      <div className="flex h-11 shrink-0 items-center gap-1.5 border-b border-border bg-background px-3">
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <span className={cn("flex h-6 w-6 shrink-0 items-center justify-center rounded text-[8px] font-black uppercase",
+            pdf ? "bg-rose-100 text-rose-600 dark:bg-rose-950/50" : "bg-sky-100 text-sky-600 dark:bg-sky-950/50"
+          )}>{pdf ? "PDF" : resource.fileType.slice(0, 3)}</span>
+          <div className="min-w-0">
+            <h2 className="truncate text-[12px] font-medium leading-tight">{resource.title}</h2>
+            <p className="text-[9px] uppercase tracking-wide text-muted-foreground">{resource.fileType} · {resource.visibility ?? "Accessible"}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-1">
+          <ToolbarButton title={documentsOpen ? "Collapse documents" : "Show documents"} active={documentsOpen} onClick={onToggleDocuments}><RiLayoutLeftLine /></ToolbarButton>
+          <ToolbarButton title={notesOpen ? "Collapse notes" : "Show notes"} active={notesOpen} onClick={onToggleNotes}><RiLayoutRightLine /></ToolbarButton>
+          {pdf && <ToolbarButton title={aiOpen ? "Hide AI panel" : "Show AI panel"} active={aiOpen} onClick={onToggleAi}><RiBrainLine /></ToolbarButton>}
+          <ToolbarButton title="Focus mode (F)" active={focusMode} onClick={onToggleFocus}><RiFocus3Line /></ToolbarButton>
+          <span className="mx-0.5 h-5 w-px bg-border" />
+          <a href={signedUrl(resource, false)} title="Download" className="flex h-7 w-7 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"><RiDownloadLine className="text-[13px]" /></a>
+          <button onClick={onAddNote} title="Add note (N)" className="flex h-7 items-center gap-1.5 rounded-md bg-teal-600 px-2.5 text-[10px] font-medium text-white transition-colors hover:bg-teal-700"><RiStickyNoteLine className="text-[12px]" />Note</button>
         </div>
       </div>
-      <ToolbarButton title={documentsOpen ? "Collapse accessible documents" : "Show accessible documents"} active={documentsOpen} onClick={onToggleDocuments}><RiLayoutLeftLine /></ToolbarButton>
-      <ToolbarButton title={notesOpen ? "Collapse notes" : "Show notes"} active={notesOpen} onClick={onToggleNotes}><RiLayoutRightLine /></ToolbarButton>
-      {pdf && <ToolbarButton title={aiOpen ? "Hide AI reading panel" : "Show AI reading panel"} active={aiOpen} onClick={onToggleAi}><RiBrainLine /></ToolbarButton>}
-      <ToolbarButton title="Focus reading mode (F)" active={focusMode} onClick={onToggleFocus}><RiFocus3Line /></ToolbarButton>
-      <a href={signedUrl(resource, false)} title="Download" className="flex h-8 w-8 items-center justify-center rounded-md border border-border text-muted-foreground hover:bg-muted hover:text-foreground"><RiDownloadLine /></a>
-      <button onClick={onAddNote} title="Add note" className="flex h-8 w-8 items-center justify-center rounded-md bg-teal-600 text-white hover:bg-teal-700"><RiStickyNoteLine /></button>
-    </div>
-    <div className="relative flex-1 overflow-auto bg-zinc-100 p-3 dark:bg-zinc-950">
-      {pdf ? <div className={cn("mx-auto grid min-h-[680px] items-start gap-4", aiOpen ? "xl:grid-cols-[minmax(0,1fr)_360px]" : "grid-cols-1")}>
-        <div className="relative min-h-[680px] w-full overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm dark:border-white/10 dark:bg-zinc-950">
-          {readerUrl && <NexoraPdfReader source={readerUrl} title={resource.title} page={currentPage} zoom={zoom} rotation={rotation} onPageChange={onGoToPage} onZoomChange={onZoom} onRotationChange={onRotate} onLoaded={onLoaded} onError={onError} />}
-          {readerLoading && <ReaderLoading />}
-          {readerError && <ReaderError onRetry={onRetry} />}
-        </div>
-        {aiOpen && <AiReadingPanel
-          loading={aiLoading}
-          processing={aiProcessing}
-          activeTab={aiTab}
-          status={aiStatus}
-          summary={aiSummary}
-          citations={citations}
-          graph={graph}
-          onTab={onAiTab}
-          onProcess={onProcessAi}
-        />}
-      </div> : <NativeDocument resource={resource} />}
-    </div>
-  </>;
+      <div className="relative flex-1 overflow-auto bg-zinc-50 p-4 dark:bg-zinc-950">
+        {pdf ? (
+          <div className={cn("mx-auto grid min-h-[640px] items-start gap-4", aiOpen ? "xl:grid-cols-[minmax(0,1fr)_340px]" : "grid-cols-1")}>
+            <div className="relative min-h-[640px] w-full overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm dark:border-white/8 dark:bg-zinc-900">
+              {readerUrl && <NexoraPdfReader source={readerUrl} title={resource.title} page={currentPage} zoom={zoom} rotation={rotation} onPageChange={onGoToPage} onZoomChange={onZoom} onRotationChange={onRotate} onLoaded={onLoaded} onError={onError} />}
+              {readerLoading && <ReaderLoading />}
+              {readerError && <ReaderError onRetry={onRetry} />}
+            </div>
+            {aiOpen && <AiReadingPanel
+              loading={aiLoading}
+              processing={aiProcessing}
+              activeTab={aiTab}
+              status={aiStatus}
+              summary={aiSummary}
+              summaryEnvelope={summaryEnvelope}
+              citations={citations}
+              graph={graph}
+              errors={aiErrors}
+              teacherMode={teacherMode}
+              onTab={onAiTab}
+              onProcess={onProcessAi}
+            />}
+          </div>
+        ) : <NativeDocument resource={resource} />}
+      </div>
+    </>
+  );
 }
 
 function NotesPanel({ activeTab, annotations, sharedAnnotations, currentNotes, loading, onTab, onDelete, onToggleShare, onGoToPage }: {
@@ -534,178 +844,785 @@ function NotesPanel({ activeTab, annotations, sharedAnnotations, currentNotes, l
   onToggleShare: (annotation: Annotation) => void;
   onGoToPage: (page: number) => void;
 }) {
-  return <aside className="flex min-h-0 flex-col overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
-    <div className="border-b border-border p-3"><div className="grid grid-cols-2 rounded-xl border border-border p-1">{(["mine", "shared"] as const).map((tab) => <button key={tab} onClick={() => onTab(tab)} className={cn("h-8 rounded-lg text-[9px] font-black", activeTab === tab ? "bg-foreground text-background" : "text-muted-foreground")}>{tab === "mine" ? `My notes (${annotations.length})` : `Shared (${sharedAnnotations.length})`}</button>)}</div></div>
-    <div className="flex-1 space-y-2 overflow-y-auto p-3">{loading ? Array.from({ length: 4 }).map((_, index) => <div key={index} className="h-28 animate-pulse rounded-xl bg-muted" />) : currentNotes.length ? currentNotes.map((annotation) => <NoteCard key={annotation.id} annotation={annotation} owned={activeTab === "mine"} onDelete={onDelete} onToggleShare={onToggleShare} onGoToPage={onGoToPage} />) : <div className="py-16 text-center"><RiStickyNoteLine className="mx-auto text-3xl text-muted-foreground/20" /><p className="mt-2 text-[10px] font-bold text-muted-foreground">No notes here yet</p></div>}</div>
-  </aside>;
+  return (
+    <aside className="flex min-h-0 flex-col overflow-hidden border-l border-border bg-background">
+      <div className="border-b border-border p-3">
+        <div className="flex gap-1 rounded-lg border border-border bg-muted/30 p-0.5">
+          {(["mine", "shared"] as const).map((tab) => (
+            <button key={tab} onClick={() => onTab(tab)}
+              className={cn("flex-1 rounded-md py-1.5 text-[9px] font-semibold uppercase tracking-wide transition-colors",
+                activeTab === tab ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+              )}>
+              {tab === "mine" ? `My notes (${annotations.length})` : `Shared (${sharedAnnotations.length})`}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="flex-1 space-y-2 overflow-y-auto p-3">
+        {loading
+          ? Array.from({ length: 3 }).map((_, index) => <div key={index} className="h-24 animate-pulse rounded-lg bg-muted" />)
+          : currentNotes.length
+            ? currentNotes.map((annotation) => <NoteCard key={annotation.id} annotation={annotation} owned={activeTab === "mine"} onDelete={onDelete} onToggleShare={onToggleShare} onGoToPage={onGoToPage} />)
+            : <div className="py-12 text-center"><RiStickyNoteLine className="mx-auto text-3xl text-muted-foreground/20" /><p className="mt-2 text-[10px] text-muted-foreground">No notes yet</p></div>}
+      </div>
+    </aside>
+  );
 }
 
 function ToolbarButton({ children, title, active, onClick }: { children: React.ReactNode; title: string; active?: boolean; onClick: () => void }) {
-  return <button title={title} onClick={onClick} className={cn("flex h-9 w-9 items-center justify-center rounded-lg border text-sm transition-colors", active ? "border-teal-500/30 bg-teal-500/10 text-teal-600" : "border-border text-muted-foreground hover:bg-muted hover:text-foreground")}>{children}</button>;
+  return <button title={title} onClick={onClick} className={cn("flex h-7 w-7 items-center justify-center rounded-md border text-[13px] transition-colors",
+    active ? "border-teal-200 bg-teal-50 text-teal-600 dark:border-teal-800 dark:bg-teal-950/40" : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+  )}>{children}</button>;
 }
 
 function RailButton({ children, title, active, onClick }: { children: React.ReactNode; title: string; active?: boolean; onClick: () => void }) {
-  return <button title={title} onClick={onClick} className={cn("flex h-9 w-9 items-center justify-center rounded-lg text-sm transition-colors", active ? "bg-teal-500/10 text-teal-600" : "text-muted-foreground hover:bg-muted hover:text-foreground")}>{children}</button>;
+  return <button title={title} onClick={onClick} className={cn("flex h-8 w-8 items-center justify-center rounded-md text-[13px] transition-colors",
+    active ? "bg-teal-50 text-teal-600 dark:bg-teal-950/40" : "text-muted-foreground hover:bg-muted hover:text-foreground"
+  )}>{children}</button>;
 }
 
 function ReaderLoading() {
-  return <div className="absolute inset-0 flex items-center justify-center bg-white/95"><div className="text-center"><RiLoader4Line className="mx-auto animate-spin text-3xl text-teal-600" /><p className="mt-3 text-[10px] font-black text-zinc-700">Opening paper...</p><p className="mt-1 text-[8px] text-zinc-500">Preparing secure PDF reader</p></div></div>;
+  return (
+    <div className="absolute inset-0 flex items-center justify-center bg-white/95 dark:bg-zinc-900/95">
+      <div className="text-center">
+        <RiLoader4Line className="mx-auto animate-spin text-2xl text-teal-600" />
+        <p className="mt-3 text-[11px] font-medium text-zinc-600 dark:text-zinc-400">Opening document…</p>
+      </div>
+    </div>
+  );
 }
 
 function ReaderError({ onRetry }: { onRetry: () => void }) {
-  return <div className="absolute inset-0 flex items-center justify-center bg-white p-8 text-center"><div><RiFileTextLine className="mx-auto text-5xl text-rose-300" /><p className="mt-4 text-[12px] font-black text-zinc-800">The paper could not be opened</p><p className="mt-2 max-w-sm text-[9px] leading-5 text-zinc-500">Retry the secure in-app reader. The paper will not be sent to the browser download manager.</p><div className="mt-4 flex justify-center"><button onClick={onRetry} className="flex h-9 items-center gap-2 rounded-xl bg-teal-600 px-4 text-[9px] font-bold text-white"><RiRefreshLine />Retry</button></div></div></div>;
+  return (
+    <div className="absolute inset-0 flex items-center justify-center p-8 text-center">
+      <div>
+        <RiFileTextLine className="mx-auto text-4xl text-rose-300" />
+        <p className="mt-4 text-[12px] font-semibold text-zinc-800 dark:text-zinc-200">Could not open document</p>
+        <p className="mt-1 max-w-xs text-[10px] leading-5 text-zinc-500">Retry the secure in-app reader.</p>
+        <button onClick={onRetry} className="mt-4 inline-flex h-8 items-center gap-1.5 rounded-lg bg-teal-600 px-4 text-[10px] font-medium text-white hover:bg-teal-700"><RiRefreshLine /> Retry</button>
+      </div>
+    </div>
+  );
 }
 
-function AiReadingPanel({ loading, processing, activeTab, status, summary, citations, graph, onTab, onProcess }: {
+// ─── Processing step definitions ─────────────────────────────────────────────
+const AI_STEPS = [
+  { key: "text",     label: "Extracting text",   statuses: ["TEXT_PROCESSING", "TEXT_EXTRACTED"] },
+  { key: "summary",  label: "Generating summary", statuses: ["SUMMARY_PROCESSING", "SUMMARY_READY"] },
+  { key: "refs",     label: "Parsing references", statuses: ["CITATION_PROCESSING", "CITATIONS_READY"] },
+  { key: "graph",    label: "Building graph",     statuses: ["GRAPH_READY"] },
+] as const;
+
+type AiStepKey = typeof AI_STEPS[number]["key"];
+
+function getActiveStep(status?: string | null): AiStepKey | null {
+  if (!status) return null;
+  for (const step of AI_STEPS) {
+    if ((step.statuses as readonly string[]).includes(status)) return step.key;
+  }
+  return null;
+}
+
+function isStepDone(stepKey: AiStepKey, currentStatus?: string | null): boolean {
+  const order = AI_STEPS.map((s) => s.key);
+  const currentIdx = AI_STEPS.findIndex((s) => (s.statuses as readonly string[]).includes(currentStatus ?? ""));
+  const stepIdx = order.indexOf(stepKey);
+  return currentIdx > stepIdx;
+}
+
+function AiReadingPanel({ loading, processing, activeTab, status, summary, summaryEnvelope, citations, graph, errors, onTab, onProcess, teacherMode }: {
   loading: boolean;
   processing: boolean;
   activeTab: "summary" | "citations" | "graph";
   status: ResourceAiStatus | null;
   summary: ResourceSummary | null;
+  summaryEnvelope: SummaryEnvelope | null;
   citations: ResourceCitation[];
   graph: ResourceGraph | null;
+  errors: AiFeatureErrors;
+  teacherMode: boolean;
   onTab: (tab: "summary" | "citations" | "graph") => void;
   onProcess: (mode?: "full" | "summary" | "citations") => void;
 }) {
-  return <aside className="flex max-h-[760px] min-h-[680px] flex-col overflow-hidden rounded-xl border border-white/10 bg-zinc-950 text-zinc-100 shadow-xl">
-    <div className="border-b border-white/10 p-3">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wider text-teal-300"><RiBrainLine />AI reading</p>
-          <p className="mt-1 text-[8px] text-zinc-500">Verify generated content with the original PDF.</p>
+  const rawStatus = status?.status;
+  const busy = processing || isAiProcessingStatus(rawStatus);
+  const notStarted = !rawStatus || rawStatus === "PENDING" || rawStatus === "NOT_PROCESSED";
+  const isFailed = rawStatus === "FAILED";
+
+  return (
+    <aside className="flex max-h-[760px] min-h-[640px] flex-col overflow-hidden rounded-lg border border-border bg-background shadow-sm">
+      {/* Header */}
+      <div className="border-b border-border p-3">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5">
+            <RiBrainLine className="text-teal-600 dark:text-teal-400" />
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-teal-600 dark:text-teal-400">AI Reading</span>
+            {citations.length > 0 && <span className="rounded-full bg-teal-100 px-1.5 py-0.5 text-[7px] font-bold text-teal-700 dark:bg-teal-950/50 dark:text-teal-400">{citations.length} refs</span>}
+          </div>
+          <button disabled={busy} onClick={() => onProcess("full")}
+            className="flex h-7 items-center gap-1.5 rounded-md bg-teal-600 px-2.5 text-[9px] font-medium text-white transition-colors hover:bg-teal-700 disabled:opacity-50">
+            {busy ? <RiLoader4Line className="animate-spin text-[11px]" /> : <RiPlayCircleLine className="text-[11px]" />}
+            {busy ? "Working…" : notStarted ? "Process PDF" : "Re-process"}
+          </button>
         </div>
-        <button disabled={processing} onClick={() => onProcess(activeTab === "summary" ? "summary" : activeTab === "citations" ? "citations" : "full")} className="flex h-8 items-center gap-1.5 rounded-lg bg-teal-600 px-3 text-[8px] font-black text-white disabled:opacity-50">
-          {processing ? <RiLoader4Line className="animate-spin" /> : <RiPlayCircleLine />}Process
-        </button>
+        {/* Tab bar */}
+        <div className="mt-2.5 flex gap-0.5 rounded-lg border border-border bg-muted/30 p-0.5">
+          {(["summary", "citations", "graph"] as const).map((tab) => (
+            <button key={tab} onClick={() => onTab(tab)}
+              className={cn("flex flex-1 items-center justify-center gap-1 rounded-md py-1.5 text-[9px] font-semibold uppercase tracking-wide transition-colors",
+                activeTab === tab ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+              )}>
+              {tab === "summary" && <RiBrainLine />}{tab === "citations" && <RiLinksLine />}{tab === "graph" && <RiMindMap />}
+              {tab === "summary" ? "Summary" : tab === "citations" ? `Refs${citations.length ? ` (${citations.length})` : ""}` : "Graph"}
+            </button>
+          ))}
+        </div>
+        {/* Status: progress stepper during processing, compact badge otherwise */}
+        {busy ? (
+          <ProcessingStepper status={rawStatus} />
+        ) : (
+          <StatusBadge status={rawStatus} error={errors.status} loading={loading} processingError={status?.processingError} />
+        )}
       </div>
-      <div className="mt-3 grid grid-cols-3 rounded-lg border border-white/10 p-1">
-        {([
-          ["summary", <RiBrainLine key="s" />, "Summary"],
-          ["citations", <RiLinksLine key="c" />, "Refs"],
-          ["graph", <RiMindMap key="g" />, "Graph"],
-        ] as const).map(([tab, icon, label]) => (
-          <button key={tab} onClick={() => onTab(tab)} className={cn("flex h-8 items-center justify-center gap-1 rounded-md text-[8px] font-black", activeTab === tab ? "bg-white text-zinc-950" : "text-zinc-400 hover:bg-white/10")}>{icon}{label}</button>
-        ))}
+      {/* Body */}
+      <div className="flex-1 overflow-y-auto p-3">
+        {loading ? <AiSkeleton />
+          : busy && !summary && !citations.length ? <AiProcessingOverlay status={rawStatus} />
+          : notStarted ? <NotProcessedState onProcess={() => onProcess("full")} processing={busy} />
+          : isFailed ? <FailedState error={status?.processingError} onRetry={() => onProcess("full")} processing={busy} />
+          : activeTab === "summary" ? <SummaryPanel summary={summary} summaryEnvelope={summaryEnvelope} error={errors.summary} onRegenerate={() => onProcess("summary")} processing={busy} teacherMode={teacherMode} resourceId={summaryEnvelope?.resourceId} />
+          : activeTab === "citations" ? <CitationList citations={citations} error={errors.citations} onReanalyze={() => onProcess("full")} processing={busy} />
+          : <CitationGraph graph={graph} citations={citations} error={errors.graph} onProcess={() => onProcess("full")} processing={busy} />}
       </div>
-      <StatusStrip status={status} loading={loading} />
-    </div>
-    <div className="flex-1 overflow-y-auto p-3">
-      {loading ? <AiSkeleton /> : activeTab === "summary" ? <SummaryPanel summary={summary} onRegenerate={() => onProcess("summary")} processing={processing} /> : activeTab === "citations" ? <CitationList citations={citations} onReanalyze={() => onProcess("citations")} processing={processing} /> : <CitationGraph graph={graph} citations={citations} />}
-    </div>
-  </aside>;
+    </aside>
+  );
 }
 
-function StatusStrip({ status, loading }: { status: ResourceAiStatus | null; loading: boolean }) {
-  const label = loading ? "Loading" : status?.status ?? "Not processed";
-  const tone = label === "FAILED" ? "border-rose-500/30 bg-rose-500/10 text-rose-300" : label.includes("READY") || label === "GRAPH_READY" ? "border-teal-500/30 bg-teal-500/10 text-teal-300" : "border-amber-500/30 bg-amber-500/10 text-amber-200";
-  return <div className={cn("mt-3 rounded-lg border px-3 py-2 text-[8px] font-black uppercase tracking-wider", tone)}>
-    <div className="flex items-center justify-between gap-2"><span>{label.replaceAll("_", " ")}</span><span>{status?.citations?.count ?? 0} refs</span></div>
-    {status?.processingError && <p className="mt-1 normal-case tracking-normal text-rose-200">{status.processingError}</p>}
-  </div>;
+function ProcessingStepper({ status }: { status?: string | null }) {
+  const active = getActiveStep(status);
+  return (
+    <div className="relative mt-3 overflow-hidden rounded-xl border border-teal-200/60 bg-gradient-to-br from-teal-50/80 via-white to-cyan-50/80 p-3.5 shadow-sm dark:border-teal-900/40 dark:from-teal-950/30 dark:via-background dark:to-cyan-950/30">
+      {/* Animated shimmer band */}
+      <div className="pointer-events-none absolute inset-x-0 -top-1 h-1 bg-gradient-to-r from-transparent via-teal-400/70 to-transparent [animation:shimmer_2.2s_linear_infinite]" />
+      <div className="flex items-center justify-between">
+        {AI_STEPS.map((step, i) => {
+          const done = isStepDone(step.key, status);
+          const current = active === step.key;
+          return (
+            <div key={step.key} className="flex flex-1 items-center gap-1.5 last:flex-none">
+              <div className="relative">
+                <div className={cn("flex h-6 w-6 items-center justify-center rounded-full text-[9px] font-bold transition-all duration-500",
+                  done ? "bg-teal-600 text-white shadow-md shadow-teal-600/30"
+                    : current ? "bg-gradient-to-br from-teal-500 to-cyan-500 text-white shadow-lg shadow-teal-500/40 ring-2 ring-teal-300/60"
+                    : "bg-muted text-muted-foreground"
+                )}>
+                  {done ? <RiCheckLine className="text-[11px]" />
+                    : current ? <RiLoader4Line className="animate-spin text-[11px]" />
+                    : i + 1}
+                </div>
+                {current && (
+                  <span className="absolute inset-0 -z-10 animate-ping rounded-full bg-teal-400/40" />
+                )}
+              </div>
+              <span className={cn("text-[9px] font-medium transition-colors",
+                done ? "text-teal-700 dark:text-teal-400"
+                  : current ? "text-teal-700 dark:text-teal-300"
+                  : "text-muted-foreground/70"
+              )}>
+                {step.label}
+              </span>
+              {i < AI_STEPS.length - 1 && (
+                <span className={cn("mx-1 h-px flex-1 transition-colors",
+                  done ? "bg-teal-500/60" : "bg-border"
+                )} />
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <style jsx>{`
+        @keyframes shimmer {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(100%); }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+function StatusBadge({ status, error, loading, processingError }: { status?: string | null; error?: string; loading: boolean; processingError?: string | null }) {
+  const label = error ? "Status unavailable" : loading ? "Loading…" : aiStatusLabel(status);
+  const isError = error || status === "FAILED";
+  const isReady = isAiReadyStatus(status);
+  if (!status && !loading && !error) return null; // hide if nothing to show
+  return (
+    <div className={cn("mt-2 rounded-md px-2.5 py-1.5 text-[9px] font-medium",
+      isError ? "bg-rose-50 text-rose-600 dark:bg-rose-950/30 dark:text-rose-400"
+        : isReady ? "bg-teal-50 text-teal-700 dark:bg-teal-950/30 dark:text-teal-400"
+        : "bg-muted/60 text-muted-foreground"
+    )}>
+      <span>{label}</span>
+      {processingError && isError && <p className="mt-0.5 font-normal opacity-80">{processingError}</p>}
+    </div>
+  );
+}
+
+/**
+ * Full-panel aesthetic loader shown while the backend is actively processing
+ * the PDF. Replaces the regular tab body so the user sees a focused,
+ * non-distracting loading experience instead of stale or empty content.
+ */
+function AiProcessingOverlay({ status }: { status?: string | null }) {
+  const active = getActiveStep(status);
+  const activeStep = AI_STEPS.find((s) => s.key === active);
+  const headline =
+    activeStep?.key === "text" ? "Reading your paper" :
+    activeStep?.key === "summary" ? "Drafting a bilingual summary" :
+    activeStep?.key === "refs" ? "Resolving citations" :
+    activeStep?.key === "graph" ? "Mapping connected papers" :
+    "Starting AI reading…";
+  const subline =
+    activeStep?.key === "text" ? "Extracting structured text from every page." :
+    activeStep?.key === "summary" ? "Building an academic summary in English and বাংলা." :
+    activeStep?.key === "refs" ? "Looking up DOIs, titles, and venues for each reference." :
+    activeStep?.key === "graph" ? "Linking this paper to the wider research graph." :
+    "Warming up the reader — this usually takes 30–60 seconds.";
+
+  return (
+    <div className="relative flex min-h-[420px] flex-col items-center justify-center overflow-hidden rounded-xl border border-teal-200/50 bg-gradient-to-br from-white via-teal-50/40 to-cyan-50/40 px-6 py-10 text-center dark:border-teal-900/30 dark:from-background dark:via-teal-950/20 dark:to-cyan-950/20">
+      {/* Animated background blobs */}
+      <div className="pointer-events-none absolute -left-12 -top-12 h-40 w-40 rounded-full bg-teal-300/25 blur-3xl [animation:floatA_7s_ease-in-out_infinite]" />
+      <div className="pointer-events-none absolute -bottom-16 -right-10 h-44 w-44 rounded-full bg-cyan-300/25 blur-3xl [animation:floatB_9s_ease-in-out_infinite]" />
+
+      {/* Pulsing brain icon */}
+      <div className="relative">
+        <div className="absolute inset-0 -z-10 animate-ping rounded-full bg-teal-400/30" />
+        <div className="absolute inset-0 -z-10 animate-pulse rounded-full bg-cyan-400/20 [animation-delay:300ms]" />
+        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-teal-500 via-teal-600 to-cyan-600 text-white shadow-2xl shadow-teal-500/40 ring-4 ring-teal-200/50 dark:ring-teal-900/40">
+          <RiBrainLine className="h-9 w-9 animate-pulse" />
+        </div>
+      </div>
+
+      <h3 className="mt-6 text-[15px] font-semibold tracking-tight text-foreground">{headline}</h3>
+      <p className="mt-1.5 max-w-xs text-[10px] leading-relaxed text-muted-foreground">{subline}</p>
+
+      {/* Step list */}
+      <div className="mt-7 w-full max-w-xs space-y-2">
+        {AI_STEPS.map((step) => {
+          const done = isStepDone(step.key, status);
+          const current = active === step.key;
+          return (
+            <div key={step.key} className={cn(
+              "flex items-center gap-2.5 rounded-lg border px-3 py-2 text-left transition-all duration-500",
+              done ? "border-teal-200 bg-teal-50/70 dark:border-teal-900/40 dark:bg-teal-950/30"
+                : current ? "border-teal-300 bg-white shadow-sm shadow-teal-200/60 dark:border-teal-800 dark:bg-teal-950/40"
+                : "border-border/60 bg-background/40 opacity-60"
+            )}>
+              <div className={cn(
+                "flex h-5 w-5 flex-none items-center justify-center rounded-full text-[8px] font-bold transition-all",
+                done ? "bg-teal-600 text-white"
+                  : current ? "bg-gradient-to-br from-teal-500 to-cyan-500 text-white"
+                  : "bg-muted text-muted-foreground"
+              )}>
+                {done ? <RiCheckLine className="text-[9px]" />
+                  : current ? <RiLoader4Line className="animate-spin text-[9px]" />
+                  : null}
+              </div>
+              <span className={cn(
+                "text-[10px] font-medium transition-colors",
+                done ? "text-teal-700 dark:text-teal-400"
+                  : current ? "text-foreground"
+                  : "text-muted-foreground"
+              )}>
+                {step.label}
+              </span>
+              {current && (
+                <span className="ml-auto flex gap-0.5">
+                  <span className="h-1 w-1 animate-bounce rounded-full bg-teal-500 [animation-delay:0ms]" />
+                  <span className="h-1 w-1 animate-bounce rounded-full bg-teal-500 [animation-delay:150ms]" />
+                  <span className="h-1 w-1 animate-bounce rounded-full bg-teal-500 [animation-delay:300ms]" />
+                </span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <p className="mt-7 text-[9px] font-medium uppercase tracking-wider text-muted-foreground/80">
+        Please don't close this panel
+      </p>
+
+      <style jsx>{`
+        @keyframes floatA {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          50% { transform: translate(20px, 30px) scale(1.1); }
+        }
+        @keyframes floatB {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          50% { transform: translate(-25px, -20px) scale(1.15); }
+        }
+      `}</style>
+    </div>
+  );
 }
 
 function AiSkeleton() {
-  return <div className="space-y-3">{Array.from({ length: 5 }).map((_, index) => <div key={index} className="h-20 animate-pulse rounded-lg bg-white/10" />)}</div>;
+  return <div className="space-y-2.5">{Array.from({ length: 4 }).map((_, i) => <div key={i} className={cn("animate-pulse rounded-lg bg-muted", i === 0 ? "h-24" : "h-16")} />)}</div>;
 }
 
-function SummaryPanel({ summary, processing, onRegenerate }: { summary: ResourceSummary | null; processing: boolean; onRegenerate: () => void }) {
+function NotProcessedState({ onProcess, processing }: { onProcess: () => void; processing: boolean }) {
+  return (
+    <div className="relative flex min-h-72 flex-col items-center justify-center overflow-hidden rounded-xl border border-dashed border-teal-300/60 bg-gradient-to-br from-teal-50/50 via-white to-cyan-50/40 p-6 text-center dark:border-teal-900/40 dark:from-teal-950/20 dark:via-background dark:to-cyan-950/20">
+      <div className="pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full bg-teal-300/20 blur-2xl" />
+      <div className="pointer-events-none absolute -bottom-10 -left-8 h-32 w-32 rounded-full bg-cyan-300/20 blur-2xl" />
+      <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-500 to-cyan-600 text-white shadow-lg shadow-teal-500/30 ring-2 ring-teal-200/60 dark:ring-teal-900/40">
+        <RiBrainLine className="text-2xl" />
+      </div>
+      <p className="mt-4 text-[13px] font-semibold tracking-tight">Generate AI reading</p>
+      <p className="mx-auto mt-1.5 max-w-60 text-[9px] leading-[1.6] text-muted-foreground">
+        Extract a bilingual summary, resolve the reference list, and build a citation graph for this paper.
+      </p>
+      <button disabled={processing} onClick={onProcess}
+        className="group relative mt-6 inline-flex h-10 items-center gap-2 overflow-hidden rounded-xl bg-gradient-to-r from-teal-600 via-teal-600 to-cyan-600 px-6 text-[11px] font-semibold text-white shadow-lg shadow-teal-600/30 transition-all hover:shadow-xl hover:shadow-teal-600/40 disabled:opacity-50">
+        <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+        {processing ? <RiLoader4Line className="animate-spin" /> : <RiSparklingLine className="transition-transform group-hover:rotate-12" />}
+        {processing ? "Starting…" : "Generate AI summary"}
+      </button>
+      <p className="mt-4 flex items-center gap-1.5 text-[8px] text-muted-foreground">
+        <RiTimeLine /> Takes 30–60 seconds · Result is saved and shared with all users
+      </p>
+    </div>
+  );
+}
+
+function FailedState({ error, onRetry, processing }: { error?: string | null; onRetry: () => void; processing: boolean }) {
+  return (
+    <div className="flex min-h-72 flex-col items-center justify-center rounded-lg border border-dashed border-rose-200 bg-rose-50/40 p-6 text-center dark:border-rose-900/30 dark:bg-rose-950/20">
+      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-rose-100 dark:bg-rose-950/50">
+        <RiAlertLine className="text-xl text-rose-500" />
+      </div>
+      <p className="mt-3 text-[12px] font-semibold text-rose-700 dark:text-rose-400">Processing failed</p>
+      {error && <p className="mx-auto mt-1.5 max-w-52 text-[9px] leading-[1.6] text-rose-600/80 dark:text-rose-400/70">{error}</p>}
+      <button disabled={processing} onClick={onRetry}
+        className="mt-5 flex h-9 items-center gap-2 rounded-lg bg-teal-600 px-5 text-[10px] font-medium text-white transition-colors hover:bg-teal-700 disabled:opacity-50">
+        {processing ? <RiLoader4Line className="animate-spin" /> : <RiRefreshLine />}
+        {processing ? "Retrying…" : "Retry processing"}
+      </button>
+    </div>
+  );
+}
+
+function SummaryPanel({ summary, summaryEnvelope, error, processing, onRegenerate, teacherMode, resourceId }: {
+  summary: ResourceSummary | null;
+  summaryEnvelope: SummaryEnvelope | null;
+  error?: string;
+  processing: boolean;
+  teacherMode: boolean;
+  resourceId?: string;
+  onRegenerate: () => void;
+}) {
+  const [togglingVisibility, setTogglingVisibility] = useState(false);
+  const [lang, setLang] = useState<"en" | "bn">("en");
+
+  const toggleVisibility = async () => {
+    if (!resourceId) return;
+    const makingVisible = summaryEnvelope?.summaryStatus === "HIDDEN";
+    setTogglingVisibility(true);
+    try {
+      await resourceAiApi.setSummaryVisibility(resourceId, makingVisible);
+      toast.success(makingVisible ? "Summary is now visible to students" : "Summary hidden from students");
+      onRegenerate(); // Reload summary state
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Could not update summary visibility");
+    } finally {
+      setTogglingVisibility(false);
+    }
+  };
+
+  if (error) {
+    return <EmptyAiState icon={<RiAlertLine />} title="Summary unavailable" text={error} actionLabel="Try again" loading={processing} onAction={onRegenerate} />;
+  }
+  if (summaryEnvelope?.summaryStatus === "HIDDEN") {
+    return (
+      <div className="space-y-3">
+        {teacherMode && (
+          <div className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50/60 p-3 dark:border-amber-900/40 dark:bg-amber-950/20">
+            <div>
+              <p className="text-[9px] font-semibold text-amber-700 dark:text-amber-400">Summary is hidden from students</p>
+              <p className="text-[8px] text-amber-600/70 dark:text-amber-500/70">Click to make it visible to all users</p>
+            </div>
+            <button onClick={toggleVisibility} disabled={togglingVisibility} className="flex h-7 items-center gap-1 rounded-md bg-amber-600 px-2.5 text-[8px] font-medium text-white hover:bg-amber-700 disabled:opacity-50">
+              {togglingVisibility ? <RiLoader4Line className="animate-spin" /> : <RiCheckLine />} Publish
+            </button>
+          </div>
+        )}
+        <EmptyAiState icon={<RiBrainLine />} title="Summary is hidden" text="The summary for this resource has been set to private by the teacher. Contact your instructor if you need access." />
+      </div>
+    );
+  }
   if (!summary) {
     return <EmptyAiState icon={<RiBrainLine />} title="No summary yet" text="Process this PDF to create a structured academic summary." actionLabel="Generate summary" loading={processing} onAction={onRegenerate} />;
   }
+
+  // Pick the Bangla field if it's actually populated, otherwise gracefully
+  // fall back to the English equivalent so the UI never renders empty.
+  const pick = (en?: string | null, bn?: string | null): string | null | undefined => {
+    if (lang === "bn") return bn && bn.trim().length > 0 ? bn : en;
+    return en;
+  };
+  const pickList = (en: string[], bn?: string[]): string[] => {
+    if (lang === "bn" && bn && bn.length > 0) return bn;
+    return en;
+  };
+
+  const labels = {
+    en: { goals: "Goals", methods: "Methods", results: "Results", conclusions: "Conclusions" },
+    bn: { goals: "লক্ষ্য", methods: "পদ্ধতি", results: "ফলাফল", conclusions: "উপসংহার" },
+  } as const;
+  const sectionLabels = labels[lang];
+
   const sections = [
-    ["Goals", summary.goals],
-    ["Methods", summary.methods],
-    ["Results", summary.results],
-    ["Conclusions", summary.conclusions],
+    [sectionLabels.goals, pick(summary.goals, summary.goalsBn)],
+    [sectionLabels.methods, pick(summary.methods, summary.methodsBn)],
+    [sectionLabels.results, pick(summary.results, summary.resultsBn)],
+    [sectionLabels.conclusions, pick(summary.conclusions, summary.conclusionsBn)],
   ].filter(([, value]) => value);
-  return <div className="space-y-3">
-    <div className="rounded-lg border border-teal-500/20 bg-teal-500/10 p-3">
-      <p className="text-[8px] font-black uppercase text-teal-300">Professional summary</p>
-      <p className="mt-2 text-[10px] leading-5 text-zinc-100">{summary.professionalSummary}</p>
+
+  const sectionLabel = {
+    summary: lang === "bn" ? "সারসংক্ষেপ" : "Summary",
+    keyContributions: lang === "bn" ? "মূল অবদান" : "Key Contributions",
+    limitations: lang === "bn" ? "সীমাবদ্ধতা" : "Limitations",
+    keywords: lang === "bn" ? "মূল শব্দ" : "Keywords",
+  } as const;
+
+  const hasBangla =
+    Boolean(summary.professionalSummaryBn && summary.professionalSummaryBn.trim().length > 0) ||
+    Boolean(summary.goalsBn && summary.goalsBn.trim().length > 0) ||
+    Boolean(summary.keyContributionsBn && summary.keyContributionsBn.length > 0);
+
+  return (
+    <div className="space-y-2.5">
+      {/* Teacher visibility control */}
+      {teacherMode && summaryEnvelope?.summaryStatus === "COMPLETED" && (
+        <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-3 py-2">
+          <span className="text-[8px] font-medium text-muted-foreground">Visible to students</span>
+          <button onClick={toggleVisibility} disabled={togglingVisibility} className="flex h-6 items-center gap-1 rounded-md border border-border bg-background px-2 text-[8px] font-medium text-muted-foreground hover:bg-muted disabled:opacity-50">
+            {togglingVisibility ? <RiLoader4Line className="animate-spin" /> : <RiCheckLine className="text-teal-600" />} Visible
+          </button>
+        </div>
+      )}
+
+      {/* Language toggle — falls back to English automatically if the Bangla
+          field is empty. Persists in component state per session. */}
+      <div className="flex items-center justify-between rounded-lg border border-border bg-muted/20 px-3 py-1.5">
+        <span className="text-[8px] font-medium uppercase tracking-widest text-muted-foreground">
+          {lang === "bn" ? "ভাষা" : "Language"}
+        </span>
+        <div
+          role="tablist"
+          aria-label="Summary language"
+          className="inline-flex h-6 items-center gap-0.5 rounded-md border border-border bg-background p-0.5"
+        >
+          <button
+            role="tab"
+            aria-selected={lang === "en"}
+            onClick={() => setLang("en")}
+            className={cn(
+              "h-5 rounded px-2 text-[9px] font-semibold transition-colors",
+              lang === "en"
+                ? "bg-teal-600 text-white shadow-sm"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            EN
+          </button>
+          <button
+            role="tab"
+            aria-selected={lang === "bn"}
+            onClick={() => setLang("bn")}
+            disabled={!hasBangla}
+            title={hasBangla ? "বাংলা সারসংক্ষেপ দেখুন" : "বাংলা অনুবাদ এখনো প্রস্তুত নয়"}
+            className={cn(
+              "h-5 rounded px-2 text-[9px] font-semibold transition-colors",
+              lang === "bn"
+                ? "bg-teal-600 text-white shadow-sm"
+                : "text-muted-foreground hover:text-foreground",
+              !hasBangla && "cursor-not-allowed opacity-40 hover:text-muted-foreground",
+            )}
+          >
+            বাংলা
+          </button>
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-teal-100 bg-teal-50/60 p-3 dark:border-teal-900/40 dark:bg-teal-950/20">
+        <p className="text-[9px] font-semibold uppercase tracking-widest text-teal-700 dark:text-teal-400">{sectionLabel.summary}</p>
+        <p
+          dir={lang === "bn" ? "ltr" : "ltr"}
+          lang={lang === "bn" ? "bn" : "en"}
+          className={cn(
+            "mt-1.5 text-[10px] leading-5 text-foreground",
+            lang === "bn" && "font-bn",
+          )}
+        >
+          {pick(summary.professionalSummary, summary.professionalSummaryBn)}
+        </p>
+      </div>
+      {sections.map(([label, value]) => (
+        <section key={label} className="rounded-lg border border-border p-3">
+          <p className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground">{label}</p>
+          <p
+            lang={lang === "bn" ? "bn" : "en"}
+            className={cn(
+              "mt-1 text-[10px] leading-5 text-foreground/80",
+              lang === "bn" && "font-bn",
+            )}
+          >
+            {value}
+          </p>
+        </section>
+      ))}
+      <ChipSection label={sectionLabel.keyContributions} items={pickList(summary.keyContributions, summary.keyContributionsBn)} />
+      <ChipSection label={sectionLabel.limitations} items={pickList(summary.limitations, summary.limitationsBn)} />
+      <ChipSection label={sectionLabel.keywords} items={pickList(summary.keywords, summary.keywordsBn)} compact />
+      <button disabled={processing} onClick={onRegenerate} className="flex h-8 w-full items-center justify-center gap-1.5 rounded-lg border border-border text-[9px] font-medium text-muted-foreground transition-colors hover:bg-muted disabled:opacity-50">
+        {processing ? <RiLoader4Line className="animate-spin" /> : <RiRefreshLine />}Regenerate
+      </button>
     </div>
-    {sections.map(([label, value]) => <section key={label} className="rounded-lg border border-white/10 p-3"><p className="text-[8px] font-black uppercase text-zinc-500">{label}</p><p className="mt-1 text-[9px] leading-5 text-zinc-300">{value}</p></section>)}
-    <ChipSection label="Contributions" items={summary.keyContributions} />
-    <ChipSection label="Limitations" items={summary.limitations} />
-    <ChipSection label="Keywords" items={summary.keywords} compact />
-    <button disabled={processing} onClick={onRegenerate} className="flex h-9 w-full items-center justify-center gap-2 rounded-lg border border-white/10 text-[8px] font-black hover:bg-white/10 disabled:opacity-50">{processing ? <RiLoader4Line className="animate-spin" /> : <RiRefreshLine />}Regenerate summary</button>
-  </div>;
+  );
 }
 
 function ChipSection({ label, items, compact = false }: { label: string; items: string[]; compact?: boolean }) {
-  if (!items.length) return null;
-  return <section className="rounded-lg border border-white/10 p-3"><p className="text-[8px] font-black uppercase text-zinc-500">{label}</p><div className="mt-2 flex flex-wrap gap-1.5">{items.map((item) => <span key={item} className={cn("rounded-full border border-white/10 bg-white/5 text-zinc-300", compact ? "px-2 py-1 text-[8px]" : "px-2.5 py-1.5 text-[9px]")}>{item}</span>)}</div></section>;
-}
-
-function CitationList({ citations, processing, onReanalyze }: { citations: ResourceCitation[]; processing: boolean; onReanalyze: () => void }) {
-  if (!citations.length) return <EmptyAiState icon={<RiLinksLine />} title="No references extracted" text="Process or reanalyze the PDF to parse its reference section." actionLabel="Analyze references" loading={processing} onAction={onReanalyze} />;
-  return <div className="space-y-2">
-    <button disabled={processing} onClick={onReanalyze} className="mb-2 flex h-9 w-full items-center justify-center gap-2 rounded-lg border border-white/10 text-[8px] font-black hover:bg-white/10 disabled:opacity-50">{processing ? <RiLoader4Line className="animate-spin" /> : <RiRefreshLine />}Reanalyze citations</button>
-    {citations.map((citation) => <article key={citation.id} className="rounded-lg border border-white/10 p-3">
-      <div className="flex items-start justify-between gap-2">
-        <p className="text-[10px] font-black leading-4 text-zinc-100">{citation.target.title ?? "Unresolved reference"}</p>
-        <span className="shrink-0 rounded-full bg-white/10 px-2 py-1 text-[7px] font-black uppercase text-zinc-400">{Math.round((citation.confidenceScore ?? 0) * 100)}%</span>
+  if (!items?.length) return null;
+  return (
+    <section className="rounded-lg border border-border p-3">
+      <p className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground">{label}</p>
+      <div className="mt-2 flex flex-wrap gap-1">
+        {items.map((item) => <span key={item} className={cn("rounded-full border border-border bg-muted/50 text-muted-foreground", compact ? "px-2 py-0.5 text-[8px]" : "px-2.5 py-1 text-[9px]")}>{item}</span>)}
       </div>
-      <p className="mt-1 text-[8px] uppercase text-zinc-500">{citation.target.type}{citation.target.publicationYear || citation.target.year ? ` · ${citation.target.publicationYear ?? citation.target.year}` : ""}</p>
-      {citation.target.doi && <p className="mt-2 break-all text-[8px] text-teal-300">doi:{citation.target.doi}</p>}
-      {citation.target.url && <a href={citation.target.url} target="_blank" rel="noreferrer" className="mt-2 inline-flex text-[8px] font-black text-sky-300 hover:text-sky-200">Open source</a>}
-      {citation.rawReference && <p className="mt-2 line-clamp-3 text-[8px] leading-4 text-zinc-500">{citation.rawReference}</p>}
-    </article>)}
+    </section>
+  );
+}
+
+// Resolve the best clickable URL for a citation in priority order:
+// 1. DOI link  2. Stored URL (open access)  3. Google Scholar search fallback
+function resolvePaperUrl(target: CitationTarget): string | null {
+  if (target.doi) return `https://doi.org/${target.doi}`;
+  if (target.url) return target.url;
+  const title = target.title;
+  if (title) return `https://scholar.google.com/scholar?q=${encodeURIComponent(title)}`;
+  return null;
+}
+
+function CitationList({ citations, error, processing, onReanalyze }: { citations: ResourceCitation[]; error?: string; processing: boolean; onReanalyze: () => void }) {
+  if (error) return <EmptyAiState icon={<RiAlertLine />} title="References unavailable" text={error} actionLabel="Try again" loading={processing} onAction={onReanalyze} />;
+  if (!citations.length) return <EmptyAiState icon={<RiLinksLine />} title="No references extracted" text="Process this PDF to extract and resolve its reference list. Supported formats: numbered, author-year." actionLabel="Process & extract references" loading={processing} onAction={onReanalyze} />;
+
+  const linkedCount = citations.filter((c) => resolvePaperUrl(c.target)).length;
+
+  return <div className="space-y-2">
+    <div className="mb-2 flex items-center justify-between">
+      <div>
+        <span className="text-[9px] font-medium text-muted-foreground">{citations.length} reference{citations.length !== 1 ? "s" : ""}</span>
+        {linkedCount > 0 && <span className="ml-1.5 text-[8px] text-teal-600">· {linkedCount} linked</span>}
+      </div>
+      <button disabled={processing} onClick={onReanalyze} className="flex h-7 items-center gap-1.5 rounded-md border border-border px-2.5 text-[8px] font-medium text-muted-foreground transition-colors hover:bg-muted disabled:opacity-50">
+        {processing ? <RiLoader4Line className="animate-spin" /> : <RiRefreshLine />}Reanalyze
+      </button>
+    </div>
+    {citations.map((citation) => {
+      const confidence = Math.round((citation.confidenceScore ?? 0) * 100);
+      const paperUrl = resolvePaperUrl(citation.target);
+      const year = citation.target.publicationYear ?? citation.target.year;
+      const authorsRaw = citation.target.authors;
+      const authors = Array.isArray(authorsRaw) ? authorsRaw.join(", ") : (authorsRaw ?? null);
+      const linkLabel = citation.target.doi ? "Open via DOI" : citation.target.url ? "Open paper" : "Search Google Scholar";
+
+      return <article key={citation.id} className="group rounded-lg border border-border bg-background p-3 transition-shadow hover:shadow-sm">
+        <div className="flex items-start justify-between gap-2">
+          <p className="text-[10px] font-medium leading-[1.45] text-foreground">{citation.target.title ?? "Unresolved reference"}</p>
+          <span className={cn("shrink-0 rounded-full px-1.5 py-0.5 text-[7px] font-bold uppercase",
+            confidence >= 80 ? "bg-teal-100 text-teal-700 dark:bg-teal-950/50 dark:text-teal-400"
+            : confidence >= 60 ? "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400"
+            : "bg-muted text-muted-foreground"
+          )}>{confidence}%</span>
+        </div>
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[8px] text-muted-foreground">
+          <span className={cn("rounded-sm px-1 py-0.5 font-semibold uppercase text-[7px]",
+            citation.target.type === "internal" ? "bg-sky-100 text-sky-700" : citation.target.type === "external" ? "bg-slate-100 text-slate-600" : "bg-muted text-muted-foreground"
+          )}>{citation.target.type}</span>
+          {year && <span>{year}</span>}
+          {authors && <span className="truncate max-w-[160px]">{authors}</span>}
+        </div>
+        {citation.target.doi && <p className="mt-1 break-all text-[8px] font-mono text-muted-foreground/70">{citation.target.doi}</p>}
+        {citation.rawReference && <p className="mt-1.5 line-clamp-2 text-[8px] leading-[1.5] text-muted-foreground">{citation.rawReference}</p>}
+        {paperUrl && (
+          <a href={paperUrl} target="_blank" rel="noreferrer"
+            className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-teal-600 px-2.5 py-1.5 text-[8px] font-semibold text-white transition-colors hover:bg-teal-700">
+            <RiExternalLinkLine className="text-[10px]" />{linkLabel}
+          </a>
+        )}
+      </article>;
+    })}
   </div>;
 }
 
-function CitationGraph({ graph, citations }: { graph: ResourceGraph | null; citations: ResourceCitation[] }) {
-  const nodes = graph?.nodes ?? [];
-  const edges = graph?.edges ?? [];
-  if (!nodes.length || edges.length === 0) return <EmptyAiState icon={<RiMindMap />} title="Graph unavailable" text={citations.length ? "No graph edges matched the current filters." : "Analyze references to build a connected-paper graph."} />;
-  const center = { x: 160, y: 150 };
-  const related = nodes.filter((node) => node.type !== "current-resource");
-  const positions = new Map<string, { x: number; y: number }>();
-  positions.set(nodes[0].id, center);
-  related.forEach((node, index) => {
-    const angle = (index / Math.max(related.length, 1)) * Math.PI * 2 - Math.PI / 2;
-    positions.set(node.id, { x: center.x + Math.cos(angle) * 110, y: center.y + Math.sin(angle) * 105 });
-  });
-  return <div className="space-y-3">
-    <div className="rounded-lg border border-white/10 bg-white/[.03] p-2">
-      <svg viewBox="0 0 320 300" className="h-[300px] w-full">
-        {edges.map((edge) => {
-          const source = positions.get(edge.source);
-          const target = positions.get(edge.target);
-          if (!source || !target) return null;
-          return <line key={edge.id} x1={source.x} y1={source.y} x2={target.x} y2={target.y} stroke={edge.confidenceScore && edge.confidenceScore < 0.7 ? "#f59e0b" : "#14b8a6"} strokeWidth="1.4" strokeDasharray={edge.confidenceScore && edge.confidenceScore < 0.7 ? "4 4" : undefined} />;
-        })}
-        {nodes.map((node) => {
-          const pos = positions.get(node.id);
-          if (!pos) return null;
-          const current = node.type === "current-resource";
-          return <g key={node.id}>
-            <circle cx={pos.x} cy={pos.y} r={current ? 28 : 20} fill={current ? "#14b8a6" : node.type === "internal-resource" ? "#38bdf8" : "#18181b"} stroke={current ? "#99f6e4" : "#71717a"} strokeWidth="2" />
-            <text x={pos.x} y={pos.y + (current ? 42 : 34)} textAnchor="middle" fill="#e4e4e7" fontSize="8" fontWeight="700">{node.label.slice(0, 24)}</text>
-          </g>;
-        })}
-      </svg>
+function CitationGraph({ graph, citations, error, onProcess, processing }: {
+  graph: ResourceGraph | null;
+  citations: ResourceCitation[];
+  error?: string;
+  onProcess: () => void;
+  processing: boolean;
+}) {
+  const graphNodes = graph?.nodes ?? [];
+  const graphEdges = graph?.edges ?? [];
+
+  const { flowNodes, flowEdges, currentNodeId } = useMemo(() => {
+    const sourceCurrentNode = graphNodes.find((n) => n.type === "current-resource") ?? graphNodes[0];
+    if (!sourceCurrentNode || !graphEdges.length) return { flowNodes: [], flowEdges: [], currentNodeId: sourceCurrentNode?.id ?? "" };
+
+    const positions = runForceLayout(graphNodes, graphEdges, 800, 460, 180);
+    const fNodes: Node<{ label: React.ReactNode }>[] = graphNodes.map((node) => {
+      const pos = positions.get(node.id) ?? { x: 0, y: 0 };
+      const isCurrent = node.id === sourceCurrentNode.id;
+      const isInternal = node.type === "internal-resource";
+      const year = (node.data?.publicationYear ?? node.data?.year) as number | null | undefined;
+      const tone = isCurrent
+        ? { border: "#0f766e", bg: "#ccfbf1", color: "#134e4a", shadow: "0 10px 28px rgba(15,118,110,0.22)" }
+        : isInternal
+          ? { border: "#0369a1", bg: "#e0f2fe", color: "#075985", shadow: "0 6px 18px rgba(3,105,161,0.12)" }
+          : { border: "#71717a", bg: "#f4f4f5", color: "#3f3f46", shadow: "0 4px 12px rgba(0,0,0,0.07)" };
+      return {
+        id: node.id,
+        position: pos,
+        sourcePosition: Position.Right,
+        targetPosition: Position.Left,
+        data: {
+          label: (
+            <div className="max-w-[148px]">
+              <p className="text-[7.5px] font-black uppercase tracking-widest opacity-70">
+                {isCurrent ? "Current" : isInternal ? "In Library" : "External"}
+              </p>
+              <p className="mt-0.5 line-clamp-2 text-[9.5px] font-semibold leading-[1.35]">{node.label}</p>
+              {year && <p className="mt-0.5 text-[7.5px] opacity-60">{year}</p>}
+            </div>
+          ),
+        },
+        style: { width: isCurrent ? 175 : 160, borderRadius: 8, border: `1.5px solid ${tone.border}`, background: tone.bg, color: tone.color, boxShadow: tone.shadow, padding: "6px 8px" },
+      };
+    });
+    const fEdges: Edge[] = graphEdges.map((edge) => {
+      const hi = (edge.confidenceScore ?? 0) >= 0.7;
+      return {
+        id: edge.id, source: edge.source, target: edge.target,
+        label: hi ? undefined : `${Math.round((edge.confidenceScore ?? 0) * 100)}%`,
+        markerEnd: { type: MarkerType.ArrowClosed, width: 14, height: 14 },
+        style: { stroke: hi ? "#14b8a6" : "#f59e0b", strokeWidth: hi ? 2 : 1.4, opacity: 0.85 },
+        labelStyle: { fontSize: 7, fill: "#b45309", fontWeight: 700 },
+        labelBgStyle: { fill: "#fffbeb", fillOpacity: 0.9 },
+        animated: !hi,
+      };
+    });
+    return { flowNodes: fNodes, flowEdges: fEdges, currentNodeId: sourceCurrentNode.id };
+  }, [graph]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (error) return <EmptyAiState icon={<RiAlertLine />} title="Graph unavailable" text={error} />;
+
+  if (!graphEdges.length) {
+    return (
+      <EmptyAiState
+        icon={<RiMindMap />}
+        title="No connected papers yet"
+        text={citations.length
+          ? "Citations were found but no external connections could be resolved. Try re-processing."
+          : "Process this PDF to extract references and build a connected-paper graph."}
+        actionLabel={citations.length ? "Re-process" : "Process PDF"}
+        loading={processing}
+        onAction={onProcess}
+      />
+    );
+  }
+
+  const highConfCount = graphEdges.filter((e) => (e.confidenceScore ?? 0) >= 0.7).length;
+
+  return (
+    <div className="space-y-3">
+      {/* React Flow canvas */}
+      <div className="h-[340px] overflow-hidden rounded-lg border border-border bg-gradient-to-br from-muted/40 to-muted/10">
+        <ReactFlow
+          nodes={flowNodes}
+          edges={flowEdges}
+          fitView
+          fitViewOptions={{ padding: 0.18 }}
+          minZoom={0.25}
+          maxZoom={2}
+          nodesConnectable={false}
+          nodesDraggable
+          proOptions={{ hideAttribution: true }}
+        >
+          <Background gap={20} size={0.8} color="#d4d4d8" />
+          <Controls showInteractive={false} className="!border-border !bg-background/90 !shadow-sm" />
+          <MiniMap
+            pannable
+            zoomable
+            nodeColor={(n) => n.id === currentNodeId ? "#0f766e" : n.id.startsWith("resource:") ? "#0369a1" : "#71717a"}
+            className="!h-[60px] !w-[80px] !rounded-lg !border !border-border !bg-background/95 !shadow-sm"
+          />
+        </ReactFlow>
+      </div>
+      {/* Legend + stats */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3 text-[8px] text-muted-foreground">
+          <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-teal-600" />Current paper</span>
+          <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-sky-600" />In library</span>
+          <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-zinc-500" />External</span>
+        </div>
+        <div className="flex gap-2 text-[8px] text-muted-foreground">
+          <span>{graphNodes.length} papers</span>
+          <span>·</span>
+          <span>{graphEdges.length} links</span>
+          {highConfCount > 0 && <><span>·</span><span className="text-teal-600">{highConfCount} high-conf</span></>}
+        </div>
+      </div>
     </div>
-    <div className="grid grid-cols-3 gap-2 text-center text-[8px] font-black uppercase text-zinc-400"><span>{nodes.length} nodes</span><span>{edges.length} edges</span><span>1 hop</span></div>
-  </div>;
+  );
 }
 
 function EmptyAiState({ icon, title, text, actionLabel, loading, onAction }: { icon: React.ReactNode; title: string; text: string; actionLabel?: string; loading?: boolean; onAction?: () => void }) {
-  return <div className="flex min-h-80 items-center justify-center rounded-lg border border-dashed border-white/15 p-6 text-center">
+  return <div className="flex min-h-80 items-center justify-center rounded-lg border border-dashed border-border p-6 text-center">
     <div>
-      <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-xl text-zinc-400">{icon}</div>
+      <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-muted text-xl text-muted-foreground">{icon}</div>
       <p className="mt-3 text-[11px] font-black">{title}</p>
-      <p className="mx-auto mt-1 max-w-52 text-[9px] leading-4 text-zinc-500">{text}</p>
+      <p className="mx-auto mt-1 max-w-52 break-words text-[9px] leading-4 text-muted-foreground">{text}</p>
       {actionLabel && onAction && <button disabled={loading} onClick={onAction} className="mt-4 inline-flex h-9 items-center gap-2 rounded-lg bg-teal-600 px-4 text-[8px] font-black text-white disabled:opacity-50">{loading ? <RiLoader4Line className="animate-spin" /> : <RiPlayCircleLine />}{actionLabel}</button>}
     </div>
   </div>;
 }
 
 function NativeDocument({ resource }: { resource: Resource }) {
-  return <div className="mx-auto flex min-h-[620px] max-w-2xl items-center justify-center rounded-xl bg-white p-8 text-center shadow-xl dark:bg-zinc-900"><div><RiFileTextLine className="mx-auto text-5xl text-muted-foreground/20" /><p className="mt-4 text-[12px] font-black">{resource.title}</p><p className="mt-2 max-w-md text-[10px] leading-5 text-muted-foreground">{resource.description || "This file opens in its native viewer."}</p><a href={signedUrl(resource)} target="_blank" rel="noreferrer" className="mt-5 inline-flex h-10 items-center gap-2 rounded-xl bg-sky-600 px-4 text-[10px] font-bold text-white"><RiExternalLinkLine />Open document</a></div></div>;
+  return <div className="mx-auto flex min-h-[620px] max-w-2xl items-center justify-center rounded-lg border border-border bg-card p-8 text-center shadow-sm"><div><RiFileTextLine className="mx-auto text-5xl text-muted-foreground/20" /><p className="mt-4 text-[12px] font-black">{resource.title}</p><p className="mt-2 max-w-md text-[10px] leading-5 text-muted-foreground">{resource.description || "This file opens in its native viewer."}</p><a href={signedUrl(resource)} target="_blank" rel="noreferrer" className="mt-5 inline-flex h-10 items-center gap-2 rounded-lg bg-sky-600 px-4 text-[10px] font-bold text-white"><RiExternalLinkLine />Open document</a></div></div>;
 }
 
 function NoteCard({ annotation, owned, onDelete, onToggleShare, onGoToPage }: { annotation: Annotation; owned: boolean; onDelete: (id: string) => void; onToggleShare: (annotation: Annotation) => void; onGoToPage: (page: number) => void }) {
-  return <article className="rounded-2xl border border-border bg-muted/[.12] p-3"><div className="flex items-start justify-between gap-2"><span className={cn("rounded-full px-2 py-1 text-[7px] font-black uppercase", annotation.isShared ? "bg-teal-500/10 text-teal-600" : "bg-violet-500/10 text-violet-600")}>{annotation.isShared ? "Shared note" : "Private note"}</span>{annotation.page && <button onClick={() => onGoToPage(annotation.page!)} className="rounded-lg bg-sky-500/10 px-2 py-1 text-[8px] font-bold text-sky-600 hover:bg-sky-500/20">Go to page {annotation.page}</button>}</div>{annotation.highlight && <blockquote className="mt-3 border-l-2 border-amber-400 bg-amber-500/5 px-3 py-2 text-[9px] italic leading-4 text-amber-700 dark:text-amber-300">{annotation.highlight}</blockquote>}{annotation.note && <p className="mt-3 whitespace-pre-wrap text-[10px] leading-5">{annotation.note}</p>}{annotation.user && <p className="mt-3 text-[8px] font-bold text-muted-foreground">Shared by {annotation.user.name}</p>}{owned && <div className="mt-3 flex justify-end gap-1 border-t border-border pt-2"><button onClick={() => onToggleShare(annotation)} className="flex h-7 items-center gap-1 rounded-lg px-2 text-[8px] font-bold text-muted-foreground hover:bg-muted"><RiShareLine />{annotation.isShared ? "Make private" : "Share"}</button><button onClick={() => onDelete(annotation.id)} className="flex h-7 items-center gap-1 rounded-lg px-2 text-[8px] font-bold text-rose-600 hover:bg-rose-500/10"><RiDeleteBinLine />Delete</button></div>}</article>;
+  return (
+    <article className="rounded-lg border border-border bg-background p-3">
+      <div className="flex items-center justify-between gap-2">
+        <span className={cn("rounded-full px-2 py-0.5 text-[8px] font-medium",
+          annotation.isShared ? "bg-teal-50 text-teal-700 dark:bg-teal-950/40" : "bg-muted text-muted-foreground"
+        )}>{annotation.isShared ? "Shared" : "Private"}</span>
+        {annotation.page && <button onClick={() => onGoToPage(annotation.page!)} className="rounded-md bg-sky-50 px-2 py-0.5 text-[8px] font-medium text-sky-700 transition-colors hover:bg-sky-100 dark:bg-sky-950/40 dark:text-sky-400">p. {annotation.page}</button>}
+      </div>
+      {annotation.highlight && <blockquote className="mt-2 border-l-2 border-amber-400 bg-amber-50/50 px-3 py-1.5 text-[9px] italic leading-4 text-amber-800 dark:bg-amber-950/20 dark:text-amber-300">{annotation.highlight}</blockquote>}
+      {annotation.note && <p className="mt-2 whitespace-pre-wrap text-[10px] leading-5">{annotation.note}</p>}
+      {annotation.user && <p className="mt-2 text-[8px] text-muted-foreground">Shared by <span className="font-medium">{annotation.user.name}</span></p>}
+      {owned && (
+        <div className="mt-2 flex justify-end gap-1 border-t border-border pt-2">
+          <button onClick={() => onToggleShare(annotation)} className="flex h-7 items-center gap-1 rounded-md px-2 text-[8px] font-medium text-muted-foreground transition-colors hover:bg-muted"><RiShareLine />{annotation.isShared ? "Make private" : "Share"}</button>
+          <button onClick={() => onDelete(annotation.id)} className="flex h-7 items-center gap-1 rounded-md px-2 text-[8px] font-medium text-rose-600 transition-colors hover:bg-rose-50 dark:hover:bg-rose-950/30"><RiDeleteBinLine />Delete</button>
+        </div>
+      )}
+    </article>
+  );
 }
 
 function NoteModal({ resource, resources, annotationPath, defaultPage, onClose, onSaved }: { resource: Resource; resources: Resource[]; annotationPath: string; defaultPage: number; onClose: () => void; onSaved: () => void }) {
@@ -730,13 +1647,63 @@ function NoteModal({ resource, resources, annotationPath, defaultPage, onClose, 
       setSaving(false);
     }
   };
-  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm"><div className="w-full max-w-xl overflow-hidden rounded-3xl border border-border bg-card shadow-2xl"><div className="flex items-center justify-between border-b border-border p-5"><div><p className="text-[9px] font-black uppercase tracking-wider text-teal-600">Reading note</p><h2 className="mt-1 text-[14px] font-black">{resource.title}</h2></div><button onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-xl hover:bg-muted"><RiCloseLine /></button></div><div className="space-y-4 p-5"><Field label="Highlighted text"><textarea value={highlight} onChange={(event) => setHighlight(event.target.value)} rows={2} placeholder="Paste a memorable passage..." className="w-full resize-none rounded-xl border border-border bg-muted/20 p-3 text-[11px] outline-none focus:border-teal-500/50" /></Field><Field label="Your note"><textarea value={note} onChange={(event) => setNote(event.target.value)} rows={5} placeholder="Write your understanding, question, or summary..." className="w-full resize-y rounded-xl border border-border bg-muted/20 p-3 text-[11px] outline-none focus:border-teal-500/50" /></Field><div className="grid gap-3 sm:grid-cols-2"><Field label="Page number"><input type="number" min={1} value={page} onChange={(event) => setPage(event.target.value)} placeholder="Optional" className="h-10 w-full rounded-xl border border-border bg-muted/20 px-3 text-[11px] outline-none" /></Field><Field label="Related document"><select value={relatedId} onChange={(event) => setRelatedId(event.target.value)} className="h-10 w-full rounded-xl border border-border bg-muted/20 px-3 text-[10px] outline-none"><option value="">No related document</option>{resources.filter((item) => item.id !== resource.id).map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}</select></Field></div><label className="flex cursor-pointer items-center justify-between rounded-xl border border-border p-3"><span><span className="block text-[10px] font-black">Share this note</span><span className="mt-1 block text-[8px] text-muted-foreground">Other students with access can read it.</span></span><input type="checkbox" checked={shared} onChange={(event) => setShared(event.target.checked)} className="h-4 w-4 accent-teal-600" /></label></div><div className="flex justify-end gap-2 border-t border-border p-4"><button onClick={onClose} className="h-10 rounded-xl border border-border px-4 text-[10px] font-bold hover:bg-muted">Cancel</button><button onClick={save} disabled={saving || (!highlight.trim() && !note.trim() && !relatedId)} className="flex h-10 items-center gap-2 rounded-xl bg-teal-600 px-5 text-[10px] font-bold text-white disabled:opacity-40">{saving ? <RiLoader4Line className="animate-spin" /> : <RiCheckLine />}Save note</button></div></div></div>;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-lg overflow-hidden rounded-xl border border-border bg-background shadow-2xl">
+        <div className="flex items-center justify-between border-b border-border px-5 py-4">
+          <div>
+            <p className="text-[9px] font-semibold uppercase tracking-widest text-teal-600">Reading note</p>
+            <h2 className="mt-0.5 text-[13px] font-semibold leading-tight">{resource.title}</h2>
+          </div>
+          <button onClick={onClose} className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted"><RiCloseLine /></button>
+        </div>
+        <div className="space-y-4 p-5">
+          <Field label="Highlighted text">
+            <textarea value={highlight} onChange={(event) => setHighlight(event.target.value)} rows={2} placeholder="Paste a memorable passage…" className="w-full resize-none rounded-lg border border-border bg-muted/20 p-3 text-[11px] outline-none transition-colors focus:border-teal-500/60 focus:bg-background" />
+          </Field>
+          <Field label="Your note">
+            <textarea value={note} onChange={(event) => setNote(event.target.value)} rows={4} placeholder="Write your understanding, question, or summary…" className="w-full resize-y rounded-lg border border-border bg-muted/20 p-3 text-[11px] outline-none transition-colors focus:border-teal-500/60 focus:bg-background" />
+          </Field>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="Page number">
+              <input type="number" min={1} value={page} onChange={(event) => setPage(event.target.value)} placeholder="Optional" className="h-9 w-full rounded-lg border border-border bg-muted/20 px-3 text-[11px] outline-none transition-colors focus:border-teal-500/60" />
+            </Field>
+            <Field label="Related document">
+              <select value={relatedId} onChange={(event) => setRelatedId(event.target.value)} className="h-9 w-full rounded-lg border border-border bg-muted/20 px-3 text-[10px] outline-none transition-colors focus:border-teal-500/60">
+                <option value="">None</option>
+                {resources.filter((item) => item.id !== resource.id).map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
+              </select>
+            </Field>
+          </div>
+          <label className="flex cursor-pointer items-center justify-between rounded-lg border border-border p-3 transition-colors hover:bg-muted/30">
+            <span><span className="block text-[10px] font-medium">Share this note</span><span className="mt-0.5 block text-[8px] text-muted-foreground">Other students with access can read it.</span></span>
+            <input type="checkbox" checked={shared} onChange={(event) => setShared(event.target.checked)} className="h-4 w-4 accent-teal-600" />
+          </label>
+        </div>
+        <div className="flex justify-end gap-2 border-t border-border px-5 py-3">
+          <button onClick={onClose} className="h-9 rounded-lg border border-border px-4 text-[10px] font-medium transition-colors hover:bg-muted">Cancel</button>
+          <button onClick={save} disabled={saving || (!highlight.trim() && !note.trim() && !relatedId)} className="flex h-9 items-center gap-1.5 rounded-lg bg-teal-600 px-5 text-[10px] font-medium text-white transition-colors hover:bg-teal-700 disabled:opacity-40">
+            {saving ? <RiLoader4Line className="animate-spin" /> : <RiCheckLine />}Save note
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return <label className="block"><span className="mb-1.5 block text-[9px] font-black uppercase tracking-wider text-muted-foreground">{label}</span>{children}</label>;
+  return <label className="block"><span className="mb-1.5 block text-[9px] font-semibold uppercase tracking-widest text-muted-foreground">{label}</span>{children}</label>;
 }
 
 function EmptyState() {
-  return <div className="flex flex-1 items-center justify-center p-8 text-center"><div><RiBookOpenLine className="mx-auto text-6xl text-muted-foreground/15" /><h2 className="mt-4 text-[14px] font-black">Choose a document to begin reading</h2><p className="mt-2 text-[10px] text-muted-foreground">Your accessible documents appear on the left.</p></div></div>;
+  return (
+    <div className="flex flex-1 items-center justify-center p-8 text-center">
+      <div>
+        <RiBookOpenLine className="mx-auto text-5xl text-muted-foreground/15" />
+        <h2 className="mt-4 text-[14px] font-semibold">Choose a document to begin reading</h2>
+        <p className="mt-1 text-[10px] text-muted-foreground">Your accessible documents appear on the left.</p>
+      </div>
+    </div>
+  );
 }
+

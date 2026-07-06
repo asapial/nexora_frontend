@@ -1,8 +1,16 @@
 import type { Metadata } from "next";
+import { Noto_Sans_Bengali } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/provider/theme-provider";
 
 import { Toaster } from "@/components/ui/sonner";
+
+const notoSansBengali = Noto_Sans_Bengali({
+  subsets: ["bengali"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-bn",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Nexora",
@@ -15,7 +23,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="font-sans" suppressHydrationWarning={true}>
+    <html
+      lang="en"
+      className={`font-sans ${notoSansBengali.variable}`}
+      suppressHydrationWarning={true}
+    >
       <body className="antialiased">
         <ThemeProvider
           attribute="class"

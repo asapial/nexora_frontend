@@ -341,7 +341,7 @@ export default function SignUpPage({ data }: { data: SignUpPageData; }) {
 
       if (data.success) {
         toast.success("User registered successfully", { position: "top-right" });
-        window.location.href = "/dashboard";
+        window.location.replace("/dashboard");
       }
 
 
