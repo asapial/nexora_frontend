@@ -1,0 +1,595 @@
+.container {
+  --mascot-primary: oklch(0.72 0.16 180);
+  --mascot-secondary: oklch(0.6 0.2 285);
+  --mascot-glow: oklch(0.84 0.17 184);
+  --mascot-surface: var(--popover);
+  --mascot-text: var(--popover-foreground);
+  --mascot-shadow: oklch(0.12 0.03 250 / 30%);
+  position: fixed;
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  z-index: 40;
+  max-width: calc(100vw - 2rem);
+  pointer-events: none;
+  color: var(--mascot-text);
+  font: 500 0.78rem/1.35 var(--font-sans, system-ui, sans-serif);
+}
+
+:global(.dark) .container {
+  --mascot-primary: oklch(0.75 0.16 180);
+  --mascot-secondary: oklch(0.68 0.19 285);
+  --mascot-surface: oklch(0.21 0.02 260);
+  --mascot-text: oklch(0.96 0.01 260);
+  --mascot-shadow: oklch(0 0 0 / 48%);
+}
+
+.positionRight {
+  right: max(1rem, env(safe-area-inset-right));
+}
+
+.positionLeft {
+  left: max(1rem, env(safe-area-inset-left));
+}
+
+.controls {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.2rem;
+}
+
+.positionRight .controls {
+  flex-direction: row;
+}
+
+.positionLeft .controls {
+  flex-direction: row-reverse;
+}
+
+.mascotButton {
+  width: 84px;
+  height: 96px;
+  display: grid;
+  place-items: end center;
+  padding: 0;
+  border: 0;
+  border-radius: 44px;
+  background: transparent;
+  pointer-events: auto;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mascotButton:focus-visible,
+.settingsButton:focus-visible,
+.settingsPanel button:focus-visible,
+.settingsPanel select:focus-visible,
+.settingsPanel input:focus-visible,
+.speechBubble button:focus-visible {
+  outline: 3px solid color-mix(in oklab, var(--mascot-primary) 72%, white);
+  outline-offset: 2px;
+}
+
+.svg {
+  width: 82px;
+  height: auto;
+  overflow: visible;
+  transform-origin: center bottom;
+}
+
+.creature,
+.antennae,
+.body,
+.core,
+.hands,
+.shadow {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.shadow {
+  fill: var(--mascot-shadow);
+  opacity: 0.5;
+}
+
+.antennae path,
+.hands path {
+  fill: none;
+  stroke: var(--mascot-primary);
+  stroke-width: 3.5;
+  stroke-linecap: round;
+}
+
+.antennae circle {
+  fill: var(--mascot-glow);
+}
+
+.body {
+  stroke: color-mix(in oklab, var(--mascot-primary) 65%, white);
+  stroke-width: 1.2;
+}
+
+.bodyHighlight {
+  fill: white;
+  opacity: 0.17;
+}
+
+.coreHalo {
+  opacity: 0.8;
+}
+
+.core {
+  fill: white;
+  opacity: 0.92;
+}
+
+.eye ellipse {
+  fill: color-mix(in oklab, var(--mascot-surface) 90%, white);
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: mascotBlink 5.4s ease-in-out infinite;
+}
+
+.rightEye ellipse {
+  animation-delay: 0.04s;
+}
+
+.pupil {
+  fill: oklch(0.2 0.03 255);
+  transition: transform 180ms ease;
+}
+
+.eyeShine {
+  fill: white;
+}
+
+.mouth {
+  fill: none;
+  stroke: oklch(0.2 0.04 290 / 75%);
+  stroke-width: 2.3;
+  stroke-linecap: round;
+  transition: d 160ms ease;
+}
+
+.hands {
+  opacity: 0;
+  transition: opacity 140ms ease;
+}
+
+.sleepMark,
+.particles {
+  opacity: 0;
+}
+
+.sleepMark circle {
+  fill: var(--mascot-glow);
+}
+
+.particles circle {
+  fill: var(--mascot-glow);
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.stateIdle {
+  animation: mascotFloat 4.6s ease-in-out infinite;
+}
+
+.stateIdle .antennae,
+.levelPlayful .stateIdle .antennae {
+  animation: mascotAntenna 3.8s ease-in-out infinite;
+}
+
+.levelQuiet .stateIdle {
+  animation-duration: 7s;
+  animation-name: mascotQuietFloat;
+}
+
+.levelPlayful .stateIdle {
+  animation-duration: 3.8s;
+}
+
+.stateGreeting .creature {
+  animation: mascotGreeting 1.1s ease-out both;
+}
+
+.stateGreeting .hands,
+.stateSuccess .hands,
+.stateCelebrating .hands {
+  opacity: 1;
+}
+
+.stateGreeting .rightHand {
+  animation: mascotWave 420ms ease-in-out 2;
+  transform-origin: 74px 60px;
+}
+
+.stateThinking .coreHalo,
+.stateThinking .core {
+  animation: mascotCorePulse 1.35s ease-in-out infinite;
+}
+
+.stateThinking .pupil {
+  transform: translateY(-2px);
+}
+
+.stateSuccess .creature {
+  animation: mascotSuccessBounce 700ms ease-out both;
+}
+
+.stateSuccess .coreHalo,
+.stateEncouraging .coreHalo {
+  animation: mascotCorePulse 600ms ease-out 1;
+}
+
+.stateError .creature {
+  animation: mascotErrorWobble 850ms ease-in-out both;
+}
+
+.stateError .pupil {
+  transform: translateY(1.5px);
+}
+
+.stateCurious .creature {
+  animation: mascotCurious 720ms ease-out both;
+}
+
+.stateCurious .leftEye ellipse,
+.stateCurious .rightEye ellipse {
+  transform: scale(1.08);
+}
+
+.stateEncouraging .creature {
+  animation: mascotEncouraging 900ms ease-out both;
+}
+
+.stateCelebrating .creature {
+  animation: mascotCelebration 1.8s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.stateCelebrating .particles {
+  opacity: 1;
+}
+
+.stateCelebrating .particles circle {
+  animation: mascotParticleBurst 1.25s ease-out both;
+}
+
+.stateCelebrating .particleOne { --particle-x: -28px; --particle-y: -35px; }
+.stateCelebrating .particleTwo { --particle-x: -13px; --particle-y: -47px; animation-delay: 50ms; }
+.stateCelebrating .particleThree { --particle-x: 17px; --particle-y: -45px; animation-delay: 90ms; }
+.stateCelebrating .particleFour { --particle-x: 31px; --particle-y: -28px; animation-delay: 130ms; }
+.stateCelebrating .particleFive { --particle-x: -35px; --particle-y: -13px; animation-delay: 80ms; }
+.stateCelebrating .particleSix { --particle-x: 36px; --particle-y: -9px; animation-delay: 150ms; }
+
+.stateSleeping {
+  animation: mascotSleepFloat 6.5s ease-in-out infinite;
+}
+
+.stateSleeping .eye ellipse {
+  animation: none;
+  transform: scaleY(0.14);
+}
+
+.stateSleeping .sleepMark {
+  opacity: 0.85;
+  animation: mascotSleepBubble 2.4s ease-in-out infinite;
+}
+
+.stateSleeping .coreHalo {
+  opacity: 0.35;
+}
+
+.stateHidden {
+  opacity: 0;
+}
+
+.pressed {
+  transform: scale(0.93);
+}
+
+.reducedMotion,
+.reducedMotion *,
+.levelQuiet .reducedMotion,
+.levelPlayful .reducedMotion {
+  animation: none !important;
+  transition-duration: 0.01ms !important;
+}
+
+.reducedMotion.stateThinking .coreHalo,
+.reducedMotion.stateSuccess .coreHalo,
+.reducedMotion.stateCelebrating .coreHalo {
+  animation: mascotReducedGlow 900ms ease-in-out infinite alternate !important;
+}
+
+.speechBubble {
+  position: absolute;
+  bottom: calc(100% - 0.35rem);
+  width: max-content;
+  max-width: min(240px, calc(100vw - 2rem));
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  padding: 0.68rem 0.78rem;
+  border: 1px solid var(--border);
+  border-radius: 0.9rem;
+  background: color-mix(in oklab, var(--mascot-surface) 94%, transparent);
+  color: var(--mascot-text);
+  box-shadow: 0 12px 28px var(--mascot-shadow);
+  backdrop-filter: blur(10px);
+  pointer-events: auto;
+  animation: mascotSpeechEnter 220ms ease-out both;
+}
+
+.speechRight { right: 0; }
+.speechLeft { left: 0; }
+
+.speechBubble button {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  margin: -0.28rem -0.28rem -0.28rem 0;
+  border: 0;
+  border-radius: 999px;
+  color: var(--muted-foreground);
+  background: transparent;
+  cursor: pointer;
+}
+
+.settingsRoot {
+  position: relative;
+  pointer-events: none;
+}
+
+.settingsButton {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 0.35rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--mascot-surface) 91%, transparent);
+  color: var(--muted-foreground);
+  box-shadow: 0 6px 18px var(--mascot-shadow);
+  backdrop-filter: blur(8px);
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.settingsButton:hover {
+  color: var(--mascot-text);
+  background: var(--mascot-surface);
+}
+
+.settingsButton svg {
+  width: 17px;
+  height: 17px;
+}
+
+.settingsPanel {
+  position: absolute;
+  bottom: 3.25rem;
+  width: min(286px, calc(100vw - 2rem));
+  padding: 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--mascot-surface);
+  color: var(--mascot-text);
+  box-shadow: 0 16px 40px var(--mascot-shadow);
+  pointer-events: auto;
+  animation: mascotSpeechEnter 180ms ease-out both;
+}
+
+.settingsRight { right: 0; }
+.settingsLeft { left: 0; }
+
+.settingsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0 0 0.7rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.settingsHeader > div {
+  display: grid;
+}
+
+.settingsHeader strong {
+  font-size: 0.86rem;
+}
+
+.settingsHeader span {
+  color: var(--muted-foreground);
+  font-size: 0.7rem;
+}
+
+.settingsHeader button {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 0.55rem;
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+
+.settingsHeader button:hover { background: var(--muted); }
+.settingsHeader svg { width: 16px; height: 16px; }
+
+.settingsForm {
+  --mascot-primary: oklch(0.72 0.16 180);
+  --mascot-text: var(--foreground);
+  display: grid;
+  gap: 0.72rem;
+  padding-top: 0.75rem;
+}
+
+.field,
+.toggleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 38px;
+  font-size: 0.76rem;
+}
+
+.field > span,
+.toggleRow strong {
+  color: var(--mascot-text, var(--foreground));
+  font-weight: 650;
+}
+
+.field select {
+  min-width: 126px;
+  height: 34px;
+  padding: 0 1.7rem 0 0.58rem;
+  border: 1px solid var(--border);
+  border-radius: 0.55rem;
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+}
+
+.toggleRow > span {
+  display: grid;
+  gap: 0.12rem;
+}
+
+.toggleRow small {
+  color: var(--muted-foreground);
+  font-size: 0.68rem;
+}
+
+.toggleRow input {
+  width: 36px;
+  height: 20px;
+  accent-color: var(--mascot-primary);
+}
+
+@keyframes mascotFloat {
+  0%, 100% { transform: translateY(0) rotate(-0.5deg); }
+  50% { transform: translateY(-5px) rotate(0.8deg); }
+}
+
+@keyframes mascotQuietFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+
+@keyframes mascotBlink {
+  0%, 43%, 47%, 77%, 81%, 100% { transform: scaleY(1); }
+  45%, 79% { transform: scaleY(0.12); }
+}
+
+@keyframes mascotAntenna {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(2deg); }
+}
+
+@keyframes mascotGreeting {
+  0% { transform: translateY(0) scale(1); }
+  35% { transform: translateY(-8px) scale(1.04, 0.98); }
+  65% { transform: translateY(1px) scale(0.98, 1.03); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+@keyframes mascotWave {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(-22deg); }
+}
+
+@keyframes mascotSuccessBounce {
+  0%, 100% { transform: translateY(0) scale(1); }
+  35% { transform: translateY(-9px) scale(1.04); }
+  68% { transform: translateY(1px) scale(0.98); }
+}
+
+@keyframes mascotErrorWobble {
+  0%, 100% { transform: rotate(0deg) translateX(0); }
+  20% { transform: rotate(-6deg) translateX(-2px); }
+  45% { transform: rotate(5deg) translateX(2px); }
+  70% { transform: rotate(-2deg) translateX(-1px); }
+}
+
+@keyframes mascotCurious {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  35% { transform: rotate(8deg) scale(1.03); }
+  65% { transform: rotate(-4deg) scale(0.98); }
+}
+
+@keyframes mascotEncouraging {
+  0%, 100% { transform: translateY(0); }
+  40% { transform: translateY(-5px) scale(1.02); }
+}
+
+@keyframes mascotCorePulse {
+  0%, 100% { transform: scale(0.92); opacity: 0.55; }
+  50% { transform: scale(1.16); opacity: 1; }
+}
+
+@keyframes mascotCelebration {
+  0%, 100% { transform: translateY(0) rotate(0deg) scale(1); }
+  22% { transform: translateY(-13px) rotate(-5deg) scale(1.08); }
+  48% { transform: translateY(0) rotate(5deg) scale(0.98); }
+  70% { transform: translateY(-7px) rotate(-2deg) scale(1.04); }
+}
+
+@keyframes mascotParticleBurst {
+  0% { transform: translate(0, 0) scale(0); opacity: 0; }
+  18% { opacity: 1; }
+  100% { transform: translate(var(--particle-x), var(--particle-y)) scale(0.35); opacity: 0; }
+}
+
+@keyframes mascotSleepFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+
+@keyframes mascotSleepBubble {
+  0%, 100% { transform: translate(0, 2px); opacity: 0.35; }
+  50% { transform: translate(2px, -2px); opacity: 0.9; }
+}
+
+@keyframes mascotSpeechEnter {
+  from { opacity: 0; transform: translateY(5px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes mascotSpeechExit {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(4px); }
+}
+
+@keyframes mascotReducedGlow {
+  from { opacity: 0.5; }
+  to { opacity: 0.9; }
+}
+
+@media (max-width: 640px) {
+  .container {
+    bottom: max(4.75rem, calc(env(safe-area-inset-bottom) + 3.75rem));
+  }
+  .mascotButton { width: 68px; height: 78px; }
+  .svg { width: 68px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .svg,
+  .svg *,
+  .speechBubble,
+  .settingsPanel {
+    animation: none !important;
+    scroll-behavior: auto !important;
+  }
+  .stateThinking .coreHalo,
+  .stateSuccess .coreHalo,
+  .stateCelebrating .coreHalo {
+    animation: mascotReducedGlow 900ms ease-in-out infinite alternate !important;
+  }
+}

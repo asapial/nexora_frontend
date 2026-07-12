@@ -9,6 +9,7 @@ import {
   RiTaxiLine, RiListUnordered,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
+import { emitMascotEvent } from "@/lib/mascot/eventBus";
 
 type TaskStatus = "PENDING" | "SUBMITTED" | "REVIEWED";
 
@@ -111,6 +112,7 @@ function SubmissionPageInner() {
       return;
     }
     setSubmitting(true); setSubmitErr(null);
+    emitMascotEvent("loading_started", { label: "Submitting your homework" });
     const method = task?.submission ? "PATCH" : "POST";
     try {
       const res = await fetch(`/api/student/tasks/${taskId}/submit`, {
@@ -126,9 +128,20 @@ function SubmissionPageInner() {
       const d = await res.json();
       if (!res.ok) throw new Error(d.message || "Submit failed");
       setSuccess(true);
+      emitMascotEvent("action_success", {
+        message: "Your homework was submitted successfully.",
+      });
       setTimeout(() => router.push("/dashboard/student/homework"), 1500);
-    } catch (e: unknown) { setSubmitErr(e instanceof Error ? e.message : "Submit failed"); }
-    finally { setSubmitting(false); }
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Submit failed";
+      setSubmitErr(message);
+      emitMascotEvent("action_error", {
+        message: "The submission did not go through. You can try again.",
+      });
+    } finally {
+      setSubmitting(false);
+      emitMascotEvent("loading_finished");
+    }
   };
 
   if (loading) {

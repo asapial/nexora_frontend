@@ -23,6 +23,7 @@ import {
   RiDeleteBinLine,
   RiDownloadLine,
   RiExternalLinkLine,
+  RiFileCopyLine,
   RiFileTextLine,
   RiFocus3Line,
   RiLinksLine,
@@ -72,6 +73,31 @@ type ResourceAiStatus = {
   summary?: { status: string; isVisible?: boolean };
   citations?: { status: string; count: number };
 };
+
+// Preview envelope returned by GET /api/resource/:id/extracted-text-preview.
+// `status === "PENDING"` means the PDF hasn't been text-extracted yet.
+type ExtractedTextPreview =
+  | {
+      resourceId: string;
+      title: string;
+      fileType: string;
+      status: "PENDING";
+      preview: null;
+      pageCount: null;
+      totalChars: 0;
+    }
+  | {
+      resourceId: string;
+      title: string;
+      fileType: string;
+      status: "READY";
+      preview: string;
+      pageCount: number | null;
+      language?: string | null;
+      totalChars: number;
+      truncated: boolean;
+      updatedAt?: string;
+    };
 
 type ResourceSummary = {
   professionalSummary: string;
@@ -138,8 +164,11 @@ type SummaryEnvelope = {
 const AI_PROCESSING_STATUSES = new Set(["TEXT_PROCESSING", "SUMMARY_PROCESSING", "CITATION_PROCESSING"]);
 // Ready states that are NOT yet final (pipeline still has more steps)
 const AI_INTERMEDIATE_STATUSES = new Set(["TEXT_EXTRACTED", "SUMMARY_READY"]);
-// Terminal: job is done (either success or failure) — stop polling
-const AI_TERMINAL_STATUSES = new Set(["GRAPH_READY", "CITATIONS_READY", "FAILED"]);
+// Terminal: job is done (either success or failure) — stop polling.
+// SUMMARY_READY is included because the /summary/regenerate endpoint ends
+// its job at that state (no citations step follows in summary-only mode).
+// Without it the polling loop runs forever after a successful summary.
+const AI_TERMINAL_STATUSES = new Set(["GRAPH_READY", "CITATIONS_READY", "SUMMARY_READY", "FAILED"]);
 // Any "good" terminal state
 const AI_READY_STATUSES = new Set(["SUMMARY_READY", "CITATIONS_READY", "GRAPH_READY"]);
 
@@ -339,6 +368,7 @@ export default function ResourceAnnotationPage() {
   const [graph, setGraph] = useState<ResourceGraph | null>(null);
   const [aiErrors, setAiErrors] = useState<AiFeatureErrors>({});
   const [summaryEnvelope, setSummaryEnvelope] = useState<SummaryEnvelope | null>(null);
+  const [extractedTextPreview, setExtractedTextPreview] = useState<ExtractedTextPreview | null>(null);
 
   const loadAnnotations = useCallback(async (resource: Resource) => {
     setLoadingAnnotations(true);
@@ -364,6 +394,7 @@ export default function ResourceAnnotationPage() {
       setCitations([]);
       setGraph(null);
       setAiErrors({});
+      setExtractedTextPreview(null);
       return;
     }
     if (!silent) setAiLoading(true);
@@ -374,13 +405,15 @@ export default function ResourceAnnotationPage() {
       setCitations([]);
       setGraph(null);
       setAiErrors({});
+      setExtractedTextPreview(null);
     }
 
-    const [statusResult, summaryResult, citationsResult, graphResult] = await Promise.allSettled([
+    const [statusResult, summaryResult, citationsResult, graphResult, previewResult] = await Promise.allSettled([
       resourceAiApi.status(resource.id),
       resourceAiApi.summary(resource.id),
       resourceAiApi.citations(resource.id),
       resourceAiApi.graph(resource.id, { includeExternal: "true", minConfidence: "0", limit: "50" }),
+      resourceAiApi.extractedTextPreview(resource.id),
     ]);
 
     const nextErrors: AiFeatureErrors = {};
@@ -419,6 +452,13 @@ export default function ResourceAnnotationPage() {
     } else {
       nextErrors.graph = errorMessage(graphResult.reason, "Could not load citation graph");
       setGraph(null);
+    }
+
+    if (previewResult.status === "fulfilled") {
+      setExtractedTextPreview(previewResult.value.data ?? null);
+    } else {
+      // Preview is non-critical — silently ignore so we don't toast on every load.
+      setExtractedTextPreview(null);
     }
 
     setAiErrors(nextErrors);
@@ -505,6 +545,31 @@ export default function ResourceAnnotationPage() {
     }
   }, []);
 
+  // Lightweight status-only poller used while a job is in-flight. The
+  // full `loadAiFeatures` makes 5 parallel calls (status + summary +
+  // citations + graph + text-preview) every 2.5s; during processing the
+  // heavy citations/graph/text-preview values can't have changed yet, so
+  // we only poll the cheap status endpoint until a terminal status arrives,
+  // then do one full refresh.
+  const pollStatusOnly = useCallback(async (resource: Resource) => {
+    try {
+      const response = await resourceAiApi.status(resource.id);
+      const next = response.data ?? null;
+      setAiStatus((prev) => {
+        if (prev?.status === next?.status) return prev;
+        return next;
+      });
+      if (next && isAiTerminalStatus(next.status)) {
+        stopPolling();
+        setAiProcessing(false);
+        // One full reload to populate summary/citations/graph from DB.
+        void loadAiFeatures(resource, { preserveContent: true, silent: true });
+      }
+    } catch {
+      // Network blip — leave the interval running, the next tick will retry.
+    }
+  }, [loadAiFeatures, stopPolling]);
+
   const startPolling = useCallback((resource: Resource) => {
     stopPolling(); // clear any previous interval first
     pollSelectedRef.current = resource;
@@ -513,12 +578,12 @@ export default function ResourceAnnotationPage() {
       pollIntervalRef.current = setInterval(() => {
         const res = pollSelectedRef.current;
         if (!res) { stopPolling(); return; }
-        void loadAiFeatures(res, { preserveContent: true, silent: true });
+        void pollStatusOnly(res);
       }, 2500);
     }, 800);
     // Also store kickoff so we can cancel it too
     return () => { clearTimeout(kickoff); stopPolling(); };
-  }, [loadAiFeatures, stopPolling]);
+  }, [pollStatusOnly, stopPolling]);
 
   // Stop polling whenever a terminal status arrives in aiStatus
   useEffect(() => {
@@ -677,6 +742,7 @@ export default function ResourceAnnotationPage() {
             graph={graph}
             aiErrors={aiErrors}
             teacherMode={teacherMode}
+            extractedTextPreview={extractedTextPreview}
             onToggleAi={() => setAiOpen((value) => !value)}
             onAiTab={setAiTab}
             onProcessAi={processAi}
@@ -745,7 +811,7 @@ function DocumentLibrary({ resources, selected, search, loading, onSearch, onCho
   );
 }
 
-function ReaderWorkspace({ resource, readerUrl, readerLoading, readerError, currentPage, zoom, rotation, focusMode, documentsOpen, notesOpen, aiOpen, aiLoading, aiProcessing, aiTab, aiStatus, aiSummary, summaryEnvelope, citations, graph, aiErrors, teacherMode, onGoToPage, onZoom, onRotate, onToggleFocus, onToggleDocuments, onToggleNotes, onToggleAi, onAiTab, onProcessAi, onLoaded, onError, onRetry, onAddNote }: {
+function ReaderWorkspace({ resource, readerUrl, readerLoading, readerError, currentPage, zoom, rotation, focusMode, documentsOpen, notesOpen, aiOpen, aiLoading, aiProcessing, aiTab, aiStatus, aiSummary, summaryEnvelope, citations, graph, aiErrors, teacherMode, extractedTextPreview, onGoToPage, onZoom, onRotate, onToggleFocus, onToggleDocuments, onToggleNotes, onToggleAi, onAiTab, onProcessAi, onLoaded, onError, onRetry, onAddNote }: {
   resource: Resource;
   readerUrl: string;
   readerLoading: boolean;
@@ -767,6 +833,7 @@ function ReaderWorkspace({ resource, readerUrl, readerLoading, readerError, curr
   graph: ResourceGraph | null;
   aiErrors: AiFeatureErrors;
   teacherMode: boolean;
+  extractedTextPreview: ExtractedTextPreview | null;
   onGoToPage: (page: number) => void;
   onZoom: React.Dispatch<React.SetStateAction<number>>;
   onRotate: () => void;
@@ -823,6 +890,7 @@ function ReaderWorkspace({ resource, readerUrl, readerLoading, readerError, curr
               graph={graph}
               errors={aiErrors}
               teacherMode={teacherMode}
+              extractedTextPreview={extractedTextPreview}
               onTab={onAiTab}
               onProcess={onProcessAi}
             />}
@@ -930,7 +998,7 @@ function isStepDone(stepKey: AiStepKey, currentStatus?: string | null): boolean 
   return currentIdx > stepIdx;
 }
 
-function AiReadingPanel({ loading, processing, activeTab, status, summary, summaryEnvelope, citations, graph, errors, onTab, onProcess, teacherMode }: {
+function AiReadingPanel({ loading, processing, activeTab, status, summary, summaryEnvelope, citations, graph, errors, onTab, onProcess, teacherMode, extractedTextPreview }: {
   loading: boolean;
   processing: boolean;
   activeTab: "summary" | "citations" | "graph";
@@ -941,6 +1009,7 @@ function AiReadingPanel({ loading, processing, activeTab, status, summary, summa
   graph: ResourceGraph | null;
   errors: AiFeatureErrors;
   teacherMode: boolean;
+  extractedTextPreview: ExtractedTextPreview | null;
   onTab: (tab: "summary" | "citations" | "graph") => void;
   onProcess: (mode?: "full" | "summary" | "citations") => void;
 }) {
@@ -990,7 +1059,7 @@ function AiReadingPanel({ loading, processing, activeTab, status, summary, summa
           : busy && !summary && !citations.length ? <AiProcessingOverlay status={rawStatus} />
           : notStarted ? <NotProcessedState onProcess={() => onProcess("full")} processing={busy} />
           : isFailed ? <FailedState error={status?.processingError} onRetry={() => onProcess("full")} processing={busy} />
-          : activeTab === "summary" ? <SummaryPanel summary={summary} summaryEnvelope={summaryEnvelope} error={errors.summary} onRegenerate={() => onProcess("summary")} processing={busy} teacherMode={teacherMode} resourceId={summaryEnvelope?.resourceId} />
+          : activeTab === "summary" ? <SummaryPanel summary={summary} summaryEnvelope={summaryEnvelope} error={errors.summary} onRegenerate={() => onProcess("summary")} processing={busy} teacherMode={teacherMode} resourceId={summaryEnvelope?.resourceId} extractedTextPreview={extractedTextPreview} />
           : activeTab === "citations" ? <CitationList citations={citations} error={errors.citations} onReanalyze={() => onProcess("full")} processing={busy} />
           : <CitationGraph graph={graph} citations={citations} error={errors.graph} onProcess={() => onProcess("full")} processing={busy} />}
       </div>
@@ -1077,13 +1146,13 @@ function AiProcessingOverlay({ status }: { status?: string | null }) {
   const activeStep = AI_STEPS.find((s) => s.key === active);
   const headline =
     activeStep?.key === "text" ? "Reading your paper" :
-    activeStep?.key === "summary" ? "Drafting a bilingual summary" :
+    activeStep?.key === "summary" ? "Drafting your bilingual summary" :
     activeStep?.key === "refs" ? "Resolving citations" :
     activeStep?.key === "graph" ? "Mapping connected papers" :
     "Starting AI reading…";
   const subline =
-    activeStep?.key === "text" ? "Extracting structured text from every page." :
-    activeStep?.key === "summary" ? "Building an academic summary in English and বাংলা." :
+    activeStep?.key === "text" ? "Extracting structured text from every page so the AI has a clean signal." :
+    activeStep?.key === "summary" ? "Writing an academic-grade summary in English and native বাংলা." :
     activeStep?.key === "refs" ? "Looking up DOIs, titles, and venues for each reference." :
     activeStep?.key === "graph" ? "Linking this paper to the wider research graph." :
     "Warming up the reader — this usually takes 30–60 seconds.";
@@ -1149,7 +1218,7 @@ function AiProcessingOverlay({ status }: { status?: string | null }) {
       </div>
 
       <p className="mt-7 text-[9px] font-medium uppercase tracking-wider text-muted-foreground/80">
-        Please don't close this panel
+        Runs in the background — you can keep reading
       </p>
 
       <style jsx>{`
@@ -1212,7 +1281,7 @@ function FailedState({ error, onRetry, processing }: { error?: string | null; on
   );
 }
 
-function SummaryPanel({ summary, summaryEnvelope, error, processing, onRegenerate, teacherMode, resourceId }: {
+function SummaryPanel({ summary, summaryEnvelope, error, processing, onRegenerate, teacherMode, resourceId, extractedTextPreview }: {
   summary: ResourceSummary | null;
   summaryEnvelope: SummaryEnvelope | null;
   error?: string;
@@ -1220,8 +1289,13 @@ function SummaryPanel({ summary, summaryEnvelope, error, processing, onRegenerat
   teacherMode: boolean;
   resourceId?: string;
   onRegenerate: () => void;
+  extractedTextPreview?: ExtractedTextPreview | null;
 }) {
   const [togglingVisibility, setTogglingVisibility] = useState(false);
+  // Default to English so the initial render is always readable, but
+  // auto-switch to বাংলা if the resource has no English summary and only
+  // a mirrored-from-English Bangla row (so the user sees something useful
+  // and the "(mirrored from English)" badge can make the source clear).
   const [lang, setLang] = useState<"en" | "bn">("en");
 
   const toggleVisibility = async () => {
@@ -1261,7 +1335,17 @@ function SummaryPanel({ summary, summaryEnvelope, error, processing, onRegenerat
     );
   }
   if (!summary) {
-    return <EmptyAiState icon={<RiBrainLine />} title="No summary yet" text="Process this PDF to create a structured academic summary." actionLabel="Generate summary" loading={processing} onAction={onRegenerate} />;
+    // When the paper hasn't been summarized yet, show the user *exactly* what
+    // text the AI will see — so they understand what's about to be analyzed and
+    // can choose to trigger generation. The "Ready to summarize" frame keeps
+    // each paper clearly isolated as its own card.
+    return (
+      <ReadyToSummarizeCard
+        processing={processing}
+        onGenerate={onRegenerate}
+        extractedTextPreview={extractedTextPreview ?? null}
+      />
+    );
   }
 
   // Pick the Bangla field if it's actually populated, otherwise gracefully
@@ -1281,12 +1365,59 @@ function SummaryPanel({ summary, summaryEnvelope, error, processing, onRegenerat
   } as const;
   const sectionLabels = labels[lang];
 
-  const sections = [
-    [sectionLabels.goals, pick(summary.goals, summary.goalsBn)],
-    [sectionLabels.methods, pick(summary.methods, summary.methodsBn)],
-    [sectionLabels.results, pick(summary.results, summary.resultsBn)],
-    [sectionLabels.conclusions, pick(summary.conclusions, summary.conclusionsBn)],
-  ].filter(([, value]) => value);
+  const sections: [string, string][] = (
+    [
+      [sectionLabels.goals, pick(summary.goals, summary.goalsBn) ?? ""],
+      [sectionLabels.methods, pick(summary.methods, summary.methodsBn) ?? ""],
+      [sectionLabels.results, pick(summary.results, summary.resultsBn) ?? ""],
+      [sectionLabels.conclusions, pick(summary.conclusions, summary.conclusionsBn) ?? ""],
+    ] as [string, string][]
+  ).filter(([, value]) => value.length > 0);
+
+  // Build a plain-text export of the current summary in the active language
+  // so users can copy the whole thing or download it as a .txt file.
+  const buildSummaryText = (): string => {
+    const sep = "\n\n";
+    const contribs = pickList(summary.keyContributions, summary.keyContributionsBn)
+      .map((c, i) => `${i + 1}. ${c}`)
+      .join("\n");
+    const limitations = pickList(summary.limitations, summary.limitationsBn)
+      .map((c) => `• ${c}`)
+      .join("\n");
+    const keywords = pickList(summary.keywords, summary.keywordsBn).join(", ");
+    return [
+      pick(summary.professionalSummary, summary.professionalSummaryBn),
+      sections.map(([label, value]) => `${label}\n${value}`).join(sep),
+      `${lang === "bn" ? "মূল অবদান" : "Key contributions"}\n${contribs}`,
+      `${lang === "bn" ? "সীমাবদ্ধতা" : "Limitations"}\n${limitations}`,
+      `${lang === "bn" ? "কীওয়ার্ড" : "Keywords"}\n${keywords}`,
+    ]
+      .filter(Boolean)
+      .join(sep);
+  };
+
+  const copySummary = async () => {
+    const text = buildSummaryText();
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success(lang === "bn" ? "সারসংক্ষেপ কপি হয়েছে" : "Summary copied to clipboard");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Copy failed");
+    }
+  };
+
+  const downloadSummary = () => {
+    const text = buildSummaryText();
+    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${(resourceId ?? "summary")}-${lang}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
   const sectionLabel = {
     summary: lang === "bn" ? "সারসংক্ষেপ" : "Summary",
@@ -1302,92 +1433,101 @@ function SummaryPanel({ summary, summaryEnvelope, error, processing, onRegenerat
 
   return (
     <div className="space-y-2.5">
-      {/* Teacher visibility control */}
-      {teacherMode && summaryEnvelope?.summaryStatus === "COMPLETED" && (
-        <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-3 py-2">
-          <span className="text-[8px] font-medium text-muted-foreground">Visible to students</span>
-          <button onClick={toggleVisibility} disabled={togglingVisibility} className="flex h-6 items-center gap-1 rounded-md border border-border bg-background px-2 text-[8px] font-medium text-muted-foreground hover:bg-muted disabled:opacity-50">
-            {togglingVisibility ? <RiLoader4Line className="animate-spin" /> : <RiCheckLine className="text-teal-600" />} Visible
-          </button>
-        </div>
-      )}
+      {/* Per-paper framing: each summary gets its own header strip showing
+          the paper title, file type, and language toggle. This makes it
+          visually obvious that the AI panel content belongs to one paper. */}
+      <SummaryPaperHeader
+        summary={summary}
+        lang={lang}
+        setLang={setLang}
+        hasBangla={hasBangla}
+        summaryStatus={summaryEnvelope?.summaryStatus ?? null}
+        teacherMode={teacherMode}
+        togglingVisibility={togglingVisibility}
+        onToggleVisibility={toggleVisibility}
+      />
 
-      {/* Language toggle — falls back to English automatically if the Bangla
-          field is empty. Persists in component state per session. */}
-      <div className="flex items-center justify-between rounded-lg border border-border bg-muted/20 px-3 py-1.5">
-        <span className="text-[8px] font-medium uppercase tracking-widest text-muted-foreground">
-          {lang === "bn" ? "ভাষা" : "Language"}
-        </span>
-        <div
-          role="tablist"
-          aria-label="Summary language"
-          className="inline-flex h-6 items-center gap-0.5 rounded-md border border-border bg-background p-0.5"
-        >
-          <button
-            role="tab"
-            aria-selected={lang === "en"}
-            onClick={() => setLang("en")}
-            className={cn(
-              "h-5 rounded px-2 text-[9px] font-semibold transition-colors",
-              lang === "en"
-                ? "bg-teal-600 text-white shadow-sm"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            EN
-          </button>
-          <button
-            role="tab"
-            aria-selected={lang === "bn"}
-            onClick={() => setLang("bn")}
-            disabled={!hasBangla}
-            title={hasBangla ? "বাংলা সারসংক্ষেপ দেখুন" : "বাংলা অনুবাদ এখনো প্রস্তুত নয়"}
-            className={cn(
-              "h-5 rounded px-2 text-[9px] font-semibold transition-colors",
-              lang === "bn"
-                ? "bg-teal-600 text-white shadow-sm"
-                : "text-muted-foreground hover:text-foreground",
-              !hasBangla && "cursor-not-allowed opacity-40 hover:text-muted-foreground",
-            )}
-          >
-            বাংলা
-          </button>
+      {/* Hero professional summary — large card with quote glyph, the focal
+          point of the paper. */}
+      <div className="relative overflow-hidden rounded-lg border border-teal-200/70 bg-teal-50/70 p-3.5 dark:border-teal-900/40 dark:bg-teal-950/20">
+        <span aria-hidden className="absolute -left-1 -top-3 select-none text-5xl font-serif leading-none text-teal-300/60 dark:text-teal-700/40">“</span>
+        <div className="flex items-center justify-between">
+          <p className="text-[9px] font-semibold uppercase tracking-widest text-teal-700 dark:text-teal-400">{sectionLabel.summary}</p>
+          <RiFileTextLine className="text-[12px] text-teal-500/70" />
         </div>
-      </div>
-
-      <div className="rounded-lg border border-teal-100 bg-teal-50/60 p-3 dark:border-teal-900/40 dark:bg-teal-950/20">
-        <p className="text-[9px] font-semibold uppercase tracking-widest text-teal-700 dark:text-teal-400">{sectionLabel.summary}</p>
         <p
-          dir={lang === "bn" ? "ltr" : "ltr"}
           lang={lang === "bn" ? "bn" : "en"}
           className={cn(
-            "mt-1.5 text-[10px] leading-5 text-foreground",
+            "relative mt-1.5 text-[11px] leading-6 text-foreground",
             lang === "bn" && "font-bn",
           )}
         >
           {pick(summary.professionalSummary, summary.professionalSummaryBn)}
         </p>
       </div>
-      {sections.map(([label, value]) => (
-        <section key={label} className="rounded-lg border border-border p-3">
-          <p className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground">{label}</p>
-          <p
-            lang={lang === "bn" ? "bn" : "en"}
-            className={cn(
-              "mt-1 text-[10px] leading-5 text-foreground/80",
-              lang === "bn" && "font-bn",
-            )}
-          >
-            {value}
-          </p>
-        </section>
-      ))}
-      <ChipSection label={sectionLabel.keyContributions} items={pickList(summary.keyContributions, summary.keyContributionsBn)} />
-      <ChipSection label={sectionLabel.limitations} items={pickList(summary.limitations, summary.limitationsBn)} />
-      <ChipSection label={sectionLabel.keywords} items={pickList(summary.keywords, summary.keywordsBn)} compact />
-      <button disabled={processing} onClick={onRegenerate} className="flex h-8 w-full items-center justify-center gap-1.5 rounded-lg border border-border text-[9px] font-medium text-muted-foreground transition-colors hover:bg-muted disabled:opacity-50">
-        {processing ? <RiLoader4Line className="animate-spin" /> : <RiRefreshLine />}Regenerate
-      </button>
+
+      {/* Goals / Methods / Results / Conclusions in a tight 2-col grid with
+          leading icon per card — the academic backbone of the paper. */}
+      <div className="grid grid-cols-2 gap-2">
+        {sections.map(([label, value], index) => (
+          <SummarySectionCard
+            key={label}
+            label={label}
+            value={value as string}
+            lang={lang}
+            variant={index % 4}
+          />
+        ))}
+      </div>
+
+      {/* Key contributions: full-width chip grid */}
+      <KeyContributionGrid
+        label={sectionLabel.keyContributions}
+        items={pickList(summary.keyContributions, summary.keyContributionsBn)}
+        lang={lang}
+      />
+
+      {/* Limitations: dashed-border list (visually distinct from the chip grid) */}
+      <LimitationsList
+        label={sectionLabel.limitations}
+        items={pickList(summary.limitations, summary.limitationsBn)}
+        lang={lang}
+      />
+
+      {/* Keywords: dense tag chips at the bottom */}
+      <KeywordChips
+        label={sectionLabel.keywords}
+        items={pickList(summary.keywords, summary.keywordsBn)}
+      />
+
+      <div className="flex items-center gap-1.5">
+        <button
+          disabled={processing}
+          onClick={copySummary}
+          title={lang === "bn" ? "সারসংক্ষেপ কপি করুন" : "Copy summary"}
+          aria-label="Copy summary"
+          className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-lg border border-border text-[9px] font-medium text-muted-foreground transition-colors hover:bg-muted disabled:opacity-50"
+        >
+          <RiFileCopyLine className="text-[12px]" />{lang === "bn" ? "কপি" : "Copy"}
+        </button>
+        <button
+          disabled={processing}
+          onClick={downloadSummary}
+          title={lang === "bn" ? "টেক্সট ফাইল ডাউনলোড" : "Download as .txt"}
+          aria-label="Download summary"
+          className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-lg border border-border text-[9px] font-medium text-muted-foreground transition-colors hover:bg-muted disabled:opacity-50"
+        >
+          <RiDownloadLine className="text-[12px]" />{lang === "bn" ? "ডাউনলোড" : "Download"}
+        </button>
+        <button
+          disabled={processing}
+          onClick={onRegenerate}
+          title={lang === "bn" ? "নতুন করে তৈরি করুন" : "Regenerate summary"}
+          className="flex h-8 flex-1 items-center justify-center gap-1.5 rounded-lg border border-border text-[9px] font-medium text-muted-foreground transition-colors hover:bg-muted disabled:opacity-50"
+        >
+          {processing ? <RiLoader4Line className="animate-spin text-[12px]" /> : <RiRefreshLine className="text-[12px]" />}{lang === "bn" ? "পুনঃতৈরি" : "Regenerate"}
+        </button>
+      </div>
     </div>
   );
 }
@@ -1707,3 +1847,326 @@ function EmptyState() {
   );
 }
 
+// ─── Per-summary section sub-components ──────────────────────────────────────
+// These were originally defined as a follow-up that was never checked in — the
+// summary panel references them but they don't exist anywhere in the bundle.
+// Defining them here gives each section its own distinct visual treatment, and
+// gives the no-summary case a proper "Create summary" CTA.
+
+function SummaryPaperHeader({
+  summary,
+  lang,
+  setLang,
+  hasBangla,
+  summaryStatus,
+  teacherMode,
+  togglingVisibility,
+  onToggleVisibility,
+}: {
+  summary: ResourceSummary;
+  lang: "en" | "bn";
+  setLang: (value: "en" | "bn") => void;
+  hasBangla: boolean;
+  summaryStatus: string | null;
+  teacherMode: boolean;
+  togglingVisibility: boolean;
+  onToggleVisibility: () => void;
+}) {
+  const isHidden = summaryStatus === "HIDDEN";
+  return (
+    <div className="flex items-center justify-between gap-2 rounded-lg border border-border/70 bg-gradient-to-r from-teal-50/60 via-white to-cyan-50/60 px-3 py-2 dark:border-border dark:from-teal-950/20 dark:via-background dark:to-cyan-950/20">
+      <div className="flex min-w-0 items-center gap-2">
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-teal-600/10 text-teal-600 dark:bg-teal-500/15">
+          <RiFileTextLine className="text-[14px]" />
+        </span>
+        <div className="min-w-0">
+          <p className="text-[8px] font-semibold uppercase tracking-widest text-muted-foreground">AI Summary</p>
+          <p className="truncate text-[11px] font-medium leading-tight">
+            {summaryStatus === "PENDING" ? "Awaiting generation" : "Bilingual reading guide"}
+          </p>
+        </div>
+      </div>
+      <div className="flex items-center gap-1">
+        {teacherMode && (
+          <button
+            onClick={onToggleVisibility}
+            disabled={togglingVisibility}
+            title={isHidden ? "Publish to students" : "Hide from students"}
+            className={cn(
+              "flex h-7 items-center gap-1 rounded-md px-2 text-[8px] font-semibold transition-colors disabled:opacity-50",
+              isHidden
+                ? "bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-950/40 dark:text-amber-300"
+                : "bg-muted text-muted-foreground hover:bg-muted/70"
+            )}
+          >
+            {togglingVisibility ? <RiLoader4Line className="animate-spin" /> : isHidden ? <RiCheckLine /> : <RiCloseLine />}
+            {isHidden ? "Publish" : "Visible"}
+          </button>
+        )}
+        <div className="flex h-7 items-center rounded-md border border-border bg-background p-0.5 text-[8px] font-semibold">
+          <button
+            onClick={() => setLang("en")}
+            className={cn(
+              "flex h-full items-center gap-1 rounded-[5px] px-2 transition-colors",
+              lang === "en"
+                ? "bg-teal-600 text-white shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+            title="Show English summary"
+          >
+            EN
+          </button>
+          <button
+            onClick={() => setLang("bn")}
+            disabled={!hasBangla}
+            className={cn(
+              "flex h-full items-center gap-1 rounded-[5px] px-2 font-bn transition-colors",
+              lang === "bn"
+                ? "bg-teal-600 text-white shadow-sm"
+                : "text-muted-foreground hover:text-foreground",
+              !hasBangla && "cursor-not-allowed opacity-40"
+            )}
+            title={hasBangla ? "Show বাংলা summary" : "Bangla summary not available for this paper"}
+          >
+            বাং
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SummarySectionCard({
+  label,
+  value,
+  lang,
+  variant,
+}: {
+  label: string;
+  value: string;
+  lang: "en" | "bn";
+  variant: number;
+}) {
+  // Each variant gets its own accent color so the 2x2 grid feels visually
+  // varied instead of four identical cards.
+  const accents = [
+    { ring: "border-sky-200/70 dark:border-sky-900/40", dot: "bg-sky-500", text: "text-sky-700 dark:text-sky-300" },
+    { ring: "border-violet-200/70 dark:border-violet-900/40", dot: "bg-violet-500", text: "text-violet-700 dark:text-violet-300" },
+    { ring: "border-amber-200/70 dark:border-amber-900/40", dot: "bg-amber-500", text: "text-amber-700 dark:text-amber-300" },
+    { ring: "border-emerald-200/70 dark:border-emerald-900/40", dot: "bg-emerald-500", text: "text-emerald-700 dark:text-emerald-300" },
+  ] as const;
+  const accent = accents[variant % accents.length];
+  return (
+    <div className={cn("rounded-lg border bg-background p-3 transition-shadow hover:shadow-sm", accent.ring)}>
+      <div className="flex items-center gap-1.5">
+        <span className={cn("h-1.5 w-1.5 rounded-full", accent.dot)} />
+        <p className={cn("text-[9px] font-semibold uppercase tracking-wider", accent.text)}>{label}</p>
+      </div>
+      <p
+        lang={lang === "bn" ? "bn" : "en"}
+        className={cn("mt-1.5 text-[10px] leading-5 text-foreground/90", lang === "bn" && "font-bn")}
+      >
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function KeyContributionGrid({ label, items, lang }: { label: string; items: string[]; lang: "en" | "bn" }) {
+  if (!items?.length) return null;
+  return (
+    <section className="rounded-lg border border-teal-200/60 bg-gradient-to-br from-teal-50/40 to-white p-3 dark:border-teal-900/30 dark:from-teal-950/20 dark:to-background">
+      <div className="flex items-center gap-1.5">
+        <RiSparklingLine className="text-[11px] text-teal-600 dark:text-teal-400" />
+        <p className="text-[9px] font-semibold uppercase tracking-wider text-teal-700 dark:text-teal-400">{label}</p>
+        <span className="ml-auto text-[8px] font-medium text-muted-foreground">{items.length}</span>
+      </div>
+      <ul className="mt-2 space-y-1.5">
+        {items.map((item, index) => (
+          <li
+            key={`${item}-${index}`}
+            className="flex items-start gap-2 rounded-md bg-background/60 px-2.5 py-1.5"
+          >
+            <span className="mt-1 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-teal-600 text-[8px] font-bold text-white">
+              {index + 1}
+            </span>
+            <span
+              lang={lang === "bn" ? "bn" : "en"}
+              className={cn("text-[10px] leading-[1.5] text-foreground/90", lang === "bn" && "font-bn")}
+            >
+              {item}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function LimitationsList({ label, items, lang }: { label: string; items: string[]; lang: "en" | "bn" }) {
+  if (!items?.length) return null;
+  return (
+    <section className="rounded-lg border border-dashed border-rose-200/70 bg-rose-50/30 p-3 dark:border-rose-900/30 dark:bg-rose-950/10">
+      <div className="flex items-center gap-1.5">
+        <RiAlertLine className="text-[11px] text-rose-500 dark:text-rose-400" />
+        <p className="text-[9px] font-semibold uppercase tracking-wider text-rose-700 dark:text-rose-400">{label}</p>
+        <span className="ml-auto text-[8px] font-medium text-muted-foreground">{items.length}</span>
+      </div>
+      <ul className="mt-2 space-y-1">
+        {items.map((item, index) => (
+          <li
+            key={`${item}-${index}`}
+            className="flex items-start gap-2 rounded-md border border-rose-200/40 bg-background/60 px-2.5 py-1.5 dark:border-rose-900/30"
+          >
+            <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-rose-400" />
+            <span
+              lang={lang === "bn" ? "bn" : "en"}
+              className={cn("text-[10px] leading-[1.5] text-foreground/90", lang === "bn" && "font-bn")}
+            >
+              {item}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function KeywordChips({ label, items }: { label: string; items: string[] }) {
+  if (!items?.length) return null;
+  return (
+    <section className="rounded-lg border border-border/60 bg-muted/20 p-3">
+      <div className="flex items-center gap-1.5">
+        <p className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
+        <span className="ml-auto text-[8px] font-medium text-muted-foreground">{items.length}</span>
+      </div>
+      <div className="mt-2 flex flex-wrap gap-1">
+        {items.map((item, index) => (
+          <span
+            key={`${item}-${index}`}
+            className="rounded-full border border-border bg-background px-2.5 py-1 text-[9px] font-medium text-foreground/80"
+          >
+            #{item}
+          </span>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/**
+ * Shown when a paper exists in the database but no AI summary has been
+ * generated for it yet. This is the "give the user a CTA to create a new
+ * summary" path — the backend already exposes a /summary/regenerate endpoint
+ * that creates a fresh row for the resource without re-extracting text or
+ * re-resolving citations. We surface that here so the user can act on the
+ * empty state in one click.
+ */
+function ReadyToSummarizeCard({
+  processing,
+  onGenerate,
+  extractedTextPreview,
+}: {
+  processing: boolean;
+  onGenerate: () => void;
+  extractedTextPreview: ExtractedTextPreview | null;
+}) {
+  const hasPreview = extractedTextPreview?.status === "READY";
+  const totalChars = extractedTextPreview?.totalChars ?? 0;
+  const pageCount = extractedTextPreview?.pageCount ?? null;
+
+  return (
+    <div className="space-y-2.5">
+      <div className="relative overflow-hidden rounded-xl border border-teal-200/70 bg-gradient-to-br from-teal-50/60 via-white to-cyan-50/60 p-4 dark:border-teal-900/40 dark:from-teal-950/30 dark:via-background dark:to-cyan-950/30">
+        <div className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-teal-300/25 blur-2xl" />
+        <div className="pointer-events-none absolute -bottom-8 -left-6 h-28 w-28 rounded-full bg-cyan-300/25 blur-2xl" />
+        <div className="relative">
+          <div className="flex items-start gap-3">
+            <div className="relative">
+              <div className="absolute inset-0 -z-10 animate-pulse rounded-2xl bg-teal-400/25" />
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-500 to-cyan-600 text-white shadow-lg shadow-teal-500/30 ring-2 ring-teal-200/60 dark:ring-teal-900/40">
+                <RiBrainLine className="text-xl" />
+              </div>
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[9px] font-semibold uppercase tracking-widest text-teal-700 dark:text-teal-400">
+                No summary yet
+              </p>
+              <h3 className="mt-0.5 text-[13px] font-semibold leading-tight">
+                Create an AI summary for this paper
+              </h3>
+              <p className="mt-1 text-[10px] leading-[1.55] text-muted-foreground">
+                Generate a bilingual reading guide in English and বাংলা — a professional
+                summary plus goals, methods, results, conclusions, key contributions,
+                limitations, and keywords. The result is saved and shared.
+              </p>
+            </div>
+          </div>
+
+          {/* Paper stats row — gives the user confidence the AI is looking at the
+              right thing. */}
+          <div className="mt-3.5 flex flex-wrap items-center gap-1.5">
+            <span className="rounded-full border border-teal-200/70 bg-white/60 px-2 py-0.5 text-[8px] font-medium text-teal-700 dark:border-teal-900/40 dark:bg-teal-950/30 dark:text-teal-300">
+              <RiFileTextLine className="mr-0.5 inline" /> PDF ready
+            </span>
+            {pageCount ? (
+              <span className="rounded-full border border-border bg-white/60 px-2 py-0.5 text-[8px] font-medium text-muted-foreground dark:bg-background/60">
+                {pageCount} page{pageCount === 1 ? "" : "s"}
+              </span>
+            ) : null}
+            {totalChars > 0 ? (
+              <span className="rounded-full border border-border bg-white/60 px-2 py-0.5 text-[8px] font-medium text-muted-foreground dark:bg-background/60">
+                {(totalChars / 1000).toFixed(1)}k chars extracted
+              </span>
+            ) : (
+              <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[8px] font-medium text-amber-700 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-300">
+                Text will be extracted on first run
+              </span>
+            )}
+          </div>
+
+          <button
+            disabled={processing}
+            onClick={onGenerate}
+            className="group relative mt-4 inline-flex h-10 w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-r from-teal-600 via-teal-600 to-cyan-600 px-5 text-[11px] font-semibold text-white shadow-lg shadow-teal-600/30 transition-all hover:shadow-xl hover:shadow-teal-600/40 disabled:opacity-50"
+          >
+            <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+            {processing ? (
+              <RiLoader4Line className="animate-spin" />
+            ) : (
+              <RiSparklingLine className="transition-transform group-hover:rotate-12" />
+            )}
+            {processing ? "Creating summary…" : "Create AI summary"}
+          </button>
+          <p className="mt-2 flex items-center justify-center gap-1.5 text-[8px] text-muted-foreground">
+            <RiTimeLine /> Bilingual (English + বাংলা) · Takes 30–60 seconds
+          </p>
+        </div>
+      </div>
+
+      {/* Show the user exactly what text the AI will see — preview of the
+          extracted PDF content, or a friendly message if text hasn't been
+          extracted yet. Helps build trust before they click the CTA. */}
+      {hasPreview && extractedTextPreview?.preview ? (
+        <details className="group rounded-lg border border-border bg-muted/20 p-3">
+          <summary className="flex cursor-pointer items-center gap-2 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground">
+            <RiFileTextLine className="text-[11px]" />
+            Preview text the AI will read
+            <span className="ml-auto text-[8px] font-normal normal-case opacity-70">
+              first {extractedTextPreview.preview.length} chars
+            </span>
+          </summary>
+          <pre className="mt-2 max-h-40 overflow-y-auto whitespace-pre-wrap rounded-md border border-border/60 bg-background/70 p-2.5 text-[9px] leading-[1.55] text-foreground/80">
+            {extractedTextPreview.preview}
+            {extractedTextPreview.truncated ? "…" : ""}
+          </pre>
+        </details>
+      ) : (
+        <p className="rounded-md border border-dashed border-border/60 bg-muted/10 px-3 py-2 text-[8.5px] leading-[1.55] text-muted-foreground">
+          Text hasn't been extracted from this PDF yet — the first run will
+          read every page, then build the summary.
+        </p>
+      )}
+    </div>
+  );
+}

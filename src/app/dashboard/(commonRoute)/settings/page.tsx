@@ -38,11 +38,14 @@ import {
 import { cn } from "@/lib/utils";
 import { settingsApi } from "@/lib/api";
 import { toast } from "sonner";
+import { MascotPreferencesForm } from "@/components/mascot/MascotSettings";
+import { useMascotPreferences } from "@/hooks/useMascotPreferences";
 
 // ─── Tabs (Profile removed) ───────────────────────────────
 const TABS = [
   { id: "notifications", label: "Notifications", icon: <RiBellLine /> },
   { id: "privacy", label: "Privacy & Security", icon: <RiShieldLine /> },
+  { id: "mascot", label: "Nimbi", icon: <RiSparklingFill /> },
   // { id: "api", label: "API Keys", icon: <RiCodeLine /> },
   { id: "danger", label: "Danger Zone", icon: <RiAlertLine /> },
 ] as const;
@@ -1205,6 +1208,36 @@ function DangerTab() {
   );
 }
 
+function MascotTab() {
+  const { preferences, ready, updatePreferences, resetPreferences } =
+    useMascotPreferences();
+
+  return (
+    <Section
+      title="Nimbi Mascot"
+      description="Control the optional floating companion on this browser."
+    >
+      {ready ? (
+        <div className="max-w-md">
+          <MascotPreferencesForm
+            preferences={preferences}
+            onChange={updatePreferences}
+          />
+          <button
+            type="button"
+            onClick={resetPreferences}
+            className="mt-5 h-9 px-4 rounded-xl border border-border bg-muted/40 text-[13px] font-semibold text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          >
+            Restore Nimbi defaults
+          </button>
+        </div>
+      ) : (
+        <div className="h-48 rounded-xl bg-muted/30 animate-pulse" />
+      )}
+    </Section>
+  );
+}
+
 // ─── Main page ─────────────────────────────────────────────
 export default function AccountSettingsPage() {
   const [activeTab, setActiveTab] = useState<TabId>("notifications");
@@ -1258,6 +1291,7 @@ export default function AccountSettingsPage() {
         <div className="max-w-3xl w-full">
           {activeTab === "notifications" && <NotificationsTab />}
           {activeTab === "privacy" && <PrivacyTab />}
+          {activeTab === "mascot" && <MascotTab />}
           {/* {activeTab === "api" && <ApiTab />} */}
           {activeTab === "danger" && <DangerTab />}
         </div>
