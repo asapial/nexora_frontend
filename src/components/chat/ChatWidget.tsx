@@ -356,9 +356,11 @@ function InputBar({
 
 
 // ── Root widget ───────────────────────────────────────────────────────────────
-interface ChatWidgetProps {
+export interface ChatWidgetProps {
   user?: { name: string; role: "STUDENT" | "TEACHER" | "ADMIN"; } | null;
   loginPath?: string;
+  embedded?: boolean;
+  onClose?: () => void;
 }
 
 // Wrapper panels that forward drag props into PanelHeader
@@ -492,14 +494,14 @@ function GuestPanelDraggable({
   );
 }
 
-export default function ChatWidget({ user, loginPath = "/auth/signin" }: ChatWidgetProps) {
-  const [panelState, setPanelState] = useState<PanelState>("closed");
+export default function ChatWidget({ user, loginPath = "/auth/signin", embedded = false, onClose }: ChatWidgetProps) {
+  const [panelState, setPanelState] = useState<PanelState>(embedded ? "open" : "closed");
   const router = useRouter();
   const isLoggedIn = !!user;
 
   const open = () => setPanelState("open");
-  const minimize = () => setPanelState("minimized");
-  const close = () => setPanelState("closed");
+  const minimize = () => { if (embedded) onClose?.(); else setPanelState("minimized"); };
+  const close = () => { setPanelState("closed"); onClose?.(); };
   const handleLogin = () => { close(); router.push(loginPath); };
 
   // Draggable – size depends on panel state
@@ -525,8 +527,9 @@ export default function ChatWidget({ user, loginPath = "/auth/signin" }: ChatWid
       `}</style>
 
       {/* ── Floating button (closed) ── */}
-      {panelState === "closed" && fabDrag.pos && (
+      {!embedded && panelState === "closed" && fabDrag.pos && (
         <button
+          aria-label="Open Nexora AI chat"
           style={{ position: "fixed", left: fabDrag.pos.x, top: fabDrag.pos.y, zIndex: 50 }}
           onMouseDown={fabDrag.onMouseDown}
           onTouchStart={fabDrag.onTouchStart}
@@ -550,7 +553,7 @@ export default function ChatWidget({ user, loginPath = "/auth/signin" }: ChatWid
       )}
 
       {/* ── Minimized pill ── */}
-      {panelState === "minimized" && pillDrag.pos && (
+      {!embedded && panelState === "minimized" && pillDrag.pos && (
         <div
           style={{ position: "fixed", left: pillDrag.pos.x, top: pillDrag.pos.y, zIndex: 50 }}
           onMouseDown={pillDrag.onMouseDown}
@@ -569,6 +572,7 @@ export default function ChatWidget({ user, loginPath = "/auth/signin" }: ChatWid
             <span className="text-white/60 text-[10px]">Drag or click to expand</span>
           </div>
           <button
+            aria-label="Close minimized chat"
             onMouseDown={e => e.stopPropagation()}
             onClick={e => { e.stopPropagation(); close(); }}
             className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0
@@ -582,9 +586,11 @@ export default function ChatWidget({ user, loginPath = "/auth/signin" }: ChatWid
       {/* ── Full panel ── */}
       {panelState === "open" && panelDrag.pos && (
         <div
+          role="dialog"
+          aria-label="Chat with Nimbi"
           style={{ position: "fixed", left: panelDrag.pos.x, top: panelDrag.pos.y, zIndex: 50 }}
           className={cn(
-            "nc-panel w-[370px] max-h-[590px] flex flex-col",
+            "nc-panel w-[min(370px,calc(100vw-24px))] max-h-[min(590px,calc(100vh-24px))] flex flex-col",
             "rounded-[20px] border border-teal-200/20 dark:border-teal-800/30 bg-background",
             "shadow-2xl shadow-teal-900/[0.15] dark:shadow-black/50 overflow-hidden"
           )}

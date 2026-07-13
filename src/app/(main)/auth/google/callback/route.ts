@@ -54,6 +54,16 @@ export async function GET(request: NextRequest) {
     maxAge: 60 * 60 * 24 * 7, // 7 days
   });
 
+  // A short-lived, non-sensitive marker lets the client celebrate this
+  // completed OAuth transition after the auth route's mascot suppression ends.
+  response.cookies.set("nimbi_login_pending", "1", {
+    httpOnly: false,
+    secure: isProd,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 120,
+  });
+
   // Set the BetterAuth session token on the FRONTEND domain.
   // checkAuth (backend middleware) reads this cookie when the frontend sends it
   // via Next.js server-side fetches (userService.getSession → /api/auth/me).

@@ -436,6 +436,7 @@ export default function FeaturesSection({ data }: { data: FeaturesSectionData; }
 
         {/* ── DnD Grid ── */}
         <DndContext
+          id="home-features-dnd"
           sensors={sensors}
           collisionDetection={closestCenter}
           onDragStart={handleDragStart}

@@ -1,5 +1,6 @@
 "use client";
 import { useState, useCallback, useEffect } from "react";
+import { emitMascotEvent } from "@/lib/mascot/eventBus";
 
 export interface ChatMessage {
   id: string;
@@ -53,6 +54,8 @@ export function useAuthChat() {
     saveToStorage(STORAGE_KEY_AUTH, updated);
     setLoading(true);
     setError(null);
+    emitMascotEvent("chat_message_sent");
+    emitMascotEvent("chat_response_started");
 
     try {
       const history = messages.map(m => ({ role: m.role, content: m.content }));
@@ -76,8 +79,10 @@ export function useAuthChat() {
       const withAI = [...updated, aiMsg];
       setMessages(withAI);
       saveToStorage(STORAGE_KEY_AUTH, withAI);
+      emitMascotEvent("chat_response_finished");
     } catch (err: any) {
       setError(err.message || "Failed to get response");
+      emitMascotEvent("chat_error", { message: err.message || "Failed to get response" });
     } finally {
       setLoading(false);
     }
@@ -119,6 +124,8 @@ export function useGuestChat() {
     saveToStorage(STORAGE_KEY_GUEST, updated);
     setLoading(true);
     setError(null);
+    emitMascotEvent("chat_message_sent");
+    emitMascotEvent("chat_response_started");
 
     try {
       const history = messages.map(m => ({ role: m.role, content: m.content }));
@@ -141,8 +148,10 @@ export function useGuestChat() {
       const withAI = [...updated, aiMsg];
       setMessages(withAI);
       saveToStorage(STORAGE_KEY_GUEST, withAI);
+      emitMascotEvent("chat_response_finished");
     } catch (err: any) {
       setError(err.message || "Failed to get response");
+      emitMascotEvent("chat_error", { message: err.message || "Failed to get response" });
     } finally {
       setLoading(false);
     }

@@ -64,7 +64,10 @@ export function MascotLoader() {
   );
 
   useEffect(() => {
-    if (!ready || !preferences.enabled || isSensitivePath) return;
+    if (!ready || !preferences.enabled || isSensitivePath) {
+      setShouldLoad(false);
+      return;
+    }
     return scheduleIdleTask(() => setShouldLoad(true));
   }, [isSensitivePath, preferences.enabled, ready]);
 

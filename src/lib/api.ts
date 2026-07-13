@@ -290,6 +290,8 @@ export const resourceAiApi = {
     apiFetch<any>(`/api/resource/${resourceId}/summary/regenerate`, { method: "POST" }),
   reanalyzeCitations: (resourceId: string) =>
     apiFetch<any>(`/api/resource/${resourceId}/citations/reanalyze`, { method: "POST" }),
+  regenerateGraph: (resourceId: string) =>
+    apiFetch<any>(`/api/resource/${resourceId}/graph/regenerate`, { method: "POST" }),
   setSummaryVisibility: (resourceId: string, isVisible: boolean) =>
     apiFetch<any>(`/api/resource/${resourceId}/summary/visibility`, { method: "PATCH", body: JSON.stringify({ isVisible }) }),
   // Short preview (~1800 chars) of the extracted PDF text so the UI can show

@@ -1,0 +1,16 @@
+.preview {
+  --mascot-primary: oklch(0.72 0.16 180);
+  --mascot-secondary: oklch(0.61 0.2 285);
+  --mascot-glow: oklch(0.84 0.17 184);
+  --mascot-surface: var(--popover);
+  display: grid;
+  place-items: center;
+  min-height: 190px;
+  margin-bottom: 1rem;
+  border: 1px dashed var(--border);
+  border-radius: 1rem;
+  background: color-mix(in oklab, var(--muted) 45%, transparent);
+  overflow: hidden;
+}
+.preview svg { width: 108px; }
+.preview span { margin-top: -1.4rem; color: var(--muted-foreground); font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }

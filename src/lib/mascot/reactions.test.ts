@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   canStartReaction,
+  hitReactionForCount,
   isReactionCoolingDown,
   MASCOT_REACTIONS,
 } from "./reactions.ts";
@@ -43,8 +44,15 @@ test("reaction cooldowns expire at their configured boundary", () => {
 });
 
 test("temporary and loading reactions have the expected lifecycle durations", () => {
-  assert.equal(MASCOT_REACTIONS.success.durationMs, 700);
-  assert.equal(MASCOT_REACTIONS.error.durationMs, 850);
+  assert.equal(MASCOT_REACTIONS.success.durationMs, 750);
+  assert.equal(MASCOT_REACTIONS.error.durationMs, 1100);
   assert.equal(MASCOT_REACTIONS.thinking.durationMs, 0);
   assert.equal(MASCOT_REACTIONS.idle.durationMs, 0);
+});
+
+test("repeated taps progress through the controlled emotional arc", () => {
+  assert.equal(hitReactionForCount(1), "surprised");
+  assert.equal(hitReactionForCount(2), "dizzy");
+  assert.equal(hitReactionForCount(3), "sad");
+  assert.equal(hitReactionForCount(6), "crying");
 });

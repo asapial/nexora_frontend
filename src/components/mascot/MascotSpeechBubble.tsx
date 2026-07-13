@@ -34,8 +34,9 @@ export function MascotSpeechBubble({
 
   return (
     <div
+      style={{ zIndex: 3 }}
       className={`${styles.speechBubble} ${
-        position === "bottom-left" ? styles.speechLeft : styles.speechRight
+        position.side === "left" ? styles.speechLeft : styles.speechRight
       }`}
       role={speech.meaningful ? "status" : undefined}
       aria-live={speech.meaningful ? "polite" : undefined}

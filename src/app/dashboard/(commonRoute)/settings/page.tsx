@@ -39,7 +39,9 @@ import { cn } from "@/lib/utils";
 import { settingsApi } from "@/lib/api";
 import { toast } from "sonner";
 import { MascotPreferencesForm } from "@/components/mascot/MascotSettings";
+import { MascotPreview } from "@/components/mascot/MascotPreview";
 import { useMascotPreferences } from "@/hooks/useMascotPreferences";
+import { DEFAULT_MASCOT_PREFERENCES } from "@/lib/mascot/constants";
 
 // ─── Tabs (Profile removed) ───────────────────────────────
 const TABS = [
@@ -1219,9 +1221,16 @@ function MascotTab() {
     >
       {ready ? (
         <div className="max-w-md">
+          <MascotPreview preferences={preferences} />
           <MascotPreferencesForm
             preferences={preferences}
             onChange={updatePreferences}
+            onResetPosition={() => updatePreferences({
+              position: {
+                side: preferences.defaultSide,
+                verticalRatio: DEFAULT_MASCOT_PREFERENCES.position.verticalRatio,
+              },
+            })}
           />
           <button
             type="button"

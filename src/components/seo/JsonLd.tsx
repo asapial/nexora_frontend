@@ -1,5 +1,3 @@
-import type { Thing, WithContext } from "schema-dts";
-
 /**
  * Drop-in server component for emitting JSON-LD structured data.
  *

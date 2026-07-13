@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   emitMascotEvent,
+  getMascotSuppression,
+  resetMascotSuppressionForTests,
   subscribeToMascotEvent,
   suppressMascot,
 } from "./eventBus.ts";
@@ -30,6 +32,7 @@ test("supports payload-free events", () => {
 });
 
 test("suppression drops reactions until its cleanup runs", () => {
+  resetMascotSuppressionForTests();
   let calls = 0;
   const unsubscribe = subscribeToMascotEvent("mascot_clicked", () => {
     calls += 1;
@@ -40,4 +43,15 @@ test("suppression drops reactions until its cleanup runs", () => {
   emitMascotEvent("mascot_clicked");
   unsubscribe();
   assert.equal(calls, 1);
+});
+
+test("nested hidden and speech suppression is reference counted", () => {
+  resetMascotSuppressionForTests();
+  const releaseSpeech = suppressMascot({ hide: false, speech: true, reason: "dialog" });
+  const releaseHidden = suppressMascot({ hide: true, reason: "payment" });
+  assert.deepEqual(getMascotSuppression(), { hidden: true, speech: true });
+  releaseHidden();
+  assert.deepEqual(getMascotSuppression(), { hidden: false, speech: true });
+  releaseSpeech();
+  assert.deepEqual(getMascotSuppression(), { hidden: false, speech: false });
 });

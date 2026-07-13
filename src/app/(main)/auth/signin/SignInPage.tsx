@@ -17,6 +17,7 @@ import {
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { markMascotLoginPending } from "@/hooks/useMascotActivity";
 
 
 
@@ -251,6 +252,7 @@ export default function SignInPage({ data }: { data: SignInPageData; }) {
       }
 
       toast.success("User login successfully", { position: "top-right" });
+      markMascotLoginPending(data?.data?.user?.name ?? data?.data?.userData?.name);
       await redirectToDashboard();
 
     } catch (err: unknown) {
@@ -291,6 +293,7 @@ export default function SignInPage({ data }: { data: SignInPageData; }) {
         return;
       }
       toast.success("Login successful!", { position: "top-right" });
+      markMascotLoginPending(data?.data?.user?.name ?? data?.data?.userData?.name);
       await redirectToDashboard();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to verify code. Please try again.";

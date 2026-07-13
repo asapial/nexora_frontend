@@ -30,6 +30,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { toast } from "sonner";
+import { emitMascotEvent } from "@/lib/mascot/eventBus";
 
 export interface NavUserData {
   name: string;
@@ -253,6 +254,7 @@ export function NavUser({ user }: { user: NavUserData; }) {
                 const data = await res.json();
                 if (data.success) {
                   toast.success("Logout Successfylly", { position: "top-right" });
+                  emitMascotEvent("user_logged_out");
                   window.location.href = "/";
 
                 }

@@ -72,6 +72,7 @@ type ResourceAiStatus = {
   text?: { status: string; pageCount?: number | null };
   summary?: { status: string; isVisible?: boolean };
   citations?: { status: string; count: number };
+  graph?: { status: string; provider?: string; generatedAt?: string | null };
 };
 
 // Preview envelope returned by GET /api/resource/:id/extracted-text-preview.
@@ -144,7 +145,13 @@ type ResourceCitation = {
 
 type ResourceGraph = {
   nodes: Array<{ id: string; type: string; label: string; data?: Record<string, unknown> }>;
-  edges: Array<{ id: string; source: string; target: string; confidenceScore?: number | null; label?: string }>;
+  edges: Array<{ id: string; source: string; target: string; type?: string; confidenceScore?: number | null; label?: string }>;
+  generatedAt?: string | null;
+  provider?: string;
+  providerPaperId?: string | null;
+  citationCount?: number | null;
+  warning?: string | null;
+  stats?: { references: number; citedBy: number; secondLayer: number; related: number };
 };
 
 type AiFeatureErrors = Partial<Record<"status" | "summary" | "citations" | "graph", string>>;
@@ -157,11 +164,19 @@ type SummaryEnvelope = {
   processingError: string | null;
   summaryStatus: "COMPLETED" | "HIDDEN" | "PENDING" | "FAILED" | string;
   summary: ResourceSummary | null;
+  documentIdentity?: {
+    storedTitle: string;
+    detectedTitle: string;
+    detectedAuthors: string[];
+    sourceType: "FULL_PAPER" | "RESEARCH_SUMMARY" | "EXTRACTED_TEXT";
+    titleMismatch: boolean;
+    warning?: string | null;
+  };
 };
 
 // ─── AI status classification ────────────────────────────────────────────────
 // Processing: backend is actively working — show spinner
-const AI_PROCESSING_STATUSES = new Set(["TEXT_PROCESSING", "SUMMARY_PROCESSING", "CITATION_PROCESSING"]);
+const AI_PROCESSING_STATUSES = new Set(["TEXT_PROCESSING", "SUMMARY_PROCESSING", "CITATION_PROCESSING", "GRAPH_PROCESSING"]);
 // Ready states that are NOT yet final (pipeline still has more steps)
 const AI_INTERMEDIATE_STATUSES = new Set(["TEXT_EXTRACTED", "SUMMARY_READY"]);
 // Terminal: job is done (either success or failure) — stop polling.
@@ -182,6 +197,7 @@ const aiStatusLabel = (status?: string | null) => {
   if (status === "TEXT_PROCESSING" || status === "TEXT_EXTRACTED") return "Extracting text";
   if (status === "SUMMARY_PROCESSING") return "Generating summary";
   if (status === "CITATION_PROCESSING") return "Analyzing references";
+  if (status === "GRAPH_PROCESSING") return "Building research graph";
   if (isAiReadyStatus(status)) return "Ready";
   if (status === "FAILED") return "Failed";
   return "Not processed";
@@ -240,89 +256,52 @@ function extractGraph(data: unknown): ResourceGraph | null {
   const obj = data as Record<string, unknown>;
   // May be { nodes, edges } directly, or { graph: { nodes, edges } }
   if (Array.isArray(obj.nodes) && Array.isArray(obj.edges)) {
-    return { nodes: obj.nodes as ResourceGraph["nodes"], edges: obj.edges as ResourceGraph["edges"] };
+    return obj as unknown as ResourceGraph;
   }
   if (obj.graph && typeof obj.graph === "object") {
     const g = obj.graph as Record<string, unknown>;
     if (Array.isArray(g.nodes) && Array.isArray(g.edges)) {
-      return { nodes: g.nodes as ResourceGraph["nodes"], edges: g.edges as ResourceGraph["edges"] };
+      return g as unknown as ResourceGraph;
     }
   }
   return null;
 }
 
-// ─── Force-layout simulation for citation graph ─────────────────────────────
-type NodePos = { x: number; y: number; vx: number; vy: number };
+const graphEdgeRelation = (edge: ResourceGraph["edges"][number]) =>
+  String(edge.type ?? edge.label ?? "REFERENCES").toUpperCase().replaceAll(" ", "_");
 
+// ─── Deterministic literature-tree layout ───────────────────────────────────
+// References sit to the left of the selected paper; direct citing papers are
+// its first child column; citations of those papers form the second child
+// column. Related work branches beneath the root.
 function runForceLayout(
   nodes: ResourceGraph["nodes"],
-  edges: ResourceGraph["edges"],
-  width: number,
-  height: number,
-  iterations = 120
+  _edges: ResourceGraph["edges"],
+  _width: number,
+  _height: number,
 ): Map<string, { x: number; y: number }> {
-  const cx = width / 2;
-  const cy = height / 2;
-  const positions = new Map<string, NodePos>();
+  const positions = new Map<string, { x: number; y: number }>();
   const currentNode = nodes.find((n) => n.type === "current-resource") ?? nodes[0];
+  const relation = (node: ResourceGraph["nodes"][number]) => String(node.data?.relation ?? "");
+  const depth = (node: ResourceGraph["nodes"][number]) => Number(node.data?.depth ?? 0);
+  const references = nodes.filter((node) => node.id !== currentNode?.id && (node.type === "reference-paper" || relation(node) === "REFERENCES" || node.type === "external-resource" || node.type === "internal-resource"));
+  const firstLayer = nodes.filter((node) => node.id !== currentNode?.id && relation(node) === "CITED_BY" && depth(node) <= 1);
+  const secondLayer = nodes.filter((node) => node.id !== currentNode?.id && relation(node) === "CITED_BY" && depth(node) >= 2);
+  const related = nodes.filter((node) => node.id !== currentNode?.id && (node.type === "related-paper" || relation(node) === "RELATED"));
+  const assigned = new Set([currentNode?.id, ...references.map((n) => n.id), ...firstLayer.map((n) => n.id), ...secondLayer.map((n) => n.id), ...related.map((n) => n.id)]);
+  firstLayer.push(...nodes.filter((node) => !assigned.has(node.id)));
 
-  nodes.forEach((node, i) => {
-    if (node.id === currentNode?.id) {
-      positions.set(node.id, { x: cx, y: cy, vx: 0, vy: 0 });
-    } else {
-      const angle = (i / nodes.length) * Math.PI * 2;
-      const r = Math.min(cx, cy) * 0.62;
-      positions.set(node.id, {
-        x: cx + Math.cos(angle) * r + (Math.random() - 0.5) * 12,
-        y: cy + Math.sin(angle) * r + (Math.random() - 0.5) * 12,
-        vx: 0,
-        vy: 0,
-      });
-    }
-  });
-
-  for (let iter = 0; iter < iterations; iter++) {
-    const nodeList = Array.from(positions.entries());
-    for (let a = 0; a < nodeList.length; a++) {
-      for (let b = a + 1; b < nodeList.length; b++) {
-        const [, posA] = nodeList[a];
-        const [, posB] = nodeList[b];
-        const dx = posB.x - posA.x;
-        const dy = posB.y - posA.y;
-        const dist = Math.max(Math.sqrt(dx * dx + dy * dy), 1);
-        const force = 2400 / (dist * dist);
-        posA.vx -= (dx / dist) * force;
-        posA.vy -= (dy / dist) * force;
-        posB.vx += (dx / dist) * force;
-        posB.vy += (dy / dist) * force;
-      }
-    }
-    edges.forEach((edge) => {
-      const src = positions.get(edge.source);
-      const tgt = positions.get(edge.target);
-      if (!src || !tgt) return;
-      const dx = tgt.x - src.x;
-      const dy = tgt.y - src.y;
-      const dist = Math.max(Math.sqrt(dx * dx + dy * dy), 1);
-      const displacement = dist - 85;
-      const force = 0.04 * displacement;
-      const fx = (dx / dist) * force;
-      const fy = (dy / dist) * force;
-      if (edge.source !== currentNode?.id) { src.vx += fx; src.vy += fy; }
-      if (edge.target !== currentNode?.id) { tgt.vx -= fx; tgt.vy -= fy; }
-    });
-    positions.forEach((pos, id) => {
-      if (id === currentNode?.id) return;
-      pos.vx += (cx - pos.x) * 0.005;
-      pos.vy += (cy - pos.y) * 0.005;
-      pos.vx *= 0.82;
-      pos.vy *= 0.82;
-      pos.x = Math.max(28, Math.min(width - 28, pos.x + pos.vx));
-      pos.y = Math.max(28, Math.min(height - 28, pos.y + pos.vy));
-    });
-  }
-
-  return new Map(Array.from(positions.entries()).map(([id, p]) => [id, { x: p.x, y: p.y }]));
+  const gap = 118;
+  const placeColumn = (items: ResourceGraph["nodes"], x: number, startY = 0) => {
+    items.forEach((node, index) => positions.set(node.id, { x, y: startY + index * gap }));
+  };
+  const mainHeight = Math.max(references.length, firstLayer.length, secondLayer.length, 1) * gap;
+  placeColumn(references, 0);
+  placeColumn(firstLayer, 720);
+  placeColumn(secondLayer, 1080);
+  placeColumn(related, 360, mainHeight + 150);
+  if (currentNode) positions.set(currentNode.id, { x: 360, y: Math.max(0, mainHeight / 2 - 40) });
+  return positions;
 }
 
 export default function ResourceAnnotationPage() {
@@ -412,7 +391,7 @@ export default function ResourceAnnotationPage() {
       resourceAiApi.status(resource.id),
       resourceAiApi.summary(resource.id),
       resourceAiApi.citations(resource.id),
-      resourceAiApi.graph(resource.id, { includeExternal: "true", minConfidence: "0", limit: "50" }),
+      resourceAiApi.graph(resource.id, { includeExternal: "true", minConfidence: "0", limit: "100" }),
       resourceAiApi.extractedTextPreview(resource.id),
     ]);
 
@@ -447,8 +426,7 @@ export default function ResourceAnnotationPage() {
 
     if (graphResult.status === "fulfilled") {
       const extracted = extractGraph(graphResult.value.data);
-      // Only store graph if it has edges (a graph with only the current node is not useful)
-      setGraph(extracted && (extracted.edges.length > 0) ? extracted : null);
+      setGraph(extracted);
     } else {
       nextErrors.graph = errorMessage(graphResult.reason, "Could not load citation graph");
       setGraph(null);
@@ -628,12 +606,13 @@ export default function ResourceAnnotationPage() {
     void loadAiFeatures(resource);
   };
 
-  const processAi = async (mode: "full" | "summary" | "citations" = "full") => {
+  const processAi = async (mode: "full" | "summary" | "citations" | "graph" = "full") => {
     if (!selected) return;
     setAiProcessing(true);
     try {
       if (mode === "summary") await resourceAiApi.regenerateSummary(selected.id);
       else if (mode === "citations") await resourceAiApi.reanalyzeCitations(selected.id);
+      else if (mode === "graph") await resourceAiApi.regenerateGraph(selected.id);
       else await resourceAiApi.process(selected.id);
       toast.success("AI reading started — processing in background");
       // Start the stable polling loop — keeps running until terminal status arrives
@@ -842,7 +821,7 @@ function ReaderWorkspace({ resource, readerUrl, readerLoading, readerError, curr
   onToggleNotes: () => void;
   onToggleAi: () => void;
   onAiTab: (tab: "summary" | "citations" | "graph") => void;
-  onProcessAi: (mode?: "full" | "summary" | "citations") => void;
+  onProcessAi: (mode?: "full" | "summary" | "citations" | "graph") => void;
   onLoaded: () => void;
   onError: () => void;
   onRetry: () => void;
@@ -978,7 +957,7 @@ const AI_STEPS = [
   { key: "text",     label: "Extracting text",   statuses: ["TEXT_PROCESSING", "TEXT_EXTRACTED"] },
   { key: "summary",  label: "Generating summary", statuses: ["SUMMARY_PROCESSING", "SUMMARY_READY"] },
   { key: "refs",     label: "Parsing references", statuses: ["CITATION_PROCESSING", "CITATIONS_READY"] },
-  { key: "graph",    label: "Building graph",     statuses: ["GRAPH_READY"] },
+  { key: "graph",    label: "Building graph",     statuses: ["GRAPH_PROCESSING", "GRAPH_READY"] },
 ] as const;
 
 type AiStepKey = typeof AI_STEPS[number]["key"];
@@ -1011,11 +990,12 @@ function AiReadingPanel({ loading, processing, activeTab, status, summary, summa
   teacherMode: boolean;
   extractedTextPreview: ExtractedTextPreview | null;
   onTab: (tab: "summary" | "citations" | "graph") => void;
-  onProcess: (mode?: "full" | "summary" | "citations") => void;
+  onProcess: (mode?: "full" | "summary" | "citations" | "graph") => void;
 }) {
   const rawStatus = status?.status;
   const busy = processing || isAiProcessingStatus(rawStatus);
-  const notStarted = !rawStatus || rawStatus === "PENDING" || rawStatus === "NOT_PROCESSED";
+  const hasArtifacts = Boolean(summary || citations.length || graph?.edges.length);
+  const notStarted = (!rawStatus || rawStatus === "PENDING" || rawStatus === "NOT_PROCESSED") && !hasArtifacts;
   const isFailed = rawStatus === "FAILED";
 
   return (
@@ -1056,12 +1036,12 @@ function AiReadingPanel({ loading, processing, activeTab, status, summary, summa
       {/* Body */}
       <div className="flex-1 overflow-y-auto p-3">
         {loading ? <AiSkeleton />
-          : busy && !summary && !citations.length ? <AiProcessingOverlay status={rawStatus} />
+          : busy && !summary && !citations.length && !graph?.edges.length ? <AiProcessingOverlay status={rawStatus} />
           : notStarted ? <NotProcessedState onProcess={() => onProcess("full")} processing={busy} />
-          : isFailed ? <FailedState error={status?.processingError} onRetry={() => onProcess("full")} processing={busy} />
+          : isFailed && !hasArtifacts ? <FailedState error={status?.processingError} onRetry={() => onProcess("full")} processing={busy} />
           : activeTab === "summary" ? <SummaryPanel summary={summary} summaryEnvelope={summaryEnvelope} error={errors.summary} onRegenerate={() => onProcess("summary")} processing={busy} teacherMode={teacherMode} resourceId={summaryEnvelope?.resourceId} extractedTextPreview={extractedTextPreview} />
-          : activeTab === "citations" ? <CitationList citations={citations} error={errors.citations} onReanalyze={() => onProcess("full")} processing={busy} />
-          : <CitationGraph graph={graph} citations={citations} error={errors.graph} onProcess={() => onProcess("full")} processing={busy} />}
+          : activeTab === "citations" ? <CitationList citations={citations} error={errors.citations} onReanalyze={() => onProcess("citations")} processing={busy} />
+          : <CitationGraph graph={graph} citations={citations} error={errors.graph} onProcess={() => onProcess("graph")} processing={busy} />}
       </div>
     </aside>
   );
@@ -1438,6 +1418,7 @@ function SummaryPanel({ summary, summaryEnvelope, error, processing, onRegenerat
           visually obvious that the AI panel content belongs to one paper. */}
       <SummaryPaperHeader
         summary={summary}
+        identity={summaryEnvelope?.documentIdentity}
         lang={lang}
         setLang={setLang}
         hasBangla={hasBangla}
@@ -1446,6 +1427,23 @@ function SummaryPanel({ summary, summaryEnvelope, error, processing, onRegenerat
         togglingVisibility={togglingVisibility}
         onToggleVisibility={toggleVisibility}
       />
+
+      {summaryEnvelope?.documentIdentity?.warning && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50/70 px-3 py-2.5 dark:border-amber-900/40 dark:bg-amber-950/20">
+          <div className="flex gap-2">
+            <RiAlertLine className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />
+            <div>
+              <p className="text-[9px] font-semibold text-amber-800 dark:text-amber-300">Source transparency</p>
+              <p className="mt-0.5 text-[8px] leading-4 text-amber-700/90 dark:text-amber-400/90">{summaryEnvelope.documentIdentity.warning}</p>
+              {summaryEnvelope.documentIdentity.titleMismatch && (
+                <p className="mt-1 text-[8px] leading-4 text-amber-700/80 dark:text-amber-400/80">
+                  Saved title: {summaryEnvelope.documentIdentity.storedTitle}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Hero professional summary — large card with quote glyph, the focal
           point of the paper. */}
@@ -1466,19 +1464,9 @@ function SummaryPanel({ summary, summaryEnvelope, error, processing, onRegenerat
         </p>
       </div>
 
-      {/* Goals / Methods / Results / Conclusions in a tight 2-col grid with
-          leading icon per card — the academic backbone of the paper. */}
-      <div className="grid grid-cols-2 gap-2">
-        {sections.map(([label, value], index) => (
-          <SummarySectionCard
-            key={label}
-            label={label}
-            value={value as string}
-            lang={lang}
-            variant={index % 4}
-          />
-        ))}
-      </div>
+      {/* The paper's argument as a connected research path: objective →
+          method → evidence → conclusion. */}
+      <ResearchFlow sections={sections} lang={lang} />
 
       {/* Key contributions: full-width chip grid */}
       <KeyContributionGrid
@@ -1580,7 +1568,11 @@ function CitationList({ citations, error, processing, onReanalyze }: { citations
 
       return <article key={citation.id} className="group rounded-lg border border-border bg-background p-3 transition-shadow hover:shadow-sm">
         <div className="flex items-start justify-between gap-2">
-          <p className="text-[10px] font-medium leading-[1.45] text-foreground">{citation.target.title ?? "Unresolved reference"}</p>
+          {paperUrl ? (
+            <a href={paperUrl} target="_blank" rel="noreferrer" className="text-[10px] font-medium leading-[1.45] text-foreground underline-offset-2 hover:text-teal-700 hover:underline dark:hover:text-teal-400">
+              {citation.target.title ?? "Unresolved reference"}
+            </a>
+          ) : <p className="text-[10px] font-medium leading-[1.45] text-foreground">{citation.target.title ?? "Unresolved reference"}</p>}
           <span className={cn("shrink-0 rounded-full px-1.5 py-0.5 text-[7px] font-bold uppercase",
             confidence >= 80 ? "bg-teal-100 text-teal-700 dark:bg-teal-950/50 dark:text-teal-400"
             : confidence >= 60 ? "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400"
@@ -1614,57 +1606,116 @@ function CitationGraph({ graph, citations, error, onProcess, processing }: {
   onProcess: () => void;
   processing: boolean;
 }) {
-  const graphNodes = graph?.nodes ?? [];
-  const graphEdges = graph?.edges ?? [];
+  const [expanded, setExpanded] = useState(false);
+  const [showReferences, setShowReferences] = useState(false);
+  const [showCitedBy, setShowCitedBy] = useState(true);
+  const [showRelated, setShowRelated] = useState(true);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const graphNodes = useMemo(() => graph?.nodes ?? [], [graph]);
+  const graphEdges = useMemo(() => graph?.edges ?? [], [graph]);
+  const hasDiscoveryEdges = graphEdges.some((edge) => ["CITED_BY", "RELATED", "RELATED_WORK"].includes(graphEdgeRelation(edge)));
+  const visibleEdges = useMemo(() => graphEdges.filter((edge) => {
+    const relation = graphEdgeRelation(edge);
+    if (relation === "CITED_BY") return showCitedBy;
+    if (relation === "RELATED" || relation === "RELATED_WORK") return showRelated;
+    return showReferences || !hasDiscoveryEdges;
+  }), [graphEdges, hasDiscoveryEdges, showCitedBy, showReferences, showRelated]);
+  const visibleNodeIds = useMemo(() => {
+    const ids = new Set(visibleEdges.flatMap((edge) => [edge.source, edge.target]));
+    const root = graphNodes.find((node) => node.type === "current-resource") ?? graphNodes[0];
+    if (root) ids.add(root.id);
+    return ids;
+  }, [graphNodes, visibleEdges]);
+  const visibleNodes = useMemo(() => graphNodes.filter((node) => visibleNodeIds.has(node.id)), [graphNodes, visibleNodeIds]);
 
   const { flowNodes, flowEdges, currentNodeId } = useMemo(() => {
-    const sourceCurrentNode = graphNodes.find((n) => n.type === "current-resource") ?? graphNodes[0];
-    if (!sourceCurrentNode || !graphEdges.length) return { flowNodes: [], flowEdges: [], currentNodeId: sourceCurrentNode?.id ?? "" };
+    const sourceCurrentNode = visibleNodes.find((n) => n.type === "current-resource") ?? visibleNodes[0];
+    if (!sourceCurrentNode || !visibleEdges.length) return { flowNodes: [], flowEdges: [], currentNodeId: sourceCurrentNode?.id ?? "" };
 
-    const positions = runForceLayout(graphNodes, graphEdges, 800, 460, 180);
-    const fNodes: Node<{ label: React.ReactNode }>[] = graphNodes.map((node) => {
+    const positions = runForceLayout(visibleNodes, visibleEdges, 1200, 720);
+    const fNodes: Node<{ label: React.ReactNode; paperUrl?: string | null; graphNodeId: string }>[] = visibleNodes.map((node) => {
       const pos = positions.get(node.id) ?? { x: 0, y: 0 };
       const isCurrent = node.id === sourceCurrentNode.id;
-      const isInternal = node.type === "internal-resource";
       const year = (node.data?.publicationYear ?? node.data?.year) as number | null | undefined;
+      const citationCount = node.data?.citationCount as number | null | undefined;
+      const paperUrl = node.data?.url as string | null | undefined;
+      const authorValue = node.data?.authors;
+      const authors = Array.isArray(authorValue)
+        ? authorValue.filter((author): author is string => typeof author === "string").slice(0, 2).join(", ")
+        : typeof authorValue === "string" ? authorValue.split(",").slice(0, 2).join(",") : "";
+      const venue = typeof node.data?.venue === "string" ? node.data.venue : "";
+      const relation = String(node.data?.relation ?? (node.type.includes("reference") ? "REFERENCES" : ""));
+      const depth = Number(node.data?.depth ?? 0);
+      const isReference = relation === "REFERENCES" || node.type.includes("reference") || node.type === "external-resource" || node.type === "internal-resource";
+      const isRelated = relation === "RELATED" || node.type === "related-paper";
+      const isSecondLayer = depth >= 2 || node.type === "second-layer-paper";
       const tone = isCurrent
         ? { border: "#0f766e", bg: "#ccfbf1", color: "#134e4a", shadow: "0 10px 28px rgba(15,118,110,0.22)" }
-        : isInternal
-          ? { border: "#0369a1", bg: "#e0f2fe", color: "#075985", shadow: "0 6px 18px rgba(3,105,161,0.12)" }
-          : { border: "#71717a", bg: "#f4f4f5", color: "#3f3f46", shadow: "0 4px 12px rgba(0,0,0,0.07)" };
+        : isRelated
+          ? { border: "#d97706", bg: "#fef3c7", color: "#92400e", shadow: "0 6px 18px rgba(217,119,6,0.12)" }
+          : isReference
+            ? { border: "#71717a", bg: "#f4f4f5", color: "#3f3f46", shadow: "0 4px 12px rgba(0,0,0,0.07)" }
+            : isSecondLayer
+              ? { border: "#6d28d9", bg: "#ede9fe", color: "#5b21b6", shadow: "0 6px 18px rgba(109,40,217,0.14)" }
+              : { border: "#0369a1", bg: "#e0f2fe", color: "#075985", shadow: "0 6px 18px rgba(3,105,161,0.12)" };
+      const kind = isCurrent ? "Selected paper" : isRelated ? "Related work" : isReference ? "Referenced work" : isSecondLayer ? "Second layer" : "Cites this paper";
       return {
         id: node.id,
         position: pos,
         sourcePosition: Position.Right,
         targetPosition: Position.Left,
         data: {
+          paperUrl,
+          graphNodeId: node.id,
           label: (
-            <div className="max-w-[148px]">
+            <div className="max-w-[164px]">
               <p className="text-[7.5px] font-black uppercase tracking-widest opacity-70">
-                {isCurrent ? "Current" : isInternal ? "In Library" : "External"}
+                {kind}
               </p>
               <p className="mt-0.5 line-clamp-2 text-[9.5px] font-semibold leading-[1.35]">{node.label}</p>
-              {year && <p className="mt-0.5 text-[7.5px] opacity-60">{year}</p>}
+              {authors && <p className="mt-1 truncate text-[7.5px] opacity-70">{authors}</p>}
+              <p className="mt-0.5 flex items-center gap-1 text-[7.5px] opacity-60">
+                {year && <span>{year}</span>}
+                {venue && <span className="max-w-[62px] truncate">· {venue}</span>}
+                {citationCount != null && <span>· {citationCount} citations</span>}
+              </p>
             </div>
           ),
         },
-        style: { width: isCurrent ? 175 : 160, borderRadius: 8, border: `1.5px solid ${tone.border}`, background: tone.bg, color: tone.color, boxShadow: tone.shadow, padding: "6px 8px" },
+        style: {
+          width: isCurrent ? 200 : 185,
+          cursor: "pointer",
+          borderRadius: 12,
+          border: `${node.id === selectedNodeId ? 3 : 1.5}px solid ${tone.border}`,
+          background: tone.bg,
+          color: tone.color,
+          boxShadow: node.id === selectedNodeId ? `0 0 0 4px ${tone.border}22, ${tone.shadow}` : tone.shadow,
+          padding: "8px 10px",
+        },
       };
     });
-    const fEdges: Edge[] = graphEdges.map((edge) => {
-      const hi = (edge.confidenceScore ?? 0) >= 0.7;
+    const fEdges: Edge[] = visibleEdges.map((edge) => {
+      const relation = graphEdgeRelation(edge);
+      const isCitedBy = relation === "CITED_BY";
+      const isRelated = relation === "RELATED" || relation === "RELATED_WORK";
+      const stroke = isCitedBy ? "#0284c7" : isRelated ? "#d97706" : "#71717a";
       return {
         id: edge.id, source: edge.source, target: edge.target,
-        label: hi ? undefined : `${Math.round((edge.confidenceScore ?? 0) * 100)}%`,
+        label: isRelated ? "Related" : relation === "REFERENCES" ? "References" : undefined,
         markerEnd: { type: MarkerType.ArrowClosed, width: 14, height: 14 },
-        style: { stroke: hi ? "#14b8a6" : "#f59e0b", strokeWidth: hi ? 2 : 1.4, opacity: 0.85 },
-        labelStyle: { fontSize: 7, fill: "#b45309", fontWeight: 700 },
-        labelBgStyle: { fill: "#fffbeb", fillOpacity: 0.9 },
-        animated: !hi,
+        style: { stroke, strokeWidth: isCitedBy ? 2.1 : 1.5, opacity: 0.82, strokeDasharray: isRelated ? "5 4" : undefined },
+        labelStyle: { fontSize: 7, fill: stroke, fontWeight: 700 },
+        labelBgStyle: { fill: "#ffffff", fillOpacity: 0.9 },
+        animated: isRelated,
       };
     });
     return { flowNodes: fNodes, flowEdges: fEdges, currentNodeId: sourceCurrentNode.id };
-  }, [graph]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [visibleNodes, visibleEdges, selectedNodeId]);
+
+  const selectedGraphNode = useMemo(
+    () => graphNodes.find((node) => node.id === selectedNodeId) ?? null,
+    [graphNodes, selectedNodeId],
+  );
 
   if (error) return <EmptyAiState icon={<RiAlertLine />} title="Graph unavailable" text={error} />;
 
@@ -1676,56 +1727,180 @@ function CitationGraph({ graph, citations, error, onProcess, processing }: {
         text={citations.length
           ? "Citations were found but no external connections could be resolved. Try re-processing."
           : "Process this PDF to extract references and build a connected-paper graph."}
-        actionLabel={citations.length ? "Re-process" : "Process PDF"}
+        actionLabel={citations.length ? "Build research graph" : "Process PDF"}
         loading={processing}
         onAction={onProcess}
       />
     );
   }
 
-  const highConfCount = graphEdges.filter((e) => (e.confidenceScore ?? 0) >= 0.7).length;
+  const stats = graph?.stats ?? {
+    references: graphEdges.filter((edge) => graphEdgeRelation(edge) === "REFERENCES").length,
+    citedBy: graphEdges.filter((edge) => graphEdgeRelation(edge) === "CITED_BY" && edge.source === currentNodeId).length,
+    secondLayer: graphEdges.filter((edge) => graphEdgeRelation(edge) === "CITED_BY" && edge.source !== currentNodeId).length,
+    related: graphEdges.filter((edge) => ["RELATED", "RELATED_WORK"].includes(graphEdgeRelation(edge))).length,
+  };
+
+  const renderCanvas = (full: boolean) => (
+    <ReactFlow
+      nodes={flowNodes}
+      edges={flowEdges}
+      fitView
+      fitViewOptions={{ padding: full ? 0.12 : 0.2 }}
+      minZoom={0.08}
+      maxZoom={2.5}
+      nodesConnectable={false}
+      nodesDraggable
+      proOptions={{ hideAttribution: true }}
+      onNodeClick={(_, node) => {
+        setSelectedNodeId(node.data.graphNodeId);
+      }}
+    >
+      <Background gap={20} size={0.8} color="#d4d4d8" />
+      <Controls showInteractive={false} className="!border-border !bg-background/90 !shadow-sm" />
+      <MiniMap
+        pannable
+        zoomable
+        nodeColor={(n) => n.id === currentNodeId ? "#0f766e" : n.id.startsWith("s2:") ? "#0369a1" : "#71717a"}
+        className="!h-[60px] !w-[80px] !rounded-lg !border !border-border !bg-background/95 !shadow-sm"
+      />
+    </ReactFlow>
+  );
 
   return (
     <div className="space-y-3">
-      {/* React Flow canvas */}
+      <div className="overflow-hidden rounded-xl border border-border bg-gradient-to-br from-slate-50 via-background to-teal-50/60 dark:from-slate-950/60 dark:via-background dark:to-teal-950/20">
+        <div className="border-b border-border/70 px-3 py-2.5">
+          <div className="flex items-start gap-2">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-teal-600 text-white shadow-sm"><RiMindMap /></span>
+            <div className="min-w-0">
+              <p className="text-[10px] font-semibold">Citation lineage</p>
+              <p className="mt-0.5 text-[8px] leading-4 text-muted-foreground">Select a paper node to inspect its authors, venue, evidence, and source link.</p>
+            </div>
+            <span className="ml-auto shrink-0 rounded-full border border-border bg-background px-2 py-1 text-[8px] font-semibold text-muted-foreground">{graph?.provider === "semantic-scholar" ? "Semantic Scholar" : "Local graph"}</span>
+          </div>
+        </div>
+        <div className="grid grid-cols-[1fr_auto_1fr_auto_1fr] items-center gap-1 px-3 py-2 text-center text-[7.5px] font-semibold">
+          <span className="rounded-md bg-zinc-100 px-1.5 py-1 text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">Referenced works</span>
+          <span className="text-muted-foreground">←</span>
+          <span className="rounded-md bg-teal-100 px-1.5 py-1 text-teal-800 dark:bg-teal-950/50 dark:text-teal-300">Selected paper</span>
+          <span className="text-muted-foreground">→</span>
+          <span className="rounded-md bg-sky-100 px-1.5 py-1 text-sky-800 dark:bg-sky-950/50 dark:text-sky-300">Citing papers → layer 2</span>
+        </div>
+      </div>
+      <div className="flex flex-wrap items-center gap-1.5">
+        <GraphFilter label="Cited by" count={stats.citedBy + stats.secondLayer} active={showCitedBy} onClick={() => setShowCitedBy((value) => !value)} tone="sky" />
+        <GraphFilter label="Related" count={stats.related} active={showRelated} onClick={() => setShowRelated((value) => !value)} tone="amber" />
+        <GraphFilter label="References" count={stats.references} active={showReferences || !hasDiscoveryEdges} onClick={() => setShowReferences((value) => !value)} tone="zinc" />
+        <button onClick={() => setExpanded(true)} className="ml-auto rounded-md border border-border px-2 py-1 text-[8px] font-semibold text-muted-foreground hover:bg-muted">Expand</button>
+        <button disabled={processing} onClick={onProcess} className="rounded-md border border-border p-1.5 text-muted-foreground hover:bg-muted disabled:opacity-50" title="Rebuild graph">
+          {processing ? <RiLoader4Line className="animate-spin" /> : <RiRefreshLine />}
+        </button>
+      </div>
       <div className="h-[340px] overflow-hidden rounded-lg border border-border bg-gradient-to-br from-muted/40 to-muted/10">
-        <ReactFlow
-          nodes={flowNodes}
-          edges={flowEdges}
-          fitView
-          fitViewOptions={{ padding: 0.18 }}
-          minZoom={0.25}
-          maxZoom={2}
-          nodesConnectable={false}
-          nodesDraggable
-          proOptions={{ hideAttribution: true }}
-        >
-          <Background gap={20} size={0.8} color="#d4d4d8" />
-          <Controls showInteractive={false} className="!border-border !bg-background/90 !shadow-sm" />
-          <MiniMap
-            pannable
-            zoomable
-            nodeColor={(n) => n.id === currentNodeId ? "#0f766e" : n.id.startsWith("resource:") ? "#0369a1" : "#71717a"}
-            className="!h-[60px] !w-[80px] !rounded-lg !border !border-border !bg-background/95 !shadow-sm"
-          />
-        </ReactFlow>
+        {renderCanvas(false)}
       </div>
-      {/* Legend + stats */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3 text-[8px] text-muted-foreground">
-          <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-teal-600" />Current paper</span>
-          <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-sky-600" />In library</span>
-          <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-zinc-500" />External</span>
-        </div>
-        <div className="flex gap-2 text-[8px] text-muted-foreground">
-          <span>{graphNodes.length} papers</span>
-          <span>·</span>
-          <span>{graphEdges.length} links</span>
-          {highConfCount > 0 && <><span>·</span><span className="text-teal-600">{highConfCount} high-conf</span></>}
-        </div>
+      {selectedGraphNode && (
+        <GraphPaperDetails node={selectedGraphNode} onClose={() => setSelectedNodeId(null)} />
+      )}
+      <div className="grid grid-cols-4 gap-1.5">
+        <GraphStat label="Direct citations" value={stats.citedBy} tone="sky" />
+        <GraphStat label="2nd layer" value={stats.secondLayer} tone="violet" />
+        <GraphStat label="Related" value={stats.related} tone="amber" />
+        <GraphStat label="References" value={stats.references} tone="zinc" />
       </div>
+      <div className="flex items-center justify-between gap-2 text-[8px] text-muted-foreground">
+        <span>{graphNodes.length} papers · {graphEdges.length} connections</span>
+        {graph?.generatedAt && <span>Saved {new Date(graph.generatedAt).toLocaleDateString()}</span>}
+      </div>
+      {graph?.warning && <p className="rounded-md border border-amber-200 bg-amber-50 px-2.5 py-2 text-[8px] leading-4 text-amber-700 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-400">{graph.warning}</p>}
+      {expanded && (
+        <div className="fixed inset-0 z-[100] flex flex-col bg-background/95 p-4 backdrop-blur-sm">
+          <div className="mx-auto flex w-full max-w-[1500px] flex-1 flex-col overflow-hidden rounded-2xl border border-border bg-background shadow-2xl">
+            <div className="flex items-center gap-3 border-b border-border px-4 py-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-teal-100 text-teal-700 dark:bg-teal-950/50 dark:text-teal-300"><RiMindMap /></div>
+              <div>
+                <h3 className="text-sm font-semibold">Research connection graph</h3>
+                <p className="text-[10px] text-muted-foreground">Selected paper → direct citing papers → second-level citations, with related and referenced work</p>
+              </div>
+              <button onClick={() => setExpanded(false)} className="ml-auto flex h-9 w-9 items-center justify-center rounded-lg border border-border text-muted-foreground hover:bg-muted" aria-label="Close expanded graph"><RiCloseLine /></button>
+            </div>
+            <div className="relative flex min-h-0 flex-1">
+              <div className="min-w-0 flex-1 bg-muted/20">{renderCanvas(true)}</div>
+              {selectedGraphNode && (
+                <aside className="w-[340px] shrink-0 overflow-y-auto border-l border-border bg-background p-4">
+                  <GraphPaperDetails node={selectedGraphNode} onClose={() => setSelectedNodeId(null)} expanded />
+                </aside>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
+}
+
+function GraphPaperDetails({ node, onClose, expanded = false }: {
+  node: ResourceGraph["nodes"][number];
+  onClose: () => void;
+  expanded?: boolean;
+}) {
+  const data = node.data ?? {};
+  const authors = Array.isArray(data.authors)
+    ? data.authors.filter((author): author is string => typeof author === "string").join(", ")
+    : typeof data.authors === "string" ? data.authors : null;
+  const year = (data.publicationYear ?? data.year) as number | null | undefined;
+  const venue = typeof data.venue === "string" ? data.venue : null;
+  const citationCount = typeof data.citationCount === "number" ? data.citationCount : null;
+  const paperUrl = typeof data.url === "string" ? data.url : null;
+  const abstract = typeof data.abstract === "string" ? data.abstract : null;
+  const context = typeof data.context === "string" ? data.context : null;
+  const relation = String(data.relation ?? (node.type.includes("reference") ? "REFERENCES" : "ROOT"));
+  const relationLabel = relation === "CITED_BY"
+    ? Number(data.depth ?? 1) >= 2 ? "Second-generation citing paper" : "Cites the selected paper"
+    : relation === "RELATED" ? "Related research" : relation === "REFERENCES" ? "Referenced by the selected paper" : "Selected paper";
+
+  return (
+    <article className={cn("rounded-xl border border-border bg-background p-3 shadow-sm", expanded && "border-0 p-0 shadow-none")}>
+      <div className="flex items-start gap-2">
+        <div className="min-w-0 flex-1">
+          <p className="text-[8px] font-semibold uppercase tracking-widest text-teal-600">{relationLabel}</p>
+          <h4 className={cn("mt-1 font-semibold leading-5", expanded ? "text-sm" : "text-[11px]")}>{node.label}</h4>
+        </div>
+        <button onClick={onClose} className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted" aria-label="Close paper details"><RiCloseLine /></button>
+      </div>
+      {(authors || year || venue) && (
+        <div className="mt-2 flex flex-wrap gap-x-2 gap-y-1 text-[8px] text-muted-foreground">
+          {authors && <span>{authors}</span>}
+          {year && <span>• {year}</span>}
+          {venue && <span>• {venue}</span>}
+        </div>
+      )}
+      {(context || abstract) && (
+        <p className={cn("mt-2 text-[8.5px] leading-4 text-muted-foreground", expanded ? "line-clamp-none" : "line-clamp-3")}>
+          {context ? `Citation context: ${context}` : abstract}
+        </p>
+      )}
+      <div className="mt-3 flex items-center gap-2">
+        {citationCount != null && <span className="rounded-md bg-muted px-2 py-1 text-[8px] font-semibold text-muted-foreground">{citationCount.toLocaleString()} citations</span>}
+        {paperUrl && (
+          <a href={paperUrl} target="_blank" rel="noreferrer" className="ml-auto inline-flex items-center gap-1.5 rounded-md bg-teal-600 px-2.5 py-1.5 text-[8px] font-semibold text-white hover:bg-teal-700">
+            <RiExternalLinkLine /> Open paper
+          </a>
+        )}
+      </div>
+    </article>
+  );
+}
+
+function GraphFilter({ label, count, active, onClick, tone }: { label: string; count: number; active: boolean; onClick: () => void; tone: "sky" | "amber" | "zinc" }) {
+  const activeClass = tone === "sky" ? "border-sky-300 bg-sky-50 text-sky-700 dark:border-sky-900 dark:bg-sky-950/30 dark:text-sky-300" : tone === "amber" ? "border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300" : "border-zinc-300 bg-zinc-100 text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300";
+  return <button onClick={onClick} className={cn("rounded-full border px-2 py-1 text-[8px] font-semibold transition-colors", active ? activeClass : "border-border text-muted-foreground opacity-55")}>{label} · {count}</button>;
+}
+
+function GraphStat({ label, value, tone }: { label: string; value: number; tone: "sky" | "violet" | "amber" | "zinc" }) {
+  const color = tone === "sky" ? "text-sky-600" : tone === "violet" ? "text-violet-600" : tone === "amber" ? "text-amber-600" : "text-zinc-600 dark:text-zinc-300";
+  return <div className="rounded-lg border border-border bg-muted/25 px-2 py-2 text-center"><p className={cn("text-[12px] font-black", color)}>{value}</p><p className="mt-0.5 text-[7px] leading-3 text-muted-foreground">{label}</p></div>;
 }
 
 function EmptyAiState({ icon, title, text, actionLabel, loading, onAction }: { icon: React.ReactNode; title: string; text: string; actionLabel?: string; loading?: boolean; onAction?: () => void }) {
@@ -1855,6 +2030,7 @@ function EmptyState() {
 
 function SummaryPaperHeader({
   summary,
+  identity,
   lang,
   setLang,
   hasBangla,
@@ -1864,6 +2040,7 @@ function SummaryPaperHeader({
   onToggleVisibility,
 }: {
   summary: ResourceSummary;
+  identity?: SummaryEnvelope["documentIdentity"];
   lang: "en" | "bn";
   setLang: (value: "en" | "bn") => void;
   hasBangla: boolean;
@@ -1873,17 +2050,24 @@ function SummaryPaperHeader({
   onToggleVisibility: () => void;
 }) {
   const isHidden = summaryStatus === "HIDDEN";
+  const sourceLabel = identity?.sourceType === "RESEARCH_SUMMARY"
+    ? "Prepared research pack"
+    : identity?.sourceType === "FULL_PAPER" ? "Full research paper" : "Extracted document";
   return (
-    <div className="flex items-center justify-between gap-2 rounded-lg border border-border/70 bg-gradient-to-r from-teal-50/60 via-white to-cyan-50/60 px-3 py-2 dark:border-border dark:from-teal-950/20 dark:via-background dark:to-cyan-950/20">
+    <div className="flex items-center justify-between gap-2 rounded-lg border border-border/70 bg-gradient-to-r from-teal-50/60 via-white to-cyan-50/60 px-3 py-2.5 dark:border-border dark:from-teal-950/20 dark:via-background dark:to-cyan-950/20">
       <div className="flex min-w-0 items-center gap-2">
         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-teal-600/10 text-teal-600 dark:bg-teal-500/15">
           <RiFileTextLine className="text-[14px]" />
         </span>
         <div className="min-w-0">
-          <p className="text-[8px] font-semibold uppercase tracking-widest text-muted-foreground">AI Summary</p>
-          <p className="truncate text-[11px] font-medium leading-tight">
-            {summaryStatus === "PENDING" ? "Awaiting generation" : "Bilingual reading guide"}
+          <div className="flex items-center gap-1.5">
+            <p className="text-[8px] font-semibold uppercase tracking-widest text-muted-foreground">AI Summary</p>
+            {identity && <span className="rounded-full bg-background/90 px-1.5 py-0.5 text-[7px] font-semibold text-teal-700 shadow-sm dark:text-teal-300">{sourceLabel}</span>}
+          </div>
+          <p className="max-w-[340px] truncate text-[11px] font-medium leading-tight">
+            {identity?.detectedTitle || (summaryStatus === "PENDING" ? "Awaiting generation" : "Bilingual reading guide")}
           </p>
+          {identity?.detectedAuthors?.length ? <p className="mt-0.5 max-w-[340px] truncate text-[7.5px] text-muted-foreground">{identity.detectedAuthors.join(", ")}</p> : null}
         </div>
       </div>
       <div className="flex items-center gap-1">
@@ -1933,6 +2117,43 @@ function SummaryPaperHeader({
         </div>
       </div>
     </div>
+  );
+}
+
+function ResearchFlow({ sections, lang }: { sections: [string, string][]; lang: "en" | "bn" }) {
+  if (!sections.length) return null;
+  return (
+    <section className="rounded-xl border border-border bg-muted/20 p-3">
+      <div className="mb-2.5 flex items-center justify-between">
+        <div>
+          <p className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground">
+            {lang === "bn" ? "গবেষণার প্রবাহ" : "Research flow"}
+          </p>
+          <p className="mt-0.5 text-[8px] text-muted-foreground/70">
+            {lang === "bn" ? "লক্ষ্য থেকে উপসংহার পর্যন্ত" : "From objective to conclusion"}
+          </p>
+        </div>
+        <span className="rounded-full bg-background px-2 py-1 text-[8px] font-medium text-muted-foreground shadow-sm">
+          {sections.length} {lang === "bn" ? "ধাপ" : "stages"}
+        </span>
+      </div>
+      <div className="space-y-0">
+        {sections.map(([label, value], index) => (
+          <div key={label} className="grid grid-cols-[24px_minmax(0,1fr)] gap-2">
+            <div className="flex flex-col items-center">
+              <span className={cn(
+                "flex h-6 w-6 items-center justify-center rounded-full text-[8px] font-black text-white shadow-sm",
+                index === 0 ? "bg-sky-500" : index === 1 ? "bg-violet-500" : index === 2 ? "bg-amber-500" : "bg-emerald-500",
+              )}>{index + 1}</span>
+              {index < sections.length - 1 && <span className="min-h-3 flex-1 border-l-2 border-dashed border-border" />}
+            </div>
+            <div className={cn(index < sections.length - 1 && "pb-2")}>
+              <SummarySectionCard label={label} value={value} lang={lang} variant={index} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 

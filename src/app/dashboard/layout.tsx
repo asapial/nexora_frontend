@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useEffect, useState } from "react";
-import ChatWidget from "@/components/chat/ChatWidget";
 
 // ─────────────────────────────────────────
 // TYPES
@@ -138,20 +137,6 @@ export default function Layout({ children }: { children: React.ReactNode; }) {
   const bgIndex = useAmbientBg();
   const AmbientComponent = ambientComponents[bgIndex];
 
-  // Fetch session user for ChatWidget
-  const [chatUser, setChatUser] = useState<{ name: string; role: "STUDENT" | "TEACHER" | "ADMIN"; } | null>(null);
-  useEffect(() => {
-    fetch("/api/auth/me", { credentials: "include" })
-      .then(r => r.json())
-      .then(d => {
-        if (d.success) {
-          const u = d?.data?.userData ?? d?.data;
-          if (u?.name && u?.role) setChatUser({ name: u.name, role: u.role });
-        }
-      })
-      .catch(() => { });
-  }, []);
-
   return (
     <TooltipProvider>
       <SidebarProvider>
@@ -173,8 +158,6 @@ export default function Layout({ children }: { children: React.ReactNode; }) {
           </div>
         </SidebarInset>
       </SidebarProvider>
-      {/* Global AI chat — available on every dashboard page */}
-      <ChatWidget user={chatUser} loginPath="/auth/signin" />
     </TooltipProvider>
   );
 }

@@ -3,8 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { emitMascotEvent } from "@/lib/mascot/eventBus";
 
-import ChatWidget from "@/components/chat/ChatWidget";
 import { NavBar, type MenuItem } from "@/components/shared/NavBar";
 import FooterSection, { type FooterData } from "@/components/shared/footer";
 import { ThemeProvider } from "@/provider/theme-provider";
@@ -81,6 +81,7 @@ export default function MainShell({
       // Continue locally even when the request fails.
     }
     setUser(null);
+    emitMascotEvent("user_logged_out");
     router.push("/");
     toast.success("Signed out successfully.");
   };
@@ -117,10 +118,6 @@ export default function MainShell({
           onVerifyEmail={handleVerifyEmail}
         />
       )}
-      <ChatWidget
-        user={user ? { name: user.name ?? "User", role: user.role } : null}
-        loginPath="/auth/signin"
-      />
       {children}
       {showFooter && <FooterSection data={footer} />}
     </ThemeProvider>

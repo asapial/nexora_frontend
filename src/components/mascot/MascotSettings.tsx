@@ -1,191 +1,32 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Settings2, X } from "lucide-react";
 import type { MascotPreferences } from "@/types/mascot";
 import styles from "./mascot.module.css";
 
-interface MascotPreferencesFormProps {
-  preferences: MascotPreferences;
-  onChange: (updates: Partial<MascotPreferences>) => void;
-  showEnabled?: boolean;
-}
+interface Props { preferences: MascotPreferences; onChange: (updates: Partial<MascotPreferences>) => void; showEnabled?: boolean; onResetPosition?: () => void }
+const Toggle = ({ title, detail, checked, onChange }: { title:string; detail?:string; checked:boolean; onChange:(checked:boolean)=>void }) => (
+  <label className={styles.toggleRow}><span><strong>{title}</strong>{detail ? <small>{detail}</small> : null}</span><input type="checkbox" checked={checked} onChange={(event) => onChange(event.target.checked)} /></label>
+);
 
-export function MascotPreferencesForm({
-  preferences,
-  onChange,
-  showEnabled = true,
-}: MascotPreferencesFormProps) {
-  return (
-    <div className={styles.settingsForm}>
-      {showEnabled ? (
-        <label className={styles.toggleRow}>
-          <span>
-            <strong>Show Nimbi</strong>
-            <small>Display the floating mascot.</small>
-          </span>
-          <input
-            type="checkbox"
-            checked={preferences.enabled}
-            onChange={(event) => onChange({ enabled: event.target.checked })}
-          />
-        </label>
-      ) : null}
-
-      <label className={styles.field}>
-        <span>Position</span>
-        <select
-          value={preferences.position}
-          onChange={(event) =>
-            onChange({
-              position: event.target.value as MascotPreferences["position"],
-            })
-          }
-        >
-          <option value="bottom-right">Bottom right</option>
-          <option value="bottom-left">Bottom left</option>
-        </select>
-      </label>
-
-      <label className={styles.toggleRow}>
-        <span>
-          <strong>Speech bubbles</strong>
-          <small>Show short, optional messages.</small>
-        </span>
-        <input
-          type="checkbox"
-          checked={preferences.speechEnabled}
-          onChange={(event) => onChange({ speechEnabled: event.target.checked })}
-        />
-      </label>
-
-      <label className={styles.field}>
-        <span>Motion</span>
-        <select
-          value={
-            preferences.reducedMotionOverride === null
-              ? "system"
-              : preferences.reducedMotionOverride
-                ? "reduced"
-                : "full"
-          }
-          onChange={(event) => {
-            const value = event.target.value;
-            onChange({
-              reducedMotionOverride:
-                value === "system" ? null : value === "reduced",
-            });
-          }}
-        >
-          <option value="system">Follow system</option>
-          <option value="reduced">Reduced motion</option>
-          <option value="full">Full motion</option>
-        </select>
-      </label>
-
-      <label className={styles.field}>
-        <span>Interaction level</span>
-        <select
-          value={preferences.interactionLevel}
-          onChange={(event) =>
-            onChange({
-              interactionLevel: event.target
-                .value as MascotPreferences["interactionLevel"],
-            })
-          }
-        >
-          <option value="quiet">Quiet</option>
-          <option value="normal">Normal</option>
-          <option value="playful">Playful</option>
-        </select>
-      </label>
-    </div>
-  );
-}
-
-interface MascotSettingsProps extends MascotPreferencesFormProps {
-  position: MascotPreferences["position"];
-}
-
-export function MascotSettings({
-  preferences,
-  onChange,
-  position,
-}: MascotSettingsProps) {
-  const [open, setOpen] = useState(false);
-  const panelRef = useRef<HTMLDivElement>(null);
-  const buttonRef = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const handlePointerDown = (event: PointerEvent) => {
-      if (
-        panelRef.current?.contains(event.target as Node) ||
-        buttonRef.current?.contains(event.target as Node)
-      ) {
-        return;
-      }
-      setOpen(false);
-      buttonRef.current?.focus();
-    };
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      setOpen(false);
-      buttonRef.current?.focus();
-    };
-    document.addEventListener("pointerdown", handlePointerDown);
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDown);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [open]);
-
-  return (
-    <div className={styles.settingsRoot}>
-      <button
-        ref={buttonRef}
-        type="button"
-        className={styles.settingsButton}
-        aria-label="Nimbi settings"
-        aria-expanded={open}
-        aria-controls="nimbi-settings-panel"
-        onClick={() => setOpen((value) => !value)}
-      >
-        <Settings2 aria-hidden="true" />
-      </button>
-      {open ? (
-        <div
-          ref={panelRef}
-          id="nimbi-settings-panel"
-          className={`${styles.settingsPanel} ${
-            position === "bottom-left" ? styles.settingsLeft : styles.settingsRight
-          }`}
-          role="dialog"
-          aria-label="Nimbi preferences"
-        >
-          <div className={styles.settingsHeader}>
-            <div>
-              <strong>Nimbi</strong>
-              <span>Mascot preferences</span>
-            </div>
-            <button
-              type="button"
-              aria-label="Close Nimbi settings"
-              onClick={() => {
-                setOpen(false);
-                buttonRef.current?.focus();
-              }}
-            >
-              <X aria-hidden="true" />
-            </button>
-          </div>
-          <MascotPreferencesForm
-            preferences={preferences}
-            onChange={onChange}
-          />
-        </div>
-      ) : null}
-    </div>
-  );
+export function MascotPreferencesForm({ preferences:p, onChange, showEnabled=true, onResetPosition }: Props) {
+  return <div className={styles.settingsForm}>
+    {showEnabled ? <Toggle title="Enable Nimbi" detail="Show the companion across supported pages." checked={p.enabled} onChange={(enabled)=>onChange({enabled})} /> : null}
+    <Toggle title="Automatic reactions" detail="React to meaningful app activity." checked={p.activityReactionsEnabled} onChange={(activityReactionsEnabled)=>onChange({activityReactionsEnabled, autoInteractionsEnabled:activityReactionsEnabled})} />
+    <Toggle title="Speech bubbles" detail="Show short local personality messages." checked={p.speechEnabled} onChange={(speechEnabled)=>onChange({speechEnabled})} />
+    <label className={styles.field}><span>Interaction level</span><select value={p.interactionLevel} onChange={(e)=>onChange({interactionLevel:e.target.value as MascotPreferences["interactionLevel"]})}><option value="quiet">Quiet</option><option value="normal">Normal</option><option value="playful">Playful</option></select></label>
+    <label className={styles.field}><span>Character size</span><select value={p.size} onChange={(e)=>onChange({size:e.target.value as MascotPreferences["size"]})}><option value="small">Small</option><option value="medium">Medium</option><option value="large">Large</option></select></label>
+    <div className={styles.formDivider}>Position and movement</div>
+    <label className={styles.field}><span>Default side</span><select value={p.defaultSide} onChange={(e)=>onChange({defaultSide:e.target.value as "left"|"right"})}><option value="left">Left</option><option value="right">Right</option></select></label>
+    <Toggle title="Allow dragging" checked={p.dragEnabled} onChange={(dragEnabled)=>onChange({dragEnabled})} />
+    <Toggle title="Remember position" checked={p.rememberPosition} onChange={(rememberPosition)=>onChange({rememberPosition})} />
+    {onResetPosition ? <button type="button" className={styles.secondaryButton} onClick={onResetPosition}>Reset position</button> : null}
+    <div className={styles.formDivider}>Features</div>
+    <Toggle title="AI chat" checked={p.chatEnabled} onChange={(chatEnabled)=>onChange({chatEnabled})} />
+    <Toggle title="Tic Tac Toe" checked={p.ticTacToeEnabled} onChange={(ticTacToeEnabled)=>onChange({ticTacToeEnabled})} />
+    <Toggle title="Emotional tap reactions" checked={p.emotionalTapReactionsEnabled} onChange={(emotionalTapReactionsEnabled)=>onChange({emotionalTapReactionsEnabled})} />
+    <Toggle title="Tap reaction speech" checked={p.tapReactionSpeechEnabled} onChange={(tapReactionSpeechEnabled)=>onChange({tapReactionSpeechEnabled})} />
+    <label className={styles.field}><span>Reaction intensity</span><select value={p.emotionalIntensity} onChange={(e)=>onChange({emotionalIntensity:e.target.value as MascotPreferences["emotionalIntensity"]})}><option value="gentle">Gentle</option><option value="expressive">Expressive</option></select></label>
+    <div className={styles.formDivider}>Motion</div>
+    <label className={styles.field}><span>Animation</span><select value={p.reducedMotionOverride === null ? "system" : p.reducedMotionOverride ? "reduced" : "full"} onChange={(e)=>onChange({reducedMotionOverride:e.target.value === "system" ? null : e.target.value === "reduced"})}><option value="system">Follow operating system</option><option value="reduced">Reduced motion</option><option value="full">Full motion</option></select></label>
+  </div>;
 }

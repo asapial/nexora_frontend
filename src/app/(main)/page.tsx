@@ -28,7 +28,7 @@ export default async function HomePage() {
     (faqSection?.content as { items?: FaqItem[] } | undefined)?.items ??
     DEFAULT_ITEMS;
   const faqJsonLd = {
-    "@context": "https://schema.org",
+    "@context": "https://schema.org" as const,
     "@type": "FAQPage",
     "@id": `${SITE.url}/#faq`,
     url: `${SITE.url}/#faq`,
