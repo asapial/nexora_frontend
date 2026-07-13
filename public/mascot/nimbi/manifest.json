@@ -1,0 +1,27 @@
+{
+  "name": "Nimbi",
+  "version": 2,
+  "asset": "/mascot/nimbi/spritesheet.webp",
+  "reducedMotionAsset": "/mascot/nimbi/spritesheet-reduced.webp",
+  "columns": 4,
+  "rows": 4,
+  "sourceFrameSize": 314,
+  "animations": {
+    "idle": { "column": 0, "row": 0, "frames": 1, "frameDurationMs": 4600, "loop": true, "expression": "sparkly-curious" },
+    "waving": { "column": 1, "row": 0, "frames": 1, "frameDurationMs": 420, "loop": false, "nextState": "idle", "expression": "bright-happy" },
+    "reading": { "column": 2, "row": 0, "frames": 1, "frameDurationMs": 1600, "loop": true, "expression": "focused-down" },
+    "thinking": { "column": 3, "row": 0, "frames": 1, "frameDurationMs": 1300, "loop": true, "expression": "curious-up" },
+    "writing": { "column": 0, "row": 1, "frames": 1, "frameDurationMs": 1000, "loop": true, "expression": "attentive" },
+    "searching": { "column": 1, "row": 1, "frames": 1, "frameDurationMs": 1200, "loop": true, "expression": "investigating" },
+    "uploading": { "column": 2, "row": 1, "frames": 1, "frameDurationMs": 900, "loop": true, "expression": "confident" },
+    "waiting": { "column": 3, "row": 1, "frames": 1, "frameDurationMs": 1800, "loop": true, "expression": "calm-closed" },
+    "success": { "column": 0, "row": 2, "frames": 1, "frameDurationMs": 750, "loop": false, "nextState": "idle", "expression": "sparkly-joy" },
+    "celebrating": { "column": 1, "row": 2, "frames": 1, "frameDurationMs": 1800, "loop": false, "nextState": "idle", "expression": "crescent-joy" },
+    "warning": { "column": 2, "row": 2, "frames": 1, "frameDurationMs": 1400, "loop": false, "nextState": "idle", "expression": "worried-glossy" },
+    "error": { "column": 3, "row": 2, "frames": 1, "frameDurationMs": 1200, "loop": false, "nextState": "idle", "expression": "sad-watery" },
+    "sleeping": { "column": 0, "row": 3, "frames": 1, "frameDurationMs": 2400, "loop": true, "expression": "peaceful-closed" },
+    "recovering": { "column": 1, "row": 3, "frames": 1, "frameDurationMs": 1200, "loop": false, "nextState": "idle", "expression": "playful-wink" },
+    "reviewing": { "column": 2, "row": 3, "frames": 1, "frameDurationMs": 1500, "loop": true, "expression": "serious-focused" },
+    "dragging": { "column": 3, "row": 3, "frames": 1, "frameDurationMs": 450, "loop": true, "expression": "determined-squint" }
+  }
+}

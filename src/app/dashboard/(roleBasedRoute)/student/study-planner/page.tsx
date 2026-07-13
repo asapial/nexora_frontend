@@ -10,6 +10,7 @@ import {
 import { toast } from "sonner";
 import { studyPlannerApi } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { emitMascotEvent } from "@/lib/mascot/eventBus";
 
 type Status = "TODO" | "IN_PROGRESS" | "DONE";
 type Priority = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
@@ -77,8 +78,16 @@ export default function StudyPlannerPage() {
   const move = async (goal: Goal, status: Status) => {
     const done = status === "DONE";
     setGoals((items) => items.map((item) => item.id === goal.id ? { ...item, kanbanStatus: status, isAchieved: done } : item));
-    try { await studyPlannerApi.updateGoal(goal.id, { kanbanStatus: status, isAchieved: done }); await load(); }
-    catch (error: unknown) { toast.error(error instanceof Error ? error.message : "Could not move goal"); await load(); }
+    try {
+      await studyPlannerApi.updateGoal(goal.id, { kanbanStatus: status, isAchieved: done });
+      if (done) emitMascotEvent("task_completed", { taskName: "Study goal" });
+      await load();
+    }
+    catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "Could not move goal");
+      emitMascotEvent("action_error", { message: "The goal could not be updated. Please try again." });
+      await load();
+    }
   };
   const remove = async (id: string) => {
     if (!confirm("Delete this study goal?")) return;

@@ -1,5 +1,7 @@
 export type MascotState =
-  | "idle" | "greeting" | "happy" | "excited" | "thinking" | "success"
+  | "idle" | "entering" | "greeting" | "waving" | "happy" | "excited"
+  | "reading" | "thinking" | "writing" | "searching" | "uploading" | "waiting"
+  | "success" | "warning" | "offline" | "pointing" | "reviewing" | "notice"
   | "error" | "curious" | "encouraging" | "celebrating" | "surprised"
   | "tickled" | "dizzy" | "sad" | "crying" | "recovering" | "sleeping"
   | "chatting" | "gaming" | "dragging" | "hidden";
@@ -17,15 +19,23 @@ export interface MascotEventMap {
   user_logged_in: { displayName?: string };
   user_logged_out: undefined;
   route_changed: { pathname: string };
-  loading_started: { label?: string; operationId?: string };
+  loading_started: {
+    label?: string;
+    operationId?: string;
+    state?: "thinking" | "reading" | "writing" | "searching" | "uploading" | "waiting" | "reviewing";
+  };
   loading_finished: { operationId?: string } | undefined;
   action_success: { message?: string };
   action_error: { message?: string };
   task_completed: { taskName?: string; progress?: number };
   achievement_unlocked: { title: string };
+  network_offline: undefined;
+  network_online: undefined;
+  notice_received: { count: number };
   user_inactive: { durationMs: number };
   user_returned: undefined;
   mascot_clicked: undefined;
+  mascot_hovered: undefined;
   mascot_double_tapped: undefined;
   mascot_hit: { intensity: "light" | "medium" | "repeated" };
   mascot_drag_started: undefined;
@@ -57,6 +67,10 @@ export interface MascotPreferences {
   size: "small" | "medium" | "large";
   interactionLevel: "quiet" | "normal" | "playful";
   emotionalIntensity: "gentle" | "expressive";
+  learningRemindersEnabled: boolean;
+  celebrationsEnabled: boolean;
+  soundEnabled: boolean;
+  compactMobile: boolean;
 }
 
 export interface MascotReaction {

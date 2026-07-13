@@ -220,8 +220,8 @@ export default function NexoraPdfReader({
 
   return (
     <TooltipProvider delayDuration={120}>
-      <div ref={rootRef} className="flex h-full min-h-[720px] flex-col overflow-hidden bg-white text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
-        <div className="flex h-12 shrink-0 items-center gap-2 border-b border-zinc-200/80 bg-white/95 px-2.5 backdrop-blur dark:border-white/10 dark:bg-zinc-950/95">
+      <div ref={rootRef} className="flex h-full min-h-0 min-w-0 w-full flex-col overflow-hidden bg-white text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
+        <div className="flex h-12 min-w-0 shrink-0 items-center gap-1.5 overflow-hidden border-b border-zinc-200/80 bg-white/95 px-2 backdrop-blur dark:border-white/10 dark:bg-zinc-950/95 sm:gap-2 sm:px-2.5">
           <div className="flex items-center rounded-md border border-zinc-200 bg-zinc-50 p-0.5 dark:border-white/10 dark:bg-white/[.04]">
             <IconButton active={sidebar === "pages"} title="Page thumbnails" onClick={() => setSidebar(sidebar === "pages" ? null : "pages")}>
               <RiFileList2Line />
@@ -258,9 +258,9 @@ export default function NexoraPdfReader({
           <div className="h-full bg-teal-500 transition-all" style={{ width: `${pageProgress}%` }} />
         </div>
 
-        <div className="flex min-h-0 flex-1">
+        <div className="relative flex min-h-0 min-w-0 flex-1 overflow-hidden">
           {sidebar && (
-            <aside className="w-64 shrink-0 overflow-y-auto border-r border-zinc-200 bg-white/95 p-3 dark:border-white/10 dark:bg-zinc-950/95 sm:w-56">
+            <aside className="absolute inset-y-0 left-0 z-20 w-[min(17rem,calc(100%-2rem))] overflow-y-auto border-r border-zinc-200 bg-white/95 p-3 shadow-xl dark:border-white/10 dark:bg-zinc-950/95 sm:static sm:z-auto sm:w-56 sm:shrink-0 sm:shadow-none">
               {sidebar === "pages" ? (
                 <div className="space-y-3">
                   <PanelHeading icon={<RiFileList2Line />} label={`${pageCount || 0} pages`} />

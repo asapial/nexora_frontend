@@ -14,6 +14,8 @@ import {
 } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useEffect, useState } from "react";
+import { MascotLoader } from "@/components/mascot";
+import { SessionProvider, useSession } from "@/provider/session-provider";
 
 // ─────────────────────────────────────────
 // TYPES
@@ -77,31 +79,11 @@ function useAmbientBg(): BgIndex {
 // HEADER
 // ─────────────────────────────────────────
 function DashboardHeader() {
-  const [name, setName] = useState("");
+  const { user } = useSession();
   const [greeting, setGreeting] = useState("");
 
   useEffect(() => {
     setGreeting(getGreeting());
-
-    const fetchUser = async () => {
-      try {
-        const res = await fetch("/api/auth/me", {
-          credentials: "include",
-        });
-
-        if (!res.ok) throw new Error("Failed request");
-
-        const data = await res.json();
-
-        if (data.success) {
-          setName(data?.data?.userData?.name || "");
-        }
-      } catch (err) {
-        console.error("Failed to fetch user:", err);
-      }
-    };
-
-    fetchUser();
   }, []);
 
   return (
@@ -122,7 +104,7 @@ function DashboardHeader() {
 
       <div className="ml-auto flex items-center gap-2">
         <span className="hidden sm:block text-[12.5px] text-muted-foreground">
-          {greeting && name ? `${greeting}, ${name}` : greeting}
+          {greeting && user?.name ? `${greeting}, ${user.name}` : greeting}
         </span>
         <span className="h-2 w-2 rounded-full bg-teal-500 animate-pulse" />
       </div>
@@ -134,6 +116,14 @@ function DashboardHeader() {
 // LAYOUT
 // ─────────────────────────────────────────
 export default function Layout({ children }: { children: React.ReactNode; }) {
+  return (
+    <SessionProvider>
+      <DashboardShell>{children}</DashboardShell>
+    </SessionProvider>
+  );
+}
+
+function DashboardShell({ children }: { children: React.ReactNode }) {
   const bgIndex = useAmbientBg();
   const AmbientComponent = ambientComponents[bgIndex];
 
@@ -158,6 +148,7 @@ export default function Layout({ children }: { children: React.ReactNode; }) {
           </div>
         </SidebarInset>
       </SidebarProvider>
+      <MascotLoader />
     </TooltipProvider>
   );
 }

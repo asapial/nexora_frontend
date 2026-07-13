@@ -13,6 +13,7 @@ import {
   isPdfFile,
   uploadFileDirectToCloudinary,
 } from "@/lib/resourceUpload";
+import { emitMascotEvent } from "@/lib/mascot/eventBus";
 
 type Visibility = "PUBLIC" | "CLUSTER" | "PRIVATE";
 interface Cluster { id: string; name: string; memberCount?: number; }
@@ -310,6 +311,16 @@ export default function TeacherResourceUploadPage() {
     if (!file) { setError("Please attach a file."); return; }
     if (form.visibility === "CLUSTER" && form.clusterIds.length === 0) { setError("Select at least one cluster."); return; }
     setSubmitting(true); setError(null);
+    const operationId = `resource-upload-${Date.now()}`;
+    let activityShown = false;
+    const activityTimer = window.setTimeout(() => {
+      activityShown = true;
+      emitMascotEvent("loading_started", {
+        label: "Uploading your resource",
+        operationId,
+        state: "uploading",
+      });
+    }, 650);
     try {
       let res: Response;
 
@@ -352,8 +363,16 @@ export default function TeacherResourceUploadPage() {
       setForm({ title: "", description: "", authors: [], year: "", tags: [], visibility: "PUBLIC", categoryId: "", clusterIds: [] });
       setFile(null);
       setSuggestions(null);
-    } catch (err: unknown) { setError(err instanceof Error ? err.message : "Upload failed"); }
-    finally { setSubmitting(false); }
+      emitMascotEvent("action_success", { message: "Your resource was uploaded successfully." });
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Upload failed");
+      emitMascotEvent("action_error", { message: "The resource could not be uploaded. Please try again." });
+    }
+    finally {
+      window.clearTimeout(activityTimer);
+      if (activityShown) emitMascotEvent("loading_finished", { operationId });
+      setSubmitting(false);
+    }
   };
 
   // ── Suggestion header label ─────────────────────────────────────────────

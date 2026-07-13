@@ -112,7 +112,16 @@ function SubmissionPageInner() {
       return;
     }
     setSubmitting(true); setSubmitErr(null);
-    emitMascotEvent("loading_started", { label: "Submitting your homework" });
+    const operationId = `homework-${Date.now()}`;
+    let activityShown = false;
+    const activityTimer = window.setTimeout(() => {
+      activityShown = true;
+      emitMascotEvent("loading_started", {
+        label: "Submitting your homework",
+        operationId,
+        state: "writing",
+      });
+    }, 650);
     const method = task?.submission ? "PATCH" : "POST";
     try {
       const res = await fetch(`/api/student/tasks/${taskId}/submit`, {
@@ -140,7 +149,8 @@ function SubmissionPageInner() {
       });
     } finally {
       setSubmitting(false);
-      emitMascotEvent("loading_finished");
+      window.clearTimeout(activityTimer);
+      if (activityShown) emitMascotEvent("loading_finished", { operationId });
     }
   };
 

@@ -3,7 +3,6 @@
 import { useEffect } from "react";
 import { emitMascotEvent } from "@/lib/mascot/eventBus";
 import { MASCOT_INACTIVITY_MS } from "@/lib/mascot/constants";
-import { remainingInactivityMs } from "@/lib/mascot/inactivity";
 
 const POINTER_THROTTLE_MS = 15_000;
 
@@ -11,28 +10,26 @@ export function usePageInactivity(enabled: boolean): void {
   useEffect(() => {
     if (!enabled || typeof document === "undefined") return;
 
-    let timeoutId: number | undefined;
+    let timeoutIds: number[] = [];
     let lastActivityAt = Date.now();
     let lastPointerHandledAt = 0;
     let sleeping = false;
 
     const clearTimer = () => {
-      if (timeoutId !== undefined) window.clearTimeout(timeoutId);
-      timeoutId = undefined;
+      timeoutIds.forEach((timeoutId) => window.clearTimeout(timeoutId));
+      timeoutIds = [];
     };
 
     const scheduleSleep = () => {
       clearTimer();
       if (document.hidden) return;
-      const remaining = remainingInactivityMs(
-        lastActivityAt,
-        Date.now(),
-        MASCOT_INACTIVITY_MS,
-      );
-      timeoutId = window.setTimeout(() => {
-        sleeping = true;
-        emitMascotEvent("user_inactive", { durationMs: MASCOT_INACTIVITY_MS });
-      }, remaining);
+      const elapsed = Date.now() - lastActivityAt;
+      [20_000, 60_000, MASCOT_INACTIVITY_MS].forEach((milestone) => {
+        timeoutIds.push(window.setTimeout(() => {
+          if (milestone === MASCOT_INACTIVITY_MS) sleeping = true;
+          emitMascotEvent("user_inactive", { durationMs: milestone });
+        }, Math.max(0, milestone - elapsed)));
+      });
     };
 
     const recordActivity = () => {

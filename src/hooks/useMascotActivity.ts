@@ -6,17 +6,21 @@ import type { MascotPreferences } from "@/types/mascot";
 import { emitMascotEvent } from "@/lib/mascot/eventBus";
 import { MASCOT_ROUTE_COOLDOWN_MS } from "@/lib/mascot/constants";
 
-const PENDING_LOGIN_KEY = "nimbi:pending-login:v2";
+const PENDING_LOGIN_KEY = "nimbi:pending-login:v1";
 
 export function markMascotLoginPending(displayName?: string): void {
   if (typeof window === "undefined") return;
-  try { sessionStorage.setItem(PENDING_LOGIN_KEY, displayName ?? "1"); } catch {}
+  try {
+    sessionStorage.removeItem("nimbi:login-celebrated:v1");
+    sessionStorage.setItem(PENDING_LOGIN_KEY, displayName ?? "1");
+  } catch {}
 }
 
 export function useMascotActivity(preferences: MascotPreferences, enabled: boolean): void {
   const pathname = usePathname();
   const lastPathRef = useRef(pathname);
   const lastRouteReactionRef = useRef(0);
+  const announcedInitialRouteRef = useRef(false);
 
   useEffect(() => {
     if (!enabled || !preferences.activityReactionsEnabled) return;
@@ -30,12 +34,31 @@ export function useMascotActivity(preferences: MascotPreferences, enabled: boole
   }, [enabled, preferences.activityReactionsEnabled]);
 
   useEffect(() => {
+    if (!enabled || !preferences.activityReactionsEnabled || announcedInitialRouteRef.current) return;
+    announcedInitialRouteRef.current = true;
+    emitMascotEvent("route_changed", { pathname });
+  }, [enabled, pathname, preferences.activityReactionsEnabled]);
+
+  useEffect(() => {
     if (!enabled || !preferences.activityReactionsEnabled || lastPathRef.current === pathname) return;
     lastPathRef.current = pathname;
     const now = Date.now();
-    if (preferences.interactionLevel === "playful" && now - lastRouteReactionRef.current >= MASCOT_ROUTE_COOLDOWN_MS) {
+    if (now - lastRouteReactionRef.current >= MASCOT_ROUTE_COOLDOWN_MS) {
       lastRouteReactionRef.current = now;
       emitMascotEvent("route_changed", { pathname });
     }
-  }, [enabled, pathname, preferences.activityReactionsEnabled, preferences.interactionLevel]);
+  }, [enabled, pathname, preferences.activityReactionsEnabled]);
+
+  useEffect(() => {
+    if (!enabled || !preferences.activityReactionsEnabled) return;
+    const offline = () => emitMascotEvent("network_offline");
+    const online = () => emitMascotEvent("network_online");
+    window.addEventListener("offline", offline);
+    window.addEventListener("online", online);
+    if (!navigator.onLine) offline();
+    return () => {
+      window.removeEventListener("offline", offline);
+      window.removeEventListener("online", online);
+    };
+  }, [enabled, preferences.activityReactionsEnabled]);
 }

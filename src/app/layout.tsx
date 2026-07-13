@@ -6,7 +6,6 @@ import { ThemeProvider } from "@/provider/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import JsonLd from "@/components/seo/JsonLd";
 import { buildSiteGraph, SITE } from "@/components/seo/structuredData";
-import { MascotLoader } from "@/components/mascot";
 
 const notoSansBengali = Noto_Sans_Bengali({
   subsets: ["bengali"],
@@ -83,8 +82,6 @@ export default function RootLayout({
 
           {children}
           <Toaster />
-          <MascotLoader />
-
         </ThemeProvider>
       </body>
     </html>

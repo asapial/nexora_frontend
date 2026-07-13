@@ -47,7 +47,7 @@ import { DEFAULT_MASCOT_PREFERENCES } from "@/lib/mascot/constants";
 const TABS = [
   { id: "notifications", label: "Notifications", icon: <RiBellLine /> },
   { id: "privacy", label: "Privacy & Security", icon: <RiShieldLine /> },
-  { id: "mascot", label: "Nimbi", icon: <RiSparklingFill /> },
+  { id: "mascot", label: "Learning Companion", icon: <RiSparklingFill /> },
   // { id: "api", label: "API Keys", icon: <RiCodeLine /> },
   { id: "danger", label: "Danger Zone", icon: <RiAlertLine /> },
 ] as const;
@@ -1216,8 +1216,8 @@ function MascotTab() {
 
   return (
     <Section
-      title="Nimbi Mascot"
-      description="Control the optional floating companion on this browser."
+      title="Nimbi Learning Companion"
+      description="Control the optional learning companion on this browser."
     >
       {ready ? (
         <div className="max-w-md">

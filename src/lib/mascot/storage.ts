@@ -36,6 +36,10 @@ export function validateMascotPreferences(value: unknown): MascotPreferences {
     size: oneOf(c.size, ["small", "medium", "large"], d.size),
     interactionLevel: oneOf(c.interactionLevel, ["quiet", "normal", "playful"], d.interactionLevel),
     emotionalIntensity: oneOf(c.emotionalIntensity, ["gentle", "expressive"], d.emotionalIntensity),
+    learningRemindersEnabled: bool(c.learningRemindersEnabled, d.learningRemindersEnabled),
+    celebrationsEnabled: bool(c.celebrationsEnabled, d.celebrationsEnabled),
+    soundEnabled: bool(c.soundEnabled, d.soundEnabled),
+    compactMobile: bool(c.compactMobile, d.compactMobile),
   };
 }
 

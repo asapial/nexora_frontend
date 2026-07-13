@@ -6,8 +6,10 @@ import { getMascotSuppression, subscribeToMascotEvent } from "@/lib/mascot/event
 import { canStartReaction, hitReactionForCount, isReactionCoolingDown, MASCOT_REACTIONS, type MascotReactionId } from "@/lib/mascot/reactions";
 import { MascotTimer } from "@/lib/mascot/timer";
 import { MASCOT_MESSAGES } from "@/lib/mascot/constants";
+import { getMascotRouteBehavior } from "@/lib/mascot/routeBehaviors";
 
-const LOGIN_SESSION_KEY = "nimbi:login-celebrated:v2";
+const LOGIN_SESSION_KEY = "nimbi:login-celebrated:v1";
+const ROUTE_SESSION_KEY = "nimbi:visited-routes:v1";
 interface StartOptions { message?: string; meaningful?: boolean; forceSpeech?: boolean; force?: boolean }
 
 export function chooseRecentSafeMessage(messages: readonly string[], recent: readonly string[], random = Math.random): string | undefined {
@@ -39,10 +41,12 @@ export function useMascotController(preferences: MascotPreferences) {
   }, [timer]);
   const dismissSpeech = useCallback(() => setSpeech(null), []);
 
-  const startReaction = useCallback((id: MascotReactionId, options: StartOptions = {}) => {
-    const next = MASCOT_REACTIONS[id]; const current = preferencesRef.current;
+  const startReaction = useCallback((requestedId: MascotReactionId, options: StartOptions = {}) => {
+    const current = preferencesRef.current;
+    const id = requestedId === "celebrating" && !current.celebrationsEnabled ? "success" : requestedId;
+    const next = MASCOT_REACTIONS[id];
     if (!current.enabled) return false;
-    if (current.interactionLevel === "quiet" && !["login","success","error","celebrating","click","chatting","gaming","dragging"].includes(id)) return false;
+    if (current.interactionLevel === "quiet" && !["login","success","error","offline","warning","celebrating","click","chatting","gaming","dragging"].includes(id)) return false;
     const now = Date.now();
     if (!options.force && (isReactionCoolingDown(next, cooldownsRef.current.get(id), now) || !canStartReaction(activeRef.current, next))) return false;
     timer.cancel(); const token = ++tokenRef.current; activeRef.current = next; cooldownsRef.current.set(id, now);
@@ -85,20 +89,42 @@ export function useMascotController(preferences: MascotPreferences) {
       subscribeToMascotEvent("app_ready", () => startReaction("greeting")),
       subscribeToMascotEvent("user_logged_in", ({ displayName }) => {
         let celebrated = false; try { celebrated = sessionStorage.getItem(LOGIN_SESSION_KEY) === "1"; if (!celebrated) sessionStorage.setItem(LOGIN_SESSION_KEY, "1"); } catch {}
-        if (!celebrated) startReaction("login", { force: true, forceSpeech: true, message: displayName ? `Welcome back, ${displayName.split(" ")[0]}! Ready for an adventure?` : undefined });
+        if (!celebrated) startReaction("login", { force: true, forceSpeech: true, message: displayName ? `Welcome back, ${displayName.split(" ")[0]}! Ready to continue?` : undefined });
       }),
-      subscribeToMascotEvent("user_logged_out", () => startReaction("greeting", { force: true, message: "See you next time!", forceSpeech: true })),
-      subscribeToMascotEvent("route_changed", () => { if (preferencesRef.current.interactionLevel === "playful") startReaction("surprised"); }),
-      subscribeToMascotEvent("loading_started", ({ label, operationId }) => { operationsRef.current.add(operationId ?? "__default"); startReaction("thinking", label ? { message: label, meaningful: true } : {}); }),
-      subscribeToMascotEvent("loading_finished", (payload) => { operationsRef.current.delete(payload?.operationId ?? "__default"); if (!operationsRef.current.size && activeRef.current.id === "thinking") resetToIdle(); }),
+      subscribeToMascotEvent("user_logged_out", () => {
+        try { sessionStorage.removeItem(LOGIN_SESSION_KEY); } catch {}
+        startReaction("greeting", { force: true, message: "See you next time!", forceSpeech: true });
+      }),
+      subscribeToMascotEvent("route_changed", ({ pathname }) => {
+        if (!preferencesRef.current.learningRemindersEnabled) return;
+        const behavior = getMascotRouteBehavior(pathname);
+        if (!behavior) return;
+        let visited: string[] = [];
+        try {
+          visited = JSON.parse(sessionStorage.getItem(ROUTE_SESSION_KEY) ?? "[]") as string[];
+          if (visited.includes(behavior.id)) return;
+          sessionStorage.setItem(ROUTE_SESSION_KEY, JSON.stringify([...visited, behavior.id]));
+        } catch {}
+        startReaction(behavior.reaction, {
+          message: behavior.message,
+          meaningful: false,
+          forceSpeech: Boolean(behavior.message),
+        });
+      }),
+      subscribeToMascotEvent("loading_started", ({ label, operationId, state: activityState }) => { operationsRef.current.add(operationId ?? "__default"); startReaction(activityState ?? "thinking", label ? { message: label, meaningful: true } : {}); }),
+      subscribeToMascotEvent("loading_finished", (payload) => { operationsRef.current.delete(payload?.operationId ?? "__default"); if (!operationsRef.current.size && ["thinking", "reading", "writing", "searching", "uploading", "waiting", "reviewing"].includes(activeRef.current.id)) resetToIdle(); }),
       subscribeToMascotEvent("action_success", ({ message }) => startReaction("success", { message, meaningful:true })),
       subscribeToMascotEvent("action_error", ({ message }) => startReaction("error", { message, meaningful:true })),
       subscribeToMascotEvent("task_completed", ({ taskName, progress }) => startReaction(progress === undefined || progress >= 100 ? "celebrating" : "encouraging", { message: taskName ? `${taskName} ${progress === undefined || progress >= 100 ? "complete!" : "is moving along."}` : undefined, meaningful:true })),
       subscribeToMascotEvent("achievement_unlocked", ({ title }) => startReaction("celebrating", { message:`${title} unlocked!`, forceSpeech:true, meaningful:true })),
-      subscribeToMascotEvent("user_inactive", () => startReaction("sleeping")),
+      subscribeToMascotEvent("network_offline", () => startReaction("offline", { force:true, forceSpeech:true, meaningful:true })),
+      subscribeToMascotEvent("network_online", () => { if (activeRef.current.id === "offline") startReaction("recovering", { force:true, message:"Connection restored.", forceSpeech:true, meaningful:true }); }),
+      subscribeToMascotEvent("notice_received", ({ count }) => { if (count > 0) startReaction("notice", { message: count === 1 ? "A new notice is available." : `${count} new notices are available.`, meaningful:true }); }),
+      subscribeToMascotEvent("user_inactive", ({ durationMs }) => startReaction(durationMs >= 180000 ? "sleeping" : durationMs >= 60000 ? "waiting" : "reading")),
       subscribeToMascotEvent("user_returned", () => { if (activeRef.current.id === "sleeping") startReaction("recovering", { force:true }); }),
       subscribeToMascotEvent("mascot_clicked", () => startReaction("click", { meaningful:false })),
-      subscribeToMascotEvent("mascot_double_tapped", () => startReaction("dizzy", { force:true, forceSpeech:preferencesRef.current.tapReactionSpeechEnabled })),
+      subscribeToMascotEvent("mascot_hovered", () => startReaction("waving", { meaningful:false })),
+      subscribeToMascotEvent("mascot_double_tapped", () => startReaction("waving", { force:true, message:"Back to my usual spot.", forceSpeech:true, meaningful:false })),
       subscribeToMascotEvent("mascot_hit", () => {
         if (!preferencesRef.current.emotionalTapReactionsEnabled) return;
         const now = Date.now(); hitTimesRef.current = [...hitTimesRef.current.filter((time) => now - time < 8000), now];
@@ -115,6 +141,15 @@ export function useMascotController(preferences: MascotPreferences) {
     ];
     return () => { unsubs.forEach((unsub) => unsub()); timer.cancel(); tokenRef.current += 1; };
   }, [resetToIdle, setActivePanel, startReaction, timer]);
+
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.hidden) timer.pause();
+      else timer.resume();
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, [timer]);
 
   return { state, emotion, activePanel, speech, setActivePanel, dismissSpeech, resetToIdle };
 }

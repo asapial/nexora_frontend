@@ -20,7 +20,7 @@ export function useMascotDrag({ position, enabled, remember, onSave }: Options) 
 
   const box = useCallback((): ViewportBox => {
     const rect = elementRef.current?.getBoundingClientRect();
-    return { width: window.innerWidth, height: window.innerHeight, mascotWidth: rect?.width ?? 96, mascotHeight: rect?.height ?? 124, top: 12, bottom: window.innerWidth <= 640 ? 76 : 16, inset: 12 };
+    return { width: window.innerWidth, height: window.innerHeight, mascotWidth: rect?.width ?? 124, mascotHeight: rect?.height ?? 148, top: 12, bottom: window.innerWidth <= 640 ? 76 : 16, inset: 12 };
   }, []);
   const syncFromPreference = useCallback(() => { if (typeof window !== "undefined") setPoint(positionToPixels(position, box())); }, [box, position]);
   useEffect(() => { syncFromPreference(); const resize = () => syncFromPreference(); window.addEventListener("resize", resize); return () => window.removeEventListener("resize", resize); }, [syncFromPreference]);

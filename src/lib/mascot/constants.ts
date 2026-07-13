@@ -10,18 +10,22 @@ export const DEFAULT_MASCOT_PREFERENCES: Readonly<MascotPreferences> = {
   speechEnabled: true,
   autoInteractionsEnabled: true,
   activityReactionsEnabled: true,
-  emotionalTapReactionsEnabled: true,
-  tapReactionSpeechEnabled: true,
+  emotionalTapReactionsEnabled: false,
+  tapReactionSpeechEnabled: false,
   dragEnabled: true,
   rememberPosition: true,
   chatEnabled: true,
-  ticTacToeEnabled: true,
+  ticTacToeEnabled: false,
   reducedMotionOverride: null,
-  position: { side: "right", verticalRatio: 0.82 },
-  defaultSide: "right",
+  position: { side: "left", verticalRatio: 0.94 },
+  defaultSide: "left",
   size: "medium",
   interactionLevel: "normal",
   emotionalIntensity: "gentle",
+  learningRemindersEnabled: true,
+  celebrationsEnabled: true,
+  soundEnabled: false,
+  compactMobile: true,
 };
 
 export const MASCOT_PRIORITY = {
@@ -31,16 +35,16 @@ export const MASCOT_PRIORITY = {
 } as const;
 
 export const MASCOT_MESSAGES = {
-  login: ["Welcome back! Ready for another adventure?", "You are back! Let's make today sparkle."],
+  login: ["Welcome back! Ready to continue?", "Welcome back. Let’s pick up where you left off."],
   greeting: ["Good to see you.", "Ready when you are."],
   success: ["Nicely done!", "That worked perfectly."],
-  error: ["A wire got confused. We can recover.", "That did not work. Let's try again."],
+  error: ["That did not work. Please try again.", "Something got in the way. We can retry."],
   encouraging: ["One step at a time.", "You are getting closer."],
-  celebrating: ["That deserves a celebration!", "You did it!"],
-  click: ["That tickles!", "Hello from this corner."],
-  dizzy: ["My antennas are spinning.", "Tiny bonk detected!"],
-  sad: ["I need a tiny recovery moment."],
-  recovering: ["Okay, I'm back!", "Systems cheerful again."],
+  celebrating: ["Great work. That is complete!", "You did it!"],
+  click: ["How can I help?", "I’m here when you need me."],
+  dizzy: ["Let’s get our bearings.", "One moment, please."],
+  sad: ["We can take a calm look at this."],
+  recovering: ["Ready again.", "Let’s continue."],
   chat: ["I am listening.", "Let's figure it out together."],
   gameUserWon: ["That was a brilliant move!", "You got me this time."],
   gameMascotWon: ["My antennas found the winning path!", "Good game. That was close."],
@@ -48,6 +52,6 @@ export const MASCOT_MESSAGES = {
 } as const;
 
 export const SENSITIVE_MASCOT_PATHS = [
-  "/auth/", "/courses/enroll", "/payment", "/checkout",
+  "/payment", "/checkout",
   "/dashboard/student/exams/", "/dashboard/student/resource-annotation",
 ] as const;

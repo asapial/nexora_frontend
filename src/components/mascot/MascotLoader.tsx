@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 import { useMascotPreferences } from "@/hooks/useMascotPreferences";
 import { SENSITIVE_MASCOT_PATHS } from "@/lib/mascot/constants";
+import "./mascot.module.css";
 
 const DeferredMascot = dynamic(
   () => import("./Mascot").then((module) => module.Mascot),

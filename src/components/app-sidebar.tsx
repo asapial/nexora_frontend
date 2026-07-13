@@ -48,6 +48,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { useSession } from "@/provider/session-provider";
 
 // ─── Role-based nav definitions ───────────────────────────────────────────────
 
@@ -367,27 +368,13 @@ const ROLE_CHIP: Record<string, { label: string; cls: string; }> = {
 
 // ─── Sidebar ──────────────────────────────────────────────────────────────────
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const [user, setUser] = React.useState<NavUserData>({ name: "", email: "", avatar: undefined, role: "" });
-  const [loading, setLoading] = React.useState(true);
-
-  React.useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const res = await fetch("/api/auth/me", { method: "GET", credentials: "include" });
-        const data = await res.json();
-        if (data.success) {
-          setUser({
-            name: data.data.userData.name,
-            email: data.data.userData.email,
-            avatar: data.data.userData.image,
-            role: data.data.userData.role,
-          });
-        }
-      } catch { /* silent */ }
-      finally { setLoading(false); }
-    };
-    fetchUser();
-  }, []);
+  const { user: sessionUser, loading } = useSession();
+  const user: NavUserData = sessionUser ? {
+    name: sessionUser.name,
+    email: sessionUser.email,
+    avatar: sessionUser.image,
+    role: sessionUser.role,
+  } : { name: "", email: "", avatar: undefined, role: "" };
 
   const role = user.role?.toUpperCase() as "TEACHER" | "STUDENT" | "ADMIN" | "";
   const navItems = role === "TEACHER" ? teacherNav : role === "STUDENT" ? studentNav : role === "ADMIN" ? adminNav : [];

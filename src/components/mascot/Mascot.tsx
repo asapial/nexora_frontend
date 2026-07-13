@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import dynamic from "next/dynamic";
+import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import {
   emitMascotEvent,
@@ -33,6 +34,7 @@ const GamePanel = dynamic(() => import("./MascotGamePanel"), {
 const suppressionServerSnapshot = { hidden: false, speech: false };
 
 export function Mascot() {
+  const pathname = usePathname();
   const { preferences, updatePreferences } = useMascotPreferences();
   const suppression = useSyncExternalStore(
     subscribeToMascotSuppression,
@@ -43,10 +45,17 @@ export function Mascot() {
   const controller = useMascotController(preferences);
   const [pressed, setPressed] = useState(false);
   const lastTap = useRef(0);
+  const hoverTimer = useRef<number | null>(null);
   const actionButton = useRef<HTMLButtonElement>(null);
   const mascotButton = useRef<HTMLButtonElement>(null);
+  const isDefaultDock =
+    preferences.position.side === preferences.defaultSide &&
+    preferences.position.verticalRatio === DEFAULT_MASCOT_PREFERENCES.position.verticalRatio;
+  const mascotPosition = !pathname.startsWith("/dashboard") && isDefaultDock
+    ? { side: "right" as const, verticalRatio: 0.62 }
+    : preferences.position;
   const drag = useMascotDrag({
-    position: preferences.position,
+    position: mascotPosition,
     enabled: preferences.dragEnabled,
     remember: preferences.rememberPosition,
     onSave: (position) => updatePreferences({ position }),
@@ -79,9 +88,13 @@ export function Mascot() {
     return () => window.removeEventListener("keydown", close);
   }, [controller.activePanel, controller.setActivePanel]);
 
+  useEffect(() => () => {
+    if (hoverTimer.current !== null) window.clearTimeout(hoverTimer.current);
+  }, []);
+
   if (!active || !drag.style) return null;
 
-  const side = preferences.position.side;
+  const side = mascotPosition.side;
   const sizeClass =
     styles[
       `size${preferences.size[0].toUpperCase()}${preferences.size.slice(1)}` as keyof typeof styles
@@ -90,11 +103,19 @@ export function Mascot() {
   const handleMascotClick = () => {
     if (drag.wasDrag()) return;
     const now = Date.now();
-    emitMascotEvent(
-      now - lastTap.current <= 450 ? "mascot_double_tapped" : "mascot_clicked",
-    );
+    const isDoubleTap = now - lastTap.current <= 450;
+    if (isDoubleTap) {
+      updatePreferences({
+        position: {
+          side: preferences.defaultSide,
+          verticalRatio: DEFAULT_MASCOT_PREFERENCES.position.verticalRatio,
+        },
+      });
+      emitMascotEvent("mascot_double_tapped");
+    } else {
+      emitMascotEvent("mascot_clicked");
+    }
     lastTap.current = now;
-    emitMascotEvent("mascot_hit", { intensity: "light" });
   };
 
   return (
@@ -108,14 +129,16 @@ export function Mascot() {
             : preferences.interactionLevel === "playful"
               ? styles.levelPlayful
               : ""
-        } ${drag.isDragging ? styles.dragging : ""} ${drag.repositioning ? styles.repositioning : ""}`}
-        aria-label="Nimbi mascot"
+        } ${drag.isDragging ? styles.dragging : ""} ${drag.repositioning ? styles.repositioning : ""} ${
+          controller.activePanel === "chat" ? styles.chatOpen : ""
+        }`}
+        aria-label="Nexora learning companion"
         data-mascot-state={controller.state}
       >
         {controller.speech && !suppression.speech ? (
           <MascotSpeechBubble
             speech={controller.speech}
-            position={preferences.position}
+            position={mascotPosition}
             onDismiss={controller.dismissSpeech}
           />
         ) : null}
@@ -186,6 +209,17 @@ export function Mascot() {
               ? "Reposition Nimbi. Use arrow keys, Enter to save, or Escape to cancel."
               : "Interact with Nimbi"
           }
+          onPointerEnter={() => {
+            if (hoverTimer.current !== null) window.clearTimeout(hoverTimer.current);
+            hoverTimer.current = window.setTimeout(
+              () => emitMascotEvent("mascot_hovered"),
+              650,
+            );
+          }}
+          onPointerLeave={() => {
+            if (hoverTimer.current !== null) window.clearTimeout(hoverTimer.current);
+            hoverTimer.current = null;
+          }}
           onPointerDown={(event) => {
             setPressed(true);
             drag.onPointerDown(event);

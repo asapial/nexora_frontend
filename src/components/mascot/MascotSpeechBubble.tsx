@@ -46,11 +46,9 @@ export function MascotSpeechBubble({
       onBlur={startTimer}
     >
       <span>{speech.message}</span>
-      {speech.durationMs >= 4000 ? (
-        <button type="button" onClick={onDismiss} aria-label="Dismiss Nimbi’s message">
-          ×
-        </button>
-      ) : null}
+      <button type="button" onClick={onDismiss} aria-label="Dismiss Nimbi’s message">
+        ×
+      </button>
     </div>
   );
 }

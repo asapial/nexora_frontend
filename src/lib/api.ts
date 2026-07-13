@@ -1,26 +1,77 @@
 // ─── Core fetch wrapper ───────────────────────────────────
+import { emitMascotEvent } from "@/lib/mascot/eventBus";
+
 type ApiErrorSource = {
   path?: string;
   message?: string;
 };
 
-async function apiFetch<T>(url: string, options?: RequestInit): Promise<{ success: boolean; data: T; message: string; }> {
-  const res = await fetch(url, {
-    credentials: "include",
-    headers: { "Content-Type": "application/json", ...options?.headers },
-    ...options,
-  });
-  const json = await res.json();
-  if (!res.ok || !json.success) {
-    const validationMessage = Array.isArray(json.errorSources)
-      ? json.errorSources
-        .filter((source: ApiErrorSource) => source?.message)
-        .map((source: ApiErrorSource) => `${source.path ? `${source.path}: ` : ""}${source.message}`)
-        .join("; ")
-      : "";
-    throw new Error(validationMessage || json.message || "Request failed");
+interface ApiFetchOptions extends RequestInit {
+  petAction?: string;
+  petState?: "thinking" | "reading" | "writing" | "searching" | "uploading" | "waiting" | "reviewing";
+  petSuccessLevel?: "none" | "minor" | "major";
+  petSuccessMessage?: string;
+  petErrorMessage?: string;
+  petTaskName?: string;
+}
+
+async function apiFetch<T>(url: string, options: ApiFetchOptions = {}): Promise<{ success: boolean; data: T; message: string; }> {
+  const {
+    petAction,
+    petState,
+    petSuccessLevel = "none",
+    petSuccessMessage,
+    petErrorMessage,
+    petTaskName,
+    ...requestOptions
+  } = options;
+  const operationId = petAction
+    ? `pet-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    : undefined;
+  let activityShown = false;
+  const activityTimer = petAction
+    ? globalThis.setTimeout(() => {
+        activityShown = true;
+        emitMascotEvent("loading_started", { label: petAction, operationId, state: petState });
+      }, 650)
+    : undefined;
+
+  try {
+    const res = await fetch(url, {
+      credentials: "include",
+      ...requestOptions,
+      headers: { "Content-Type": "application/json", ...requestOptions.headers },
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      const validationMessage = Array.isArray(json.errorSources)
+        ? json.errorSources
+          .filter((source: ApiErrorSource) => source?.message)
+          .map((source: ApiErrorSource) => `${source.path ? `${source.path}: ` : ""}${source.message}`)
+          .join("; ")
+        : "";
+      throw new Error(validationMessage || json.message || "Request failed");
+    }
+    if (petSuccessLevel === "major") {
+      emitMascotEvent("task_completed", {
+        taskName: petTaskName ?? petSuccessMessage ?? "Action",
+      });
+    } else if (petSuccessLevel === "minor") {
+      emitMascotEvent("action_success", { message: petSuccessMessage });
+    }
+    return json;
+  } catch (error) {
+    if (petAction) {
+      emitMascotEvent("action_error", {
+        message: petErrorMessage ?? "The request could not be completed. Please try again.",
+      });
+    }
+    if (error instanceof TypeError) emitMascotEvent("network_offline");
+    throw error;
+  } finally {
+    if (activityTimer !== undefined) globalThis.clearTimeout(activityTimer);
+    if (activityShown) emitMascotEvent("loading_finished", { operationId });
   }
-  return json;
 }
 function qs(params?: Record<string, string | number | undefined>): string {
   if (!params) return "";
@@ -34,10 +85,10 @@ const T = "/api";
 export const courseApi = {
   list: () => apiFetch<any[]>(`${T}/courses`),
   get: (id: string) => apiFetch<any>(`${T}/courses/${id}`),
-  create: (body: any) => apiFetch<any>(`${T}/courses`, { method: "POST", body: JSON.stringify(body) }),
+  create: (body: any) => apiFetch<any>(`${T}/courses`, { method: "POST", body: JSON.stringify(body), petAction: "Saving your course draft", petState: "writing", petSuccessLevel: "minor", petSuccessMessage: "Course draft saved." }),
   update: (id: string, body: any) => apiFetch<any>(`${T}/courses/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
   delete: (id: string) => apiFetch<any>(`${T}/courses/${id}`, { method: "DELETE" }),
-  submit: (id: string) => apiFetch<any>(`${T}/courses/${id}/submit`, { method: "POST" }),
+  submit: (id: string) => apiFetch<any>(`${T}/courses/${id}/submit`, { method: "POST", petAction: "Submitting your course for review", petState: "uploading", petSuccessLevel: "minor", petSuccessMessage: "Course submitted for review." }),
   close: (id: string) => apiFetch<any>(`${T}/courses/${id}/close`, { method: "POST" }),
   finish: (id: string) => apiFetch<any>(`${T}/courses/${id}/finish`, { method: "POST" }),
   getMissions: (courseId: string) => apiFetch<any[]>(`${T}/courses/${courseId}/missions`),
@@ -63,8 +114,8 @@ export const adminApi = {
   getPendingCourses: (p?: any) => apiFetch<any>(`${A}/courses${qs({ status: "PENDING_APPROVAL", ...p })}`),
   getAllCourses: (p?: any) => apiFetch<any>(`${A}/courses${qs(p)}`),
   getCourse: (id: string) => apiFetch<any>(`${A}/courses/${id}`),
-  approveCourse: (id: string) => apiFetch<any>(`${A}/courses/${id}/approve`, { method: "POST" }),
-  rejectCourse: (id: string, note: string) => apiFetch<any>(`${A}/courses/${id}/reject`, { method: "POST", body: JSON.stringify({ note }) }),
+  approveCourse: (id: string) => apiFetch<any>(`${A}/courses/${id}/approve`, { method: "POST", petAction: "Reviewing the approval", petState: "reviewing", petSuccessLevel: "major", petTaskName: "Course approval" }),
+  rejectCourse: (id: string, note: string) => apiFetch<any>(`${A}/courses/${id}/reject`, { method: "POST", body: JSON.stringify({ note }), petAction: "Filing the review notes", petState: "reviewing", petSuccessLevel: "minor", petSuccessMessage: "Review notes saved." }),
   deleteCourse: (id: string) => apiFetch<any>(`${A}/courses/${id}`, { method: "DELETE" }),
   toggleFeatured: (id: string) => apiFetch<any>(`${A}/courses/${id}/feature`, { method: "POST" }),
   setRevenuePercent: (id: string, percent: number) => apiFetch<any>(`${A}/courses/${id}/revenue-percent`, { method: "PATCH", body: JSON.stringify({ percent }) }),
@@ -99,7 +150,7 @@ export const studentApi = {
   freeEnroll: (courseId: string) => apiFetch<any>(`/api/payments/enroll/${courseId}`, { method: "POST", body: JSON.stringify({}) }),
   getMyEnrollments: (p?: any) => apiFetch<any>(`${S}/enrollments${qs(p)}`),
   getMyEnrollment: (courseId: string) => apiFetch<any>(`${S}/enrollments/${courseId}`),
-  completeMission: (courseId: string, missionId: string) => apiFetch<any>(`${S}/enrollments/${courseId}/missions/${missionId}/complete`, { method: "POST" }),
+  completeMission: (courseId: string, missionId: string) => apiFetch<any>(`${S}/enrollments/${courseId}/missions/${missionId}/complete`, { method: "POST", petAction: "Completing this mission", petState: "reading", petSuccessLevel: "major", petTaskName: "Mission" }),
   getMissionContents: (missionId: string) => apiFetch<any[]>(`${S}/missions/${missionId}/contents`),
   /** Paid course purchases (Stripe) — not free enrollments. */
   getPaymentHistory: () =>
