@@ -131,6 +131,8 @@ type CitationTarget = {
   year?: number | null;
   doi?: string | null;
   url?: string | null;
+  verifiedUrl?: string | null;
+  linkVerified?: boolean;
 };
 
 type ResourceCitation = {
@@ -462,6 +464,7 @@ export default function ResourceAnnotationPage() {
     ]);
 
     const nextErrors: AiFeatureErrors = {};
+    let refreshPending = false;
 
     if (statusResult.status === "fulfilled") {
       setAiStatus(statusResult.value.data ?? null);
@@ -476,6 +479,7 @@ export default function ResourceAnnotationPage() {
       const env = summaryResult.value.data as SummaryEnvelope | null;
       setSummaryEnvelope(env ?? null);
       setAiSummary(env?.summary ?? null);
+      refreshPending = Boolean(env?.documentIdentity?.warning?.toLowerCase().includes("refres"));
     } else {
       nextErrors.summary = errorMessage(summaryResult.reason, "Could not load AI summary");
       setAiSummary(null);
@@ -493,6 +497,7 @@ export default function ResourceAnnotationPage() {
     if (graphResult.status === "fulfilled") {
       const extracted = extractGraph(graphResult.value.data);
       setGraph(extracted);
+      refreshPending = refreshPending || Boolean(extracted?.warning?.toLowerCase().includes("refres"));
     } else {
       nextErrors.graph = errorMessage(graphResult.reason, "Could not load citation graph");
       setGraph(null);
@@ -507,6 +512,15 @@ export default function ResourceAnnotationPage() {
 
     setAiErrors(nextErrors);
     if (!silent) setAiLoading(false);
+
+    // A stale artifact response starts a backend refresh asynchronously. The
+    // initial status request can race that enqueue and still say GRAPH_READY;
+    // mark the UI as processing so the status poller waits for the fresh
+    // summary, references, and graph before the next full reload.
+    if (refreshPending && statusResult.status === "fulfilled" && isAiTerminalStatus(statusResult.value.data?.status)) {
+      setAiProcessing(true);
+      setAiStatus((current) => current ? { ...current, status: "GRAPH_PROCESSING" } : current);
+    }
 
     if (!silent && Object.keys(nextErrors).length) {
       toast.error("Some AI reading features could not load");
@@ -580,9 +594,14 @@ export default function ResourceAnnotationPage() {
   // cleared ONCE when a terminal status arrives — not cleared/reset on every
   // render caused by aiStatus state updates (which was the previous bug).
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollKickoffRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pollSelectedRef = useRef<Resource | null>(null);
 
   const stopPolling = useCallback(() => {
+    if (pollKickoffRef.current !== null) {
+      clearTimeout(pollKickoffRef.current);
+      pollKickoffRef.current = null;
+    }
     if (pollIntervalRef.current !== null) {
       clearInterval(pollIntervalRef.current);
       pollIntervalRef.current = null;
@@ -618,26 +637,29 @@ export default function ResourceAnnotationPage() {
     stopPolling(); // clear any previous interval first
     pollSelectedRef.current = resource;
     // Small initial delay so the backend has time to write the new status to DB
-    const kickoff = setTimeout(() => {
+    pollKickoffRef.current = setTimeout(() => {
+      pollKickoffRef.current = null;
       pollIntervalRef.current = setInterval(() => {
         const res = pollSelectedRef.current;
         if (!res) { stopPolling(); return; }
         void pollStatusOnly(res);
       }, 2500);
     }, 800);
-    // Also store kickoff so we can cancel it too
-    return () => { clearTimeout(kickoff); stopPolling(); };
   }, [pollStatusOnly, stopPolling]);
 
   // Stop polling whenever a terminal status arrives in aiStatus
   useEffect(() => {
     if (!selected || !isPdf(selected)) { stopPolling(); return; }
     const s = aiStatus?.status;
+    if (isAiProcessingStatus(s) && pollIntervalRef.current === null) {
+      setAiProcessing(true);
+      startPolling(selected);
+    }
     if (isAiTerminalStatus(s)) {
       stopPolling();
       setAiProcessing(false);
     }
-  }, [aiStatus?.status, selected, stopPolling]);
+  }, [aiStatus?.status, selected, startPolling, stopPolling]);
 
 
   const goToPage = useCallback((page: number) => {
@@ -685,7 +707,10 @@ export default function ResourceAnnotationPage() {
       if (mode === "summary") await resourceAiApi.regenerateSummary(selected.id);
       else if (mode === "citations") await resourceAiApi.reanalyzeCitations(selected.id);
       else if (mode === "graph") await resourceAiApi.regenerateGraph(selected.id);
-      else await resourceAiApi.process(selected.id);
+      else await resourceAiApi.process(selected.id, {
+        regenerateSummary: true,
+        reanalyzeCitations: true,
+      });
       toast.success("AI reading started — processing in background");
       // Start the stable polling loop — keeps running until terminal status arrives
       startPolling(selected);
@@ -1732,13 +1757,12 @@ function SummaryPanel({ summary, summaryEnvelope, error, processing, onRegenerat
   );
 }
 
-// Resolve the best clickable URL for a citation in priority order:
-// 1. DOI link  2. Stored URL (open access)  3. Google Scholar search fallback
+// Only use URLs the backend resolved from a DOI or a real publisher/index
+// landing page. A search query is not the original paper and must not be
+// presented as if it were a citation link.
 function resolvePaperUrl(target: CitationTarget): string | null {
+  if (target.verifiedUrl) return target.verifiedUrl;
   if (target.doi) return `https://doi.org/${target.doi}`;
-  if (target.url) return target.url;
-  const title = target.title;
-  if (title) return `https://scholar.google.com/scholar?q=${encodeURIComponent(title)}`;
   return null;
 }
 
@@ -1764,7 +1788,7 @@ function CitationList({ citations, error, processing, onReanalyze }: { citations
       const year = citation.target.publicationYear ?? citation.target.year;
       const authorsRaw = citation.target.authors;
       const authors = Array.isArray(authorsRaw) ? authorsRaw.join(", ") : (authorsRaw ?? null);
-      const linkLabel = citation.target.doi ? "Open via DOI" : citation.target.url ? "Open paper" : "Search Google Scholar";
+      const linkLabel = citation.target.doi ? "Open original paper" : "Open verified source";
 
       return <article key={citation.id} className="group rounded-2xl border border-emerald-950/10 bg-white p-3.5 shadow-[0_10px_30px_-24px_rgba(15,23,42,0.55)] transition-all hover:-translate-y-0.5 hover:border-teal-200 hover:shadow-[0_16px_36px_-22px_rgba(13,148,136,0.28)] dark:border-white/10 dark:bg-white/[.03] dark:hover:border-teal-800">
         <div className="flex items-start justify-between gap-2">
@@ -1787,7 +1811,13 @@ function CitationList({ citations, error, processing, onReanalyze }: { citations
           {authors && <span className="truncate max-w-[160px]">{authors}</span>}
         </div>
         {citation.target.doi && <p className="mt-2 break-all text-[9px] font-mono text-muted-foreground/70">{citation.target.doi}</p>}
-        {citation.rawReference && <p className="mt-2 line-clamp-2 text-[9px] leading-5 text-muted-foreground">{citation.rawReference}</p>}
+        {citation.rawReference && (
+          <div className="mt-2 rounded-lg border border-border/60 bg-muted/20 px-2.5 py-2">
+            <p className="text-[8px] font-bold uppercase tracking-wider text-muted-foreground/80">Reference as printed in the paper</p>
+            <p className="mt-1 whitespace-pre-wrap text-[9px] leading-5 text-muted-foreground">{citation.rawReference}</p>
+          </div>
+        )}
+        {!paperUrl && <p className="mt-2 text-[9px] leading-4 text-amber-700 dark:text-amber-400">No verified publisher link was found for this reference.</p>}
         {paperUrl && (
           <a href={paperUrl} target="_blank" rel="noreferrer"
             className="mt-3 inline-flex h-8 items-center gap-1.5 rounded-lg bg-gradient-to-r from-teal-700 to-emerald-600 px-3 text-[9px] font-semibold text-white shadow-sm transition-transform hover:-translate-y-0.5">
@@ -2199,7 +2229,7 @@ function GraphPaperDetails({ node, connectionCount = 0, onClose, expanded = fals
   const doi = typeof data.doi === "string" ? data.doi : null;
   const paperUrl = typeof data.url === "string"
     ? data.url
-    : doi ? `https://doi.org/${doi}` : `https://scholar.google.com/scholar?q=${encodeURIComponent(node.label)}`;
+    : doi ? `https://doi.org/${doi}` : null;
   const abstract = typeof data.abstract === "string" ? data.abstract : null;
   const context = typeof data.context === "string" ? data.context : null;
   const relation = String(data.relation ?? (node.type.includes("reference") ? "REFERENCES" : "ROOT"));
