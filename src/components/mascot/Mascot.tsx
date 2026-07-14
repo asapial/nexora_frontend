@@ -114,6 +114,8 @@ export function Mascot() {
       emitMascotEvent("mascot_double_tapped");
     } else {
       emitMascotEvent("mascot_clicked");
+      emitMascotEvent("chat_opened");
+      controller.setActivePanel("chat");
     }
     lastTap.current = now;
   };

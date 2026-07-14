@@ -148,7 +148,7 @@ const teacherNav: NavDocItem[] = [
   },
   {
     title: "Notices",
-    url: "/dashboard/student/notice",
+    url: "/dashboard/teacher/notice",
     icon: <RiNotificationLine />,
     items: [
       { title: "Notices", url: "/dashboard/teacher/notice" },

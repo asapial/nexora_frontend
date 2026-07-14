@@ -10,7 +10,7 @@ import {
   RiDraggable,
 } from "react-icons/ri";
 import { cn } from "@/lib/utils";
-import { useAuthChat, useGuestChat, ChatMessage } from "@/hooks/useChat";
+import { useAuthChat, useGuestChat, ChatMessage, NimbiActionCard } from "@/hooks/useChat";
 
 // ── Draggable hook ─────────────────────────────────────────────────────────────
 function useDraggable(widgetW: number, widgetH: number) {
@@ -139,7 +139,7 @@ function renderInline(text: string, isUser = false): React.ReactNode[] {
     } else {
       const href = match[4]; const label = match[3];
       parts.push(
-        <a key={key++} href={href} target="_blank" rel="noopener noreferrer"
+        <a key={key++} href={href} target={href.startsWith("/") ? undefined : "_blank"} rel={href.startsWith("/") ? undefined : "noopener noreferrer"}
           onClick={e => e.stopPropagation()}
           className={cn("inline-flex items-center gap-1 px-2 py-[2px] rounded-full text-[11px] font-semibold no-underline transition-all hover:scale-[1.04]",
             isUser ? "bg-white/20 hover:bg-white/30 text-white border border-white/30"
@@ -204,6 +204,11 @@ function MessageBubble({ msg }: { msg: ChatMessage; }) {
 }
 
 // ── Guest limit wall ──────────────────────────────────────────────────────────
+function ActionCards({ actions, onAction }: { actions: NimbiActionCard[]; onAction: (action: NimbiActionCard) => void }) {
+  if (!actions.length) return null;
+  return <div className="flex flex-wrap gap-1.5 mt-1">{actions.map(action => <button key={action.id} onClick={() => onAction(action)} className="text-left px-3 py-2 rounded-xl border border-teal-200/70 dark:border-teal-700/50 bg-teal-50/70 dark:bg-teal-950/30 text-teal-700 dark:text-teal-300"><span className="block text-[11px] font-semibold">{action.label}</span><span className="block text-[10px] opacity-70">{action.description}</span></button>)}</div>;
+}
+
 function GuestLimitWall({ onLogin }: { onLogin: () => void; }) {
   return (
     <div className="mx-0.5 my-1 rounded-2xl border border-amber-200/50 dark:border-amber-800/40
@@ -253,11 +258,11 @@ function PanelHeader({
           <RiSparklingFill className="text-white text-base animate-pulse" />
         </div>
         <div>
-          <p className="text-white text-[13.5px] font-semibold leading-none mb-[3px]">Nexora AI</p>
+          <p className="text-white text-[13.5px] font-semibold leading-none mb-[3px]">Nimbi</p>
           <div className="flex items-center gap-1.5">
             <span className="w-[5px] h-[5px] rounded-full bg-green-300 animate-pulse" />
             <span className="text-white/65 text-[10px] flex items-center gap-1">
-              <RiCpuLine className="text-[9px]" /> RAG-powered · Online
+              <RiCpuLine className="text-[9px]" /> Your Nexora guide · Online
             </span>
           </div>
         </div>
@@ -346,7 +351,7 @@ function InputBar({
       </div>
       {footer}
       <p className="text-[10px] text-muted-foreground/35 text-center mt-2">
-        Nexora AI · RAG-powered by your live data
+        Nimbi · Your Nexora guide
       </p>
     </div>
   );
@@ -357,7 +362,7 @@ function InputBar({
 
 // ── Root widget ───────────────────────────────────────────────────────────────
 export interface ChatWidgetProps {
-  user?: { name: string; role: "STUDENT" | "TEACHER" | "ADMIN"; } | null;
+  user?: { id?: string; name: string; role: "STUDENT" | "TEACHER" | "ADMIN"; } | null;
   loginPath?: string;
   embedded?: boolean;
   onClose?: () => void;
@@ -365,16 +370,17 @@ export interface ChatWidgetProps {
 
 // Wrapper panels that forward drag props into PanelHeader
 function AuthPanelDraggable({
-  userName, role, onMinimize, onClose,
+  userId, userName, role, onMinimize, onClose,
   onMouseDown, onTouchStart,
 }: {
-  userName: string; role: "STUDENT" | "TEACHER" | "ADMIN";
+  userId?: string; userName: string; role: "STUDENT" | "TEACHER" | "ADMIN";
   onMinimize: () => void; onClose: () => void;
   onMouseDown: (e: React.MouseEvent) => void;
   onTouchStart: (e: React.TouchEvent) => void;
 }) {
+  const router = useRouter();
   const [input, setInput] = useState("");
-  const { messages, loading, error, sendMessage, clearMessages } = useAuthChat();
+  const { messages, loading, error, sendMessage, clearMessages, actions, confirmAction, conversations, loadConversation, deleteConversation } = useAuthChat({ id: userId, name: userName, role });
   const chips = QUICK_CHIPS[role] || [];
   const handleSend = () => { if (!input.trim()) return; sendMessage(input); setInput(""); };
   return (
@@ -382,6 +388,7 @@ function AuthPanelDraggable({
       <PanelHeader role={role} messageCount={messages.length}
         onMinimize={onMinimize} onClose={onClose} onClear={clearMessages}
         onMouseDown={onMouseDown} onTouchStart={onTouchStart} />
+      {conversations.length > 0 && <details className="px-3 py-1.5 border-b border-border/40 text-[11px]"><summary className="cursor-pointer text-muted-foreground">Recent Nimbi threads</summary><div className="mt-1 flex flex-col gap-1 max-h-24 overflow-y-auto">{conversations.slice(0, 5).map(thread => <div key={thread.id} className="flex items-center gap-1"><button className="flex-1 text-left truncate hover:text-teal-600" onClick={() => void loadConversation(thread.id)}>{thread.title}</button><button className="text-muted-foreground hover:text-red-500" aria-label={`Delete ${thread.title}`} onClick={() => void deleteConversation(thread.id)}>×</button></div>)}</div></details>}
       <MessageArea messages={messages} loading={loading} error={error}>
         {messages.length === 0 && (
           <div className="flex flex-col items-center text-center gap-3 pt-3">
@@ -415,6 +422,7 @@ function AuthPanelDraggable({
           </div>
         )}
       </MessageArea>
+      <ActionCards actions={actions} onAction={async action => { const result = await confirmAction(action); if (typeof result === "string") router.push(result); }} />
       <InputBar value={input} onChange={setInput} onSend={handleSend} loading={loading} />
     </>
   );
@@ -428,8 +436,9 @@ function GuestPanelDraggable({
   onMouseDown: (e: React.MouseEvent) => void;
   onTouchStart: (e: React.TouchEvent) => void;
 }) {
+  const router = useRouter();
   const [input, setInput] = useState("");
-  const { messages, loading, error, sendMessage, limitReached, userMessageCount } = useGuestChat();
+  const { messages, loading, error, sendMessage, limitReached, userMessageCount, actions, confirmAction } = useGuestChat();
   const remaining = Math.max(0, 3 - userMessageCount);
   const handleSend = () => { if (!input.trim() || limitReached) return; sendMessage(input); setInput(""); };
   return (
@@ -448,7 +457,7 @@ function GuestPanelDraggable({
             <div>
               <p className="text-[14px] font-semibold text-foreground mb-1">Hi there 👋</p>
               <p className="text-[12px] text-muted-foreground leading-relaxed">
-                I'm Nexora AI. You have{" "}
+                I'm Nimbi, your Nexora guide. You have{" "}
                 <span className="font-medium text-amber-500 dark:text-amber-400">{remaining} free message{remaining !== 1 ? "s" : ""}</span>.
                 Log in for unlimited personalized help.
               </p>
@@ -469,6 +478,7 @@ function GuestPanelDraggable({
         )}
         {limitReached && <GuestLimitWall onLogin={onLogin} />}
       </MessageArea>
+      <ActionCards actions={actions} onAction={async action => { const result = await confirmAction(action); if (typeof result === "string") router.push(result); }} />
       {!limitReached ? (
         <InputBar value={input} onChange={setInput} onSend={handleSend} loading={loading}
           footer={
@@ -529,7 +539,7 @@ export default function ChatWidget({ user, loginPath = "/auth/signin", embedded 
       {/* ── Floating button (closed) ── */}
       {!embedded && panelState === "closed" && fabDrag.pos && (
         <button
-          aria-label="Open Nexora AI chat"
+          aria-label="Open Nimbi chat"
           style={{ position: "fixed", left: fabDrag.pos.x, top: fabDrag.pos.y, zIndex: 50 }}
           onMouseDown={fabDrag.onMouseDown}
           onTouchStart={fabDrag.onTouchStart}
@@ -568,7 +578,7 @@ export default function ChatWidget({ user, loginPath = "/auth/signin", embedded 
             <RiSparklingFill className="text-white text-sm animate-pulse" />
           </div>
           <div className="flex flex-col min-w-0">
-            <span className="text-white text-[12.5px] font-semibold leading-none">Nexora AI</span>
+            <span className="text-white text-[12.5px] font-semibold leading-none">Nimbi</span>
             <span className="text-white/60 text-[10px]">Drag or click to expand</span>
           </div>
           <button
@@ -597,7 +607,7 @@ export default function ChatWidget({ user, loginPath = "/auth/signin", embedded 
         >
           {isLoggedIn
             ? <AuthPanelDraggable
-              userName={user.name} role={user.role}
+              userId={user.id} userName={user.name} role={user.role}
               onMinimize={minimize} onClose={close}
               onMouseDown={panelDrag.onMouseDown}
               onTouchStart={panelDrag.onTouchStart}

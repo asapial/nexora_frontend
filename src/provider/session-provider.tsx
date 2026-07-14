@@ -13,6 +13,7 @@ import {
 export type NexoraRole = "STUDENT" | "TEACHER" | "ADMIN";
 
 export interface NexoraSessionUser {
+  id: string;
   name: string;
   email: string;
   image?: string;
@@ -41,6 +42,7 @@ function parseSessionUser(payload: unknown): NexoraSessionUser | null {
     !["STUDENT", "TEACHER", "ADMIN"].includes(role)
   ) return null;
   return {
+    id: typeof raw.id === "string" ? raw.id : typeof raw.userId === "string" ? raw.userId : "",
     name: raw.name,
     email: raw.email,
     image: typeof raw.image === "string" ? raw.image : undefined,
