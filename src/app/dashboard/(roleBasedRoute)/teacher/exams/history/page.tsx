@@ -6,7 +6,7 @@ import {
   RiHistoryLine, RiSearchLine, RiTeamLine,
 } from "react-icons/ri";
 import { toast } from "sonner";
-import { ExamShieldHeader, ExamStatusBadge, MetricCard } from "@/components/examshield/ExamShieldUI";
+import { ExamShieldHeader, ExamShieldRoleNav, ExamStatusBadge, MetricCard } from "@/components/examshield/ExamShieldUI";
 import { examApi } from "@/lib/api";
 import { downloadCsv, ExamDetail, ExamSummary, examPhase, formatExamDate } from "@/lib/examShield";
 
@@ -101,6 +101,7 @@ export default function ExamHistoryPage() {
         title="Exam history & export"
         description="Review assessment outcomes, participation, performance, and integrity signals across every exam window."
       />
+      <ExamShieldRoleNav role="teacher" />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <MetricCard label="Completed exams" value={completed} note="In the current result set" icon={<RiHistoryLine />} />

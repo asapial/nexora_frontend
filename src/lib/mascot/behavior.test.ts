@@ -1,5 +1,4 @@
-import assert from "node:assert/strict";
-import test from "node:test";
+import { expect, test } from "vitest";
 import { remainingInactivityMs } from "./inactivity.ts";
 import { resolveReducedMotion } from "./motion.ts";
 import { MascotTimer, type MascotTimerClock } from "./timer.ts";
@@ -32,9 +31,9 @@ test("temporary reactions return through a scheduled timer", () => {
   let state = "success";
   timer.schedule(700, () => { state = "idle"; });
   clock.advance(699);
-  assert.equal(state, "success");
+  expect(state).toBe("success");
   clock.advance(1);
-  assert.equal(state, "idle");
+  expect(state).toBe("idle");
 });
 
 test("timer cleanup prevents callbacks after unmount", () => {
@@ -44,8 +43,8 @@ test("timer cleanup prevents callbacks after unmount", () => {
   timer.schedule(800, () => { calls += 1; });
   timer.cancel();
   clock.advance(1000);
-  assert.equal(calls, 0);
-  assert.equal(timer.pending, false);
+  expect(calls).toBe(0);
+  expect(timer.pending).toBe(false);
 });
 
 test("speech timeout pauses and resumes with the remaining duration", () => {
@@ -56,22 +55,22 @@ test("speech timeout pauses and resumes with the remaining duration", () => {
   clock.advance(1000);
   timer.pause();
   clock.advance(5000);
-  assert.equal(dismissed, false);
+  expect(dismissed).toBe(false);
   timer.resume();
   clock.advance(1999);
-  assert.equal(dismissed, false);
+  expect(dismissed).toBe(false);
   clock.advance(1);
-  assert.equal(dismissed, true);
+  expect(dismissed).toBe(true);
 });
 
 test("reduced-motion override wins over the operating system", () => {
-  assert.equal(resolveReducedMotion(true, null), true);
-  assert.equal(resolveReducedMotion(false, true), true);
-  assert.equal(resolveReducedMotion(true, false), false);
+  expect(resolveReducedMotion(true, null)).toBe(true);
+  expect(resolveReducedMotion(false, true)).toBe(true);
+  expect(resolveReducedMotion(true, false)).toBe(false);
 });
 
 test("inactivity timing reaches sleep at the configured boundary", () => {
-  assert.equal(remainingInactivityMs(1000, 2000, 3000), 2000);
-  assert.equal(remainingInactivityMs(1000, 4000, 3000), 0);
-  assert.equal(remainingInactivityMs(1000, 5000, 3000), 0);
+  expect(remainingInactivityMs(1000, 2000, 3000)).toBe(2000);
+  expect(remainingInactivityMs(1000, 4000, 3000)).toBe(0);
+  expect(remainingInactivityMs(1000, 5000, 3000)).toBe(0);
 });

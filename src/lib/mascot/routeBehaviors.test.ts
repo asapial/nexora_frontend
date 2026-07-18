@@ -1,26 +1,16 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { expect, test } from "vitest";
 import { getMascotRouteBehavior } from "./routeBehaviors.ts";
 
 test("maps high-value learning routes to contextual states", () => {
-  assert.equal(
-    getMascotRouteBehavior("/dashboard/student/courses/course-1")?.reaction,
-    "reading",
-  );
-  assert.equal(
-    getMascotRouteBehavior("/dashboard/teacher/courses/create")?.reaction,
-    "writing",
-  );
-  assert.equal(
-    getMascotRouteBehavior("/dashboard/admin/approvals/courses")?.reaction,
-    "reviewing",
-  );
+  expect(getMascotRouteBehavior("/dashboard/student/courses/course-1")?.reaction).toBe("reading");
+  expect(getMascotRouteBehavior("/dashboard/teacher/courses/create")?.reaction).toBe("writing");
+  expect(getMascotRouteBehavior("/dashboard/admin/approvals/courses")?.reaction).toBe("reviewing");
 });
 
 test("keeps authentication guidance generic and password-safe", () => {
   const signIn = getMascotRouteBehavior("/auth/signin");
   const recovery = getMascotRouteBehavior("/auth/resetPassword");
-  assert.equal(signIn?.reaction, "waving");
-  assert.equal(recovery?.reaction, "waiting");
-  assert.doesNotMatch(`${signIn?.message ?? ""}${recovery?.message ?? ""}`, /password|code/i);
+  expect(signIn?.reaction).toBe("waving");
+  expect(recovery?.reaction).toBe("waiting");
+  expect(`${signIn?.message ?? ""}${recovery?.message ?? ""}`).not.toMatch(/password|code/i);
 });

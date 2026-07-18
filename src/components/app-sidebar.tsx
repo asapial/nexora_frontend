@@ -281,8 +281,15 @@ const adminNav: NavDocItem[] = [
       { title: "Course Approvals", url: "/dashboard/admin/approvals/courses" },
       { title: "Mission Approvals", url: "/dashboard/admin/approvals/missions" },
       { title: "Price Requests", url: "/dashboard/admin/approvals/price-requests" },
-      { title: "Exam Approvals", url: "/dashboard/admin/exams" },
-      { title: "Pro Mode detection lab", url: "/dashboard/admin/examshield-lab" },
+    ],
+  },
+  {
+    title: "ExamShield",
+    url: "/dashboard/admin/exams",
+    icon: <RiShieldCheckLine />,
+    items: [
+      { title: "Exam review center", url: "/dashboard/admin/exams" },
+      { title: "Detection lab", url: "/dashboard/admin/examshield-lab" },
     ],
   },
   {

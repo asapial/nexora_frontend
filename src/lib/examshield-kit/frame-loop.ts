@@ -10,15 +10,20 @@ export const startVideoFrameLoop = (
 ) => {
   const source = video as VideoWithFrameCallback;
   const usesVideoFrameCallback = typeof source.requestVideoFrameCallback === "function";
-  const minimumFrameTime = 1000 / targetFps;
+  const safeTargetFps = Number.isFinite(targetFps) ? Math.max(1, Math.min(60, targetFps)) : 24;
+  const minimumFrameTime = 1000 / safeTargetFps;
   let active = true;
   let handle = 0;
-  let lastRun = 0;
+  let lastRun = Number.NEGATIVE_INFINITY;
+  let lastVideoTime = Number.NEGATIVE_INFINITY;
 
   const run = (now: number) => {
     if (!active) return;
-    if (now - lastRun >= minimumFrameTime) {
+    const videoTime = source.currentTime;
+    const hasNewFrame = usesVideoFrameCallback || videoTime !== lastVideoTime;
+    if (hasNewFrame && now - lastRun >= minimumFrameTime) {
       lastRun = now;
+      lastVideoTime = videoTime;
       callback(now);
     }
     handle = usesVideoFrameCallback

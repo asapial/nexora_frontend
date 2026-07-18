@@ -40,11 +40,11 @@ We are committed to protecting your privacy and handling your data with transpar
 
 **Consent and Camera Access:** Before a Pro Mode attempt starts, the student receives a clear notice and must provide consent before the browser requests camera permission. Students who require an accommodation should contact their teacher or institution before the exam.
 
-**Local Processing:** Camera frames are processed locally in the student's browser for camera readiness, face presence, multiple-face, and camera interruption signals where supported. Nexora does not continuously upload or store raw camera video.
+**Local Processing:** Camera frames are processed locally in the student's browser for camera readiness, no-face and multiple-face conditions, head and eye movement, visible phones or other supported devices, and camera interruption where supported. Face landmarks are used for presence and movement checks, not facial recognition or identity matching. Nexora does not continuously upload or store raw camera video.
 
-**Integrity Signals:** Sustained integrity signals may be recorded with timestamps, duration, confidence, and limited technical metadata. These signals are provided to the exam teacher for human review. They do not automatically fail an exam or declare that a student cheated.
+**Integrity Signals:** Sustained integrity signals may be recorded with timestamps, duration, confidence, device category, and limited technical metadata. Lighting, camera angle, movement, and object-detector limitations can affect a signal. Signals are provided to the exam teacher for human review and do not automatically fail an exam or declare that a student cheated.
 
-**Evidence:** Snapshot evidence is disabled unless Nexora has configured private evidence storage and an approved retention policy. Camera images must never be stored through a public asset URL.
+**Evidence:** When the exam enables snapshot evidence and private evidence storage is available, a compressed image may be uploaded only after a sustained warning crosses its configured threshold. Snapshot evidence follows the exam's approved retention policy and must not be stored through a public asset URL.
 
 **Retention and Access:** Pro Mode integrity records are accessible only to authorized exam staff and are retained according to the exam policy and applicable institutional requirements.`,
   },

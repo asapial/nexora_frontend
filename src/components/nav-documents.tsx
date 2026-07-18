@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { RiArrowDownSLine } from "react-icons/ri";
 import { cn } from "@/lib/utils";
+import { findLongestMatchingRoute } from "@/lib/navigation";
 import {
   Collapsible,
   CollapsibleContent,
@@ -36,6 +37,7 @@ export interface NavDocItem {
 
 export function NavDocuments({ items, label }: { items: NavDocItem[]; label?: string; }) {
   const pathname = usePathname();
+  const activeItemUrl = findLongestMatchingRoute(pathname, items.map((item) => item.url));
 
   return (
     <SidebarGroup className="px-2 py-2">
@@ -52,10 +54,10 @@ export function NavDocuments({ items, label }: { items: NavDocItem[]; label?: st
       <SidebarMenu className="gap-0.5">
         {items.map((item) => {
           const hasChildren = !!item.items?.length;
+          const activeSubUrl = findLongestMatchingRoute(pathname, item.items?.map((sub) => sub.url) ?? []);
           const isGroupActive =
-            pathname === item.url ||
-            pathname.startsWith(item.url + "/") ||
-            (item.items?.some((s) => pathname === s.url || pathname.startsWith(s.url + "/")) ?? false);
+            item.url === activeItemUrl ||
+            Boolean(activeSubUrl);
 
           if (!hasChildren) {
             // flat link
@@ -140,9 +142,7 @@ export function NavDocuments({ items, label }: { items: NavDocItem[]; label?: st
                 <CollapsibleContent>
                   <SidebarMenuSub>
                     {item.items!.map((sub) => {
-                      const isSubActive =
-                        pathname === sub.url ||
-                        pathname.startsWith(sub.url + "/");
+                      const isSubActive = sub.url === activeSubUrl;
 
                       return (
                         <SidebarMenuSubItem key={sub.title}>

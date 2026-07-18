@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   RiAlertLine,
@@ -12,6 +13,7 @@ import {
   RiCheckLine,
   RiCloseLine,
   RiFileList3Line,
+  RiFlaskLine,
   RiGroupLine,
   RiLoader4Line,
   RiRefreshLine,
@@ -21,7 +23,7 @@ import {
   RiUserLine,
 } from "react-icons/ri";
 import { toast } from "sonner";
-import { ExamStatusBadge, MetricCard } from "@/components/examshield/ExamShieldUI";
+import { ExamShieldRoleNav, ExamStatusBadge, MetricCard } from "@/components/examshield/ExamShieldUI";
 import { examApi } from "@/lib/api";
 import { formatExamDate } from "@/lib/examShield";
 import { cn } from "@/lib/utils";
@@ -387,9 +389,14 @@ export default function AdminExamsPage() {
             <h1 className="mt-3 text-2xl font-black tracking-tight sm:text-3xl">Exam review center</h1>
             <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-muted-foreground">Inspect every question and private answer key, make confident approval decisions, and monitor platform-wide assessment integrity.</p>
           </div>
-          <button onClick={load} disabled={loading} className="inline-flex h-10 items-center gap-2 rounded-xl border border-teal-500/25 bg-card px-4 text-[12px] font-bold text-teal-700 shadow-sm dark:text-teal-300">
-            <RiRefreshLine className={cn(loading && "animate-spin")} /> Refresh data
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link href="/dashboard/admin/examshield-lab" className="inline-flex h-10 items-center gap-2 rounded-xl bg-violet-600 px-4 text-[12px] font-bold text-white shadow-lg shadow-violet-600/20 transition hover:bg-violet-700">
+              <RiFlaskLine /> Open detection lab
+            </Link>
+            <button onClick={load} disabled={loading} className="inline-flex h-10 items-center gap-2 rounded-xl border border-teal-500/25 bg-card px-4 text-[12px] font-bold text-teal-700 shadow-sm dark:text-teal-300">
+              <RiRefreshLine className={cn(loading && "animate-spin")} /> Refresh data
+            </button>
+          </div>
         </div>
         <div className="mt-7 grid gap-3 rounded-2xl border border-teal-500/15 bg-card/65 p-3 backdrop-blur sm:grid-cols-3">
           {([
@@ -404,6 +411,8 @@ export default function AdminExamsPage() {
           ))}
         </div>
       </header>
+
+      <ExamShieldRoleNav role="admin" />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <MetricCard label="Awaiting review" value={pending.length} note="Teacher submissions" icon={<RiFileList3Line />} accent="violet" />

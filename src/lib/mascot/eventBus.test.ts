@@ -1,5 +1,4 @@
-import assert from "node:assert/strict";
-import test from "node:test";
+import { expect, test } from "vitest";
 import {
   emitMascotEvent,
   getMascotSuppression,
@@ -18,7 +17,7 @@ test("dispatches typed payloads and unsubscribes", () => {
   unsubscribe();
   emitMascotEvent("action_success", { message: "Ignored" });
 
-  assert.deepEqual(messages, ["Saved"]);
+  expect(messages).toEqual(["Saved"]);
 });
 
 test("supports payload-free events", () => {
@@ -28,7 +27,7 @@ test("supports payload-free events", () => {
   });
   emitMascotEvent("loading_finished");
   unsubscribe();
-  assert.equal(calls, 1);
+  expect(calls).toBe(1);
 });
 
 test("suppression drops reactions until its cleanup runs", () => {
@@ -42,16 +41,16 @@ test("suppression drops reactions until its cleanup runs", () => {
   resume();
   emitMascotEvent("mascot_clicked");
   unsubscribe();
-  assert.equal(calls, 1);
+  expect(calls).toBe(1);
 });
 
 test("nested hidden and speech suppression is reference counted", () => {
   resetMascotSuppressionForTests();
   const releaseSpeech = suppressMascot({ hide: false, speech: true, reason: "dialog" });
   const releaseHidden = suppressMascot({ hide: true, reason: "payment" });
-  assert.deepEqual(getMascotSuppression(), { hidden: true, speech: true });
+  expect(getMascotSuppression()).toEqual({ hidden: true, speech: true });
   releaseHidden();
-  assert.deepEqual(getMascotSuppression(), { hidden: false, speech: true });
+  expect(getMascotSuppression()).toEqual({ hidden: false, speech: true });
   releaseSpeech();
-  assert.deepEqual(getMascotSuppression(), { hidden: false, speech: false });
+  expect(getMascotSuppression()).toEqual({ hidden: false, speech: false });
 });

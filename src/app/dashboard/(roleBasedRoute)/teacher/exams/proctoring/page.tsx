@@ -8,17 +8,18 @@ import {
   RiCloseCircleLine, RiDeleteBinLine, RiFilter3Line, RiFlagLine, RiGridLine, RiNotification3Line, RiRefreshLine, RiShieldCheckLine, RiTimeLine, RiUserLine,
 } from "react-icons/ri";
 import { toast } from "sonner";
-import { ExamShieldHeader, ExamStatusBadge, MetricCard } from "@/components/examshield/ExamShieldUI";
+import { ExamShieldHeader, ExamShieldRoleNav, ExamStatusBadge, MetricCard } from "@/components/examshield/ExamShieldUI";
 import { examApi } from "@/lib/api";
-import { ExamAttempt, ExamDetail, ExamSummary, examPhase, formatExamDate } from "@/lib/examShield";
+import { ExamAttempt, ExamDetail, ExamSummary, examPhase, formatExamDate, proctorSignalLabel } from "@/lib/examShield";
 import { cn } from "@/lib/utils";
 
 type ConnectionState = "CONNECTING" | "LIVE" | "FALLBACK";
 const signalFilters = [
   ["ALL", "All signals"],
-  ["PHONE_DETECTED", "Mobile detected"],
-  ["HEAD_TURN_HORIZONTAL", "Horizontal head turn"],
-  ["EYE_MOVEMENT_HORIZONTAL", "Horizontal eye movement"],
+  ["PHONE_DETECTED", "Phone visible"],
+  ["DEVICE_DETECTED", "Other device visible"],
+  ["HEAD_TURN_HORIZONTAL", "Head movement"],
+  ["EYE_MOVEMENT_HORIZONTAL", "Eye movement"],
   ["MULTIPLE_FACES", "Multiple faces"],
   ["FACE_NOT_VISIBLE", "Face not visible"],
   ["FULLSCREEN_EXIT", "Fullscreen exit"],
@@ -141,7 +142,7 @@ export default function ExamProctoringPage() {
           }),
         };
       });
-      if (event.action === "CREATED") toast.warning(`${event.student}: ${event.type.replaceAll("_", " ")}`);
+      if (event.action === "CREATED") toast.warning(`${event.student}: ${proctorSignalLabel(event.type, event.metadata)}`);
     };
     const connect = async () => {
       try {
@@ -245,6 +246,7 @@ export default function ExamProctoringPage() {
         title="Proctoring console"
         description="A dedicated real-time view of active attempts, risk signals, and student integrity events."
       />
+      <ExamShieldRoleNav role="teacher" />
 
       <div className="rounded-2xl border border-border bg-card/90 p-4 shadow-sm">
         <div className="flex flex-wrap items-center gap-3">
@@ -307,10 +309,10 @@ export default function ExamProctoringPage() {
                 <div className="max-h-[600px] space-y-3 overflow-y-auto pr-1">
                   {selectedEvents.map((event) => (
                     <div key={event.id} className={cn("rounded-xl border p-3", event.reviewDecision === "CONFIRMED_CONCERN" ? "border-rose-500/40 bg-rose-500/10" : "border-amber-500/25 bg-amber-500/5")}>
-                      <div className="flex items-start justify-between gap-2"><p className={cn("text-[11px] font-extrabold", event.reviewDecision === "CONFIRMED_CONCERN" ? "text-rose-700 dark:text-rose-300" : "text-amber-700 dark:text-amber-300")}>{event.type.replaceAll("_", " ")}</p><RiAlarmWarningLine className={cn("shrink-0", event.reviewDecision === "CONFIRMED_CONCERN" ? "text-rose-500" : "text-amber-500", event.type === "PHONE_DETECTED" && "animate-pulse")} /></div>
+                      <div className="flex items-start justify-between gap-2"><p className={cn("text-[11px] font-extrabold", event.reviewDecision === "CONFIRMED_CONCERN" ? "text-rose-700 dark:text-rose-300" : "text-amber-700 dark:text-amber-300")}>{proctorSignalLabel(event.type, event.metadata)}</p><RiAlarmWarningLine className={cn("shrink-0", event.reviewDecision === "CONFIRMED_CONCERN" ? "text-rose-500" : "text-amber-500", (event.type === "PHONE_DETECTED" || event.type === "DEVICE_DETECTED") && "animate-pulse")} /></div>
                       <p className="mt-2 flex items-center gap-1 text-[10px] text-muted-foreground"><RiTimeLine /> {formatExamDate(event.occurredAt)}</p>
                       <EventDetails event={event} />
-                      {event.evidenceUrl && <a href={event.evidenceUrl} target="_blank" rel="noreferrer" className="mt-3 block overflow-hidden rounded-xl border border-border bg-zinc-950"><Image src={event.evidenceUrl} alt={`${event.type.replaceAll("_", " ")} evidence`} width={640} height={360} unoptimized className="aspect-video w-full object-contain" /><span className="block bg-card px-3 py-2 text-[9px] font-bold text-muted-foreground">Snapshot evidence - open full size</span></a>}
+                      {event.evidenceUrl && <a href={event.evidenceUrl} target="_blank" rel="noreferrer" className="mt-3 block overflow-hidden rounded-xl border border-border bg-zinc-950"><Image src={event.evidenceUrl} alt={`${proctorSignalLabel(event.type, event.metadata)} evidence`} width={640} height={360} unoptimized className="aspect-video w-full object-contain" /><span className="block bg-card px-3 py-2 text-[9px] font-bold text-muted-foreground">Snapshot evidence - open full size</span></a>}
                       <div className="mt-2 flex items-center justify-between gap-2">
                         <span className={cn("rounded-full px-2 py-1 text-[8px] font-extrabold uppercase", event.reviewDecision === "CONFIRMED_CONCERN" ? "bg-rose-500/10 text-rose-600" : event.reviewDecision === "DISMISSED" ? "bg-muted text-muted-foreground" : "bg-amber-500/10 text-amber-600")}>{event.reviewDecision === "CONFIRMED_CONCERN" ? "Confirmed violation" : event.reviewDecision === "DISMISSED" ? "Warning dismissed" : "Proctor warning"}</span>
                         {(event.reviewDecision === "PENDING" || !event.reviewDecision) && <div className="flex gap-1"><button disabled={reviewing === event.id} onClick={() => reviewEvent(event.id, "DISMISSED")} title="Dismiss warning" className="inline-flex items-center gap-1 rounded-lg border border-border px-2 py-1.5 text-[9px] font-bold text-muted-foreground hover:bg-muted"><RiCloseCircleLine /> Dismiss</button><button disabled={reviewing === event.id} onClick={() => reviewEvent(event.id, "CONFIRMED_CONCERN")} title="Confirm violation" className="inline-flex items-center gap-1 rounded-lg border border-rose-500/20 px-2 py-1.5 text-[9px] font-bold text-rose-600 hover:bg-rose-500/10"><RiFlagLine /> Confirm violation</button></div>}
@@ -329,9 +331,12 @@ export default function ExamProctoringPage() {
 
 function EventDetails({ event }: { event: ExamAttempt["proctorEvents"][number] }) {
   const direction = typeof event.metadata?.direction === "string" ? event.metadata.direction : null;
+  const axis = typeof event.metadata?.axis === "string" ? event.metadata.axis : null;
+  const category = typeof event.metadata?.label === "string" ? event.metadata.label : null;
+  const model = typeof event.metadata?.model === "string" ? event.metadata.model : null;
   const duration = event.durationMs ? `${(event.durationMs / 1000).toFixed(1)}s sustained` : null;
   const confidence = typeof event.confidence === "number" ? `${Math.round(event.confidence * 100)}% confidence` : null;
-  const details = [direction ? `Direction: ${direction}` : null, duration, confidence].filter(Boolean);
+  const details = [category ? `Object: ${category}` : null, axis ? `Axis: ${axis}` : null, direction ? `Direction: ${direction}` : null, duration, confidence, model ? `Model: ${model}` : null].filter(Boolean);
   if (details.length === 0) return null;
   return <p className="mt-2 rounded-lg bg-card/70 px-2.5 py-2 text-[9px] font-bold capitalize text-muted-foreground">{details.join(" | ")}</p>;
 }

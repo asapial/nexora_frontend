@@ -85,6 +85,30 @@ export const formatExamDate = (value: string) =>
     minute: "2-digit",
   });
 
+const proctorSignalLabels: Record<string, string> = {
+  FACE_NOT_VISIBLE: "Face not visible",
+  MULTIPLE_FACES: "Multiple faces",
+  HEAD_TURN_HORIZONTAL: "Head movement",
+  EYE_MOVEMENT_HORIZONTAL: "Eye movement",
+  PHONE_DETECTED: "Phone visible",
+  DEVICE_DETECTED: "Other device visible",
+  CAMERA_INTERRUPTED: "Camera interrupted",
+  CAMERA_PERMISSION_REVOKED: "Camera permission revoked",
+  CAMERA_DEVICE_CHANGED: "Camera changed",
+  PREFLIGHT_FAILED: "Camera preflight failed",
+  FULLSCREEN_EXIT: "Fullscreen exited",
+  TAB_HIDDEN: "Tab switched",
+  WINDOW_BLUR: "Exam window lost focus",
+  COPY_ATTEMPT: "Copy attempted",
+  PASTE_ATTEMPT: "Paste attempted",
+  PAGE_EXIT: "Page exit attempted",
+};
+
+export const proctorSignalLabel = (type: string, metadata?: Record<string, unknown> | null) => {
+  if (type === "DEVICE_DETECTED" && typeof metadata?.label === "string") return `${metadata.label} visible`;
+  return proctorSignalLabels[type] ?? type.replaceAll("_", " ").toLowerCase().replace(/^./, (letter) => letter.toUpperCase());
+};
+
 export const examPhase = (exam: Pick<ExamSummary, "status" | "startTime" | "endTime">) => {
   const now = Date.now();
   if (exam.status !== "APPROVED") return exam.status;

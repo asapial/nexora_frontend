@@ -8,9 +8,9 @@ import {
   RiTimeLine, RiTrophyLine,
 } from "react-icons/ri";
 import { toast } from "sonner";
-import { ExamShieldHeader, ExamStatusBadge } from "@/components/examshield/ExamShieldUI";
+import { ExamShieldHeader, ExamShieldRoleNav, ExamStatusBadge } from "@/components/examshield/ExamShieldUI";
 import { examApi } from "@/lib/api";
-import { formatExamDate } from "@/lib/examShield";
+import { formatExamDate, proctorSignalLabel } from "@/lib/examShield";
 import { cn } from "@/lib/utils";
 
 type ResultAnswer = {
@@ -31,7 +31,7 @@ type PublishedResult = {
   statistics: { rank: number; participantCount: number };
   answerSheetAvailable: boolean;
   answerSheet: ResultAnswer[] | null;
-  violationHistory: Array<{ id: string; type: string; occurredAt: string }>;
+  violationHistory: Array<{ id: string; type: string; occurredAt: string; metadata?: Record<string, unknown> | null }>;
 };
 
 export default function StudentPublishedResultsPage() {
@@ -62,6 +62,7 @@ export default function StudentPublishedResultsPage() {
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 p-5 lg:p-8">
       <ExamShieldHeader eyebrow="ExamShield outcomes" title="Published results & answer sheets" description="Review your official scores and compare your response with the correct answer. Attempts with integrity events display the recorded violation history instead." />
+      <ExamShieldRoleNav role="student" />
 
       {loading ? <div className="h-48 animate-pulse rounded-2xl bg-muted" /> : results.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border py-20 text-center"><RiTrophyLine className="mx-auto text-4xl text-muted-foreground/30" /><p className="mt-3 text-[13px] font-black">No results published yet</p><p className="mt-1 text-[11px] text-muted-foreground">Your teacher controls when each result becomes available.</p></div>
@@ -152,7 +153,7 @@ function ViolationHistory({ events }: { events: PublishedResult["violationHistor
   return (
     <div>
       <div className="mb-4 flex gap-3"><RiAlertLine className="text-lg text-rose-600" /><div><h3 className="text-[14px] font-black text-rose-700 dark:text-rose-300">Recorded violation history</h3><p className="mt-1 text-[10px] text-muted-foreground">The answer sheet is replaced by this integrity record.</p></div></div>
-      <div className="space-y-2">{events.map((event, index) => <div key={event.id} className="flex items-center justify-between gap-3 rounded-xl border border-rose-500/20 bg-card p-3"><p className="text-[11px] font-extrabold text-rose-600">{index + 1}. {event.type.replaceAll("_", " ")}</p><p className="flex items-center gap-1 text-[9px] text-muted-foreground"><RiTimeLine /> {formatExamDate(event.occurredAt)}</p></div>)}</div>
+      <div className="space-y-2">{events.map((event, index) => <div key={event.id} className="flex items-center justify-between gap-3 rounded-xl border border-rose-500/20 bg-card p-3"><p className="text-[11px] font-extrabold text-rose-600">{index + 1}. {proctorSignalLabel(event.type, event.metadata)}</p><p className="flex items-center gap-1 text-[9px] text-muted-foreground"><RiTimeLine /> {formatExamDate(event.occurredAt)}</p></div>)}</div>
     </div>
   );
 }

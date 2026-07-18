@@ -13,7 +13,8 @@ import { toast } from "sonner";
 import { ProModeVideoMarkers } from "@/components/examshield/ProModeVideoMarkers";
 import { examApi } from "@/lib/api";
 import { ProctorPolicy } from "@/lib/examShield";
-import { evaluateProctorSignals, getProctorDecisionConfig, ProctorBaseline, ProctorDecision, ProctorSignalType } from "@/lib/examshield-kit/decision";
+import { ProctorCalibrationBuffer } from "@/lib/examshield-kit/calibration";
+import { ProctorBaseline, ProctorDecision, ProctorDecisionTracker } from "@/lib/examshield-kit/decision";
 import { startVideoFrameLoop } from "@/lib/examshield-kit/frame-loop";
 import { ExamShieldVision, VisionSignals } from "@/lib/examshield-kit/vision";
 import { cn } from "@/lib/utils";
@@ -37,6 +38,7 @@ const snapshotEventTypes = new Set([
   "HEAD_TURN_HORIZONTAL",
   "EYE_MOVEMENT_HORIZONTAL",
   "PHONE_DETECTED",
+  "DEVICE_DETECTED",
 ]);
 
 export default function ExamRunnerPage() {
@@ -52,7 +54,7 @@ export default function ExamRunnerPage() {
   const [cameraState, setCameraState] = useState<"IDLE" | "REQUESTING" | "READY" | "INTERRUPTED">("IDLE");
   const [faceCount, setFaceCount] = useState<number | null>(null);
   const [detectorSupported, setDetectorSupported] = useState(false);
-  const [phoneDetectionSupported, setPhoneDetectionSupported] = useState(false);
+  const [deviceDetectionSupported, setDeviceDetectionSupported] = useState(false);
   const [visionError, setVisionError] = useState("");
   const [liveSignals, setLiveSignals] = useState<VisionSignals | null>(null);
   const [liveDecisions, setLiveDecisions] = useState<ProctorDecision[]>([]);
@@ -63,14 +65,10 @@ export default function ExamRunnerPage() {
   const streamRef = useRef<MediaStream | null>(null);
   const visionRef = useRef<ExamShieldVision | null>(null);
   const signalsRef = useRef<VisionSignals | null>(null);
-  const baselineRef = useRef<{ headYaw: number; eyeHorizontal: number; leftEyeHorizontal: number; rightEyeHorizontal: number } | null>(null);
-  const missingSince = useRef<number | null>(null);
-  const multipleSince = useRef<number | null>(null);
-  const headTurnSince = useRef<number | null>(null);
-  const eyeMovementSince = useRef<number | null>(null);
-  const phoneSince = useRef<number | null>(null);
+  const baselineRef = useRef<ProctorBaseline | null>(null);
+  const calibrationBufferRef = useRef(new ProctorCalibrationBuffer());
+  const decisionTrackerRef = useRef(new ProctorDecisionTracker());
   const lastCameraEvent = useRef<Record<string, number>>({});
-  const lastPositiveSignal = useRef<Record<string, number>>({});
   const lastDeliveryError = useRef(0);
   const lastFaceUiUpdate = useRef(0);
   const lastMarkerUiUpdate = useRef(0);
@@ -128,6 +126,8 @@ export default function ExamRunnerPage() {
     streamRef.current = null;
     visionRef.current?.close();
     visionRef.current = null;
+    calibrationBufferRef.current.reset();
+    decisionTrackerRef.current.reset();
   }, []);
 
   const requestCamera = async () => {
@@ -137,7 +137,7 @@ export default function ExamRunnerPage() {
     }
     stopCamera();
     setDetectorSupported(false);
-    setPhoneDetectionSupported(false);
+    setDeviceDetectionSupported(false);
     setFaceCount(null);
     setLiveSignals(null);
     setLiveDecisions([]);
@@ -157,18 +157,20 @@ export default function ExamRunnerPage() {
       }
       const vision = new ExamShieldVision();
       const support = await vision.initialize();
-      if (!support.phoneDetectionSupported) {
+      if (!support.deviceDetectionSupported) {
         vision.close();
-        throw new Error("Visible-phone detection could not initialize");
+        throw new Error("Phone and device detection could not initialize");
       }
       visionRef.current = vision;
       setDetectorSupported(true);
-      setPhoneDetectionSupported(true);
+      setDeviceDetectionSupported(true);
       setVisionError("");
       const initial = vision.analyze(videoRef.current!, performance.now());
       signalsRef.current = initial;
+      calibrationBufferRef.current.push(initial);
       setLiveSignals(initial);
       setFaceCount(initial.faceCount);
+      setDeviceDetectionSupported(initial.deviceDetectorHealthy);
       stream.getVideoTracks()[0]?.addEventListener("ended", () => {
         setCameraState("INTERRUPTED");
         log("CAMERA_INTERRUPTED", { reason: "camera-track-ended" }, 1000, 1);
@@ -184,19 +186,20 @@ export default function ExamRunnerPage() {
 
   const calibrate = useCallback(() => {
     const signals = signalsRef.current;
-    if (!signals || signals.faceCount !== 1 || signals.headYaw === null || signals.eyeHorizontal === null || signals.leftEyeHorizontal === null || signals.rightEyeHorizontal === null) {
+    if (!signals || signals.faceCount !== 1) {
       toast.error("Keep exactly one face visible and look naturally at the screen before calibrating");
       return;
     }
-    const baseline = {
-      headYaw: signals.headYaw,
-      eyeHorizontal: signals.eyeHorizontal,
-      leftEyeHorizontal: signals.leftEyeHorizontal,
-      rightEyeHorizontal: signals.rightEyeHorizontal,
-    };
+    const result = calibrationBufferRef.current.createBaseline();
+    if (!result.ok) {
+      toast.error(result.reason);
+      return;
+    }
+    const baseline = result.baseline;
     baselineRef.current = baseline;
     setPreflightBaseline(baseline);
-    toast.success("Pro Mode direction tracking calibrated");
+    decisionTrackerRef.current.reset();
+    toast.success(`Pro Mode tracking calibrated from ${result.sampleCount} stable frames`);
   }, []);
 
   const analyzeVision = useCallback(() => {
@@ -204,10 +207,13 @@ export default function ExamRunnerPage() {
     try {
       const signals = visionRef.current.analyze(videoRef.current, performance.now());
       signalsRef.current = signals;
+      calibrationBufferRef.current.push(signals);
       const now = performance.now();
       if (now - lastFaceUiUpdate.current >= 100) {
         lastFaceUiUpdate.current = now;
         setFaceCount(signals.faceCount);
+        setDeviceDetectionSupported(signals.deviceDetectorHealthy);
+        if (!signals.deviceDetectorHealthy) setVisionError("Phone and device detection was interrupted; face tracking remains active");
       }
       if (now - lastMarkerUiUpdate.current >= 66) {
         lastMarkerUiUpdate.current = now;
@@ -231,7 +237,7 @@ export default function ExamRunnerPage() {
     if (started || cameraState !== "READY" || detectorSupported === false) return;
     const video = videoRef.current;
     if (!video) return;
-    return startVideoFrameLoop(video, () => analyzeVision(), 30);
+    return startVideoFrameLoop(video, () => analyzeVision(), 24);
   }, [analyzeVision, cameraState, detectorSupported, started]);
 
   useEffect(() => {
@@ -249,45 +255,28 @@ export default function ExamRunnerPage() {
   useEffect(() => {
     if (!started || access?.exam.examMode !== "PRO" || !detectorSupported) return;
     const sensitivity = access.proctorPolicy?.sensitivity ?? "STANDARD";
-    const config = getProctorDecisionConfig(sensitivity);
-    const signalRefs: Record<ProctorSignalType, React.MutableRefObject<number | null>> = {
-      FACE_NOT_VISIBLE: missingSince,
-      MULTIPLE_FACES: multipleSince,
-      HEAD_TURN_HORIZONTAL: headTurnSince,
-      EYE_MOVEMENT_HORIZONTAL: eyeMovementSince,
-      PHONE_DETECTED: phoneSince,
-    };
     const video = videoRef.current;
     if (!video) return;
     return startVideoFrameLoop(video, () => {
       const signals = analyzeVision();
       if (!signals) return;
-      const count = signals.faceCount;
       const now = Date.now();
-      const maybeLog = (type: string, since: React.MutableRefObject<number | null>, threshold: number, metadata: Record<string, unknown>, confidence = 0.85) => {
-        if (since.current && now - since.current >= threshold && now - (lastCameraEvent.current[type] ?? 0) >= config.cooldown) {
-          log(type, { faceCount: count, detector: "mediapipe", ...metadata }, now - since.current, confidence);
-          lastCameraEvent.current[type] = now;
-        }
-      };
-      const trackSignal = (type: string, since: React.MutableRefObject<number | null>, active: boolean, threshold: number, metadata: Record<string, unknown>, confidence?: number) => {
-        if (active) {
-          lastPositiveSignal.current[type] = now;
-          since.current ??= now;
-          maybeLog(type, since, threshold, metadata, confidence);
-        } else if (now - (lastPositiveSignal.current[type] ?? 0) > config.signalGrace) {
-          since.current = null;
-        }
-      };
-      const decisions = evaluateProctorSignals(signals, baselineRef.current, sensitivity);
+      const decisions = decisionTrackerRef.current.update(signals, baselineRef.current, sensitivity, now, {
+        roughPaperAllowed: access.proctorPolicy?.roughPaperAllowed,
+      });
       if (performance.now() - lastDecisionUiUpdate.current >= 66) {
         lastDecisionUiUpdate.current = performance.now();
         setLiveDecisions(decisions);
       }
-      decisions.forEach((decision) => {
-        trackSignal(decision.type, signalRefs[decision.type], decision.active, decision.thresholdMs, decision.metadata, decision.confidence);
+      decisions.filter((decision) => decision.triggered).forEach((decision) => {
+        log(
+          decision.type,
+          { faceCount: signals.faceCount, detector: "mediapipe", ...decision.metadata },
+          decision.sustainedMs,
+          decision.confidence,
+        );
       });
-    }, 30);
+    }, 24);
   }, [access, analyzeVision, detectorSupported, log, started]);
 
   const submit = useCallback(async (auto = false, reason: "TIME_EXPIRED" | "FULLSCREEN_EXIT" = "TIME_EXPIRED") => {
@@ -313,7 +302,7 @@ export default function ExamRunnerPage() {
       if (access?.exam.examMode === "PRO") {
         if (!consent || cameraState !== "READY") throw new Error("Complete consent and camera setup before starting");
         if (!detectorSupported) throw new Error("Advanced Pro Mode monitoring is not ready");
-        if (!phoneDetectionSupported) throw new Error("Visible-phone detection is not ready");
+        if (!deviceDetectionSupported) throw new Error("Phone and device detection is not ready");
         if (faceCount !== 1) throw new Error("Keep exactly one face visible before starting");
         if (!preflightBaseline) throw new Error("Calibrate direction tracking before starting");
         const settings = streamRef.current?.getVideoTracks()[0]?.getSettings();
@@ -388,7 +377,7 @@ export default function ExamRunnerPage() {
   useEffect(() => () => stopCamera(), [stopCamera]);
 
   if (!access) return <div className="mx-auto max-w-xl p-8"><div className="h-80 animate-pulse rounded-3xl bg-muted" /></div>;
-  if (!started) return <ExamEntry access={access} begin={begin} calibrate={calibrate} cameraState={cameraState} consent={consent} detectorSupported={detectorSupported} faceCount={faceCount} liveSignals={liveSignals} phoneDetectionSupported={phoneDetectionSupported} preflightBaseline={preflightBaseline} requestCamera={requestCamera} setConsent={setConsent} videoRef={videoRef} visionError={visionError} />;
+  if (!started) return <ExamEntry access={access} begin={begin} calibrate={calibrate} cameraState={cameraState} consent={consent} detectorSupported={detectorSupported} deviceDetectionSupported={deviceDetectionSupported} faceCount={faceCount} liveSignals={liveSignals} preflightBaseline={preflightBaseline} requestCamera={requestCamera} setConsent={setConsent} videoRef={videoRef} visionError={visionError} />;
 
   const clock = `${Math.floor(seconds / 60).toString().padStart(2, "0")}:${(seconds % 60).toString().padStart(2, "0")}`;
   return <div className="min-h-screen select-none bg-background">
@@ -404,7 +393,7 @@ export default function ExamRunnerPage() {
   </div>;
 }
 
-function ExamEntry({ access, begin, calibrate, cameraState, consent, detectorSupported, faceCount, liveSignals, phoneDetectionSupported, preflightBaseline, requestCamera, setConsent, videoRef, visionError }: {
+function ExamEntry({ access, begin, calibrate, cameraState, consent, detectorSupported, deviceDetectionSupported, faceCount, liveSignals, preflightBaseline, requestCamera, setConsent, videoRef, visionError }: {
   access: AccessData;
   begin: () => void;
   calibrate: () => void;
@@ -413,7 +402,7 @@ function ExamEntry({ access, begin, calibrate, cameraState, consent, detectorSup
   detectorSupported: boolean;
   faceCount: number | null;
   liveSignals: VisionSignals | null;
-  phoneDetectionSupported: boolean;
+  deviceDetectionSupported: boolean;
   preflightBaseline: ProctorBaseline | null;
   requestCamera: () => void;
   setConsent: (value: boolean) => void;
@@ -425,14 +414,19 @@ function ExamEntry({ access, begin, calibrate, cameraState, consent, detectorSup
   const faceReady = cameraReady && detectorSupported && faceCount === 1;
   const calibrationReady = liveSignals !== null
     && liveSignals.headYaw !== null
+    && liveSignals.headPitch !== null
+    && liveSignals.headRoll !== null
     && liveSignals.eyeHorizontal !== null
+    && liveSignals.eyeVertical !== null
     && liveSignals.leftEyeHorizontal !== null
-    && liveSignals.rightEyeHorizontal !== null;
+    && liveSignals.rightEyeHorizontal !== null
+    && liveSignals.leftEyeVertical !== null
+    && liveSignals.rightEyeVertical !== null;
   const trackingReady = cameraReady && detectorSupported && calibrationReady;
-  const phoneReady = cameraReady && phoneDetectionSupported;
+  const deviceReady = cameraReady && deviceDetectionSupported;
   const calibrated = trackingReady && preflightBaseline !== null;
-  const ready = !pro || (consent && cameraReady && faceReady && trackingReady && phoneReady && calibrated);
-  const checks = [consent, cameraReady, faceReady, trackingReady && phoneReady, calibrated];
+  const ready = !pro || (consent && cameraReady && faceReady && trackingReady && deviceReady && calibrated);
+  const checks = [consent, cameraReady, faceReady, trackingReady && deviceReady, calibrated];
   const completedChecks = checks.filter(Boolean).length;
   const policy = access.proctorPolicy;
   const duration = access.exam.durationMinutes ? `${access.exam.durationMinutes} minutes` : "Until exam deadline";
@@ -463,7 +457,7 @@ function ExamEntry({ access, begin, calibrate, cameraState, consent, detectorSup
           <div className="relative mt-6 grid gap-2 border-t border-border/60 pt-5 sm:grid-cols-2 lg:grid-cols-4">
             <ProgressStep number={1} label="Review exam rules" complete />
             <ProgressStep number={2} label={pro ? "Give informed consent" : "Prepare your browser"} complete={!pro || consent} />
-            <ProgressStep number={3} label={pro ? "Pass camera check" : "Enter fullscreen"} complete={!pro || (cameraReady && faceReady && trackingReady && phoneReady)} />
+            <ProgressStep number={3} label={pro ? "Pass camera check" : "Enter fullscreen"} complete={!pro || (cameraReady && faceReady && trackingReady && deviceReady)} />
             <ProgressStep number={4} label="Start the exam" complete={false} />
           </div>
         </div>
@@ -493,7 +487,7 @@ function ExamEntry({ access, begin, calibrate, cameraState, consent, detectorSup
             <input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} className="mt-1 h-5 w-5 shrink-0 accent-teal-600" />
             <div>
               <p className="text-[12px] font-black">Informed consent</p>
-              <p className="mt-1 text-[11px] leading-5 text-muted-foreground">I have read the rules and consent to Pro Mode face, head, eye, and visible-phone monitoring for this exam.</p>
+              <p className="mt-1 text-[11px] leading-5 text-muted-foreground">I have read the rules and consent to Pro Mode face, head, eye, phone, and other-device monitoring for this exam.</p>
             </div>
             {consent && <RiCheckboxCircleLine className="ml-auto shrink-0 text-xl text-teal-600" />}
           </label>
@@ -514,7 +508,7 @@ function ExamEntry({ access, begin, calibrate, cameraState, consent, detectorSup
                 <ReadinessItem label="Camera" ready={cameraReady} />
                 <ReadinessItem label="One face" ready={faceReady} />
                 <ReadinessItem label="Head & eyes" ready={trackingReady} />
-                <ReadinessItem label="Phone detector" ready={phoneReady} />
+                <ReadinessItem label="Device detector" ready={deviceReady} />
                 <ReadinessItem label="Calibrated" ready={calibrated} />
               </div>
               {visionError && <div className="flex gap-2 rounded-xl border border-rose-500/25 bg-rose-500/10 p-3 text-[10px] font-bold leading-4 text-rose-700 dark:text-rose-300"><RiAlertLine className="shrink-0" />{visionError}</div>}
@@ -532,7 +526,7 @@ function ExamEntry({ access, begin, calibrate, cameraState, consent, detectorSup
               <StartRequirement label="Rules reviewed and consent given" complete={consent} />
               <StartRequirement label="Camera permission and preview ready" complete={cameraReady} />
               <StartRequirement label="Exactly one face clearly visible" complete={faceReady} />
-              <StartRequirement label="Advanced detectors initialized" complete={trackingReady && phoneReady} />
+              <StartRequirement label="Advanced detectors initialized" complete={trackingReady && deviceReady} />
               <StartRequirement label="Neutral direction position calibrated" complete={calibrated} />
             </div>
             <button onClick={begin} disabled={!ready} className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-teal-600 text-[12px] font-black text-white shadow-lg shadow-teal-600/20 transition-colors hover:bg-teal-700 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none"><RiFullscreenLine />Enter fullscreen & start exam</button>

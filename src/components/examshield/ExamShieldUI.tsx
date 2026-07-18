@@ -1,7 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { RiArrowRightLine, RiShieldCheckLine } from "react-icons/ri";
+import { usePathname } from "next/navigation";
+import {
+  RiAddLine,
+  RiArrowRightLine,
+  RiBarChartBoxLine,
+  RiFileList3Line,
+  RiFlaskLine,
+  RiGridLine,
+  RiHistoryLine,
+  RiLiveLine,
+  RiShieldCheckLine,
+} from "react-icons/ri";
+import { findLongestMatchingRoute } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 
 const statusStyle: Record<string, string> = {
@@ -50,6 +62,70 @@ export function ExamShieldHeader({
         </Link>
       )}
     </div>
+  );
+}
+
+type ExamShieldRole = "teacher" | "student" | "admin";
+
+type ExamShieldDestination = {
+  label: string;
+  href: string;
+  icon: React.ReactNode;
+};
+
+const roleDestinations: Record<ExamShieldRole, ExamShieldDestination[]> = {
+  teacher: [
+    { label: "Overview", href: "/dashboard/teacher/exams", icon: <RiShieldCheckLine /> },
+    { label: "Create", href: "/dashboard/teacher/exams/create", icon: <RiAddLine /> },
+    { label: "Live proctoring", href: "/dashboard/teacher/exams/proctoring", icon: <RiLiveLine /> },
+    { label: "Snapshots", href: "/dashboard/teacher/exams/monitoring", icon: <RiGridLine /> },
+    { label: "Results", href: "/dashboard/teacher/exams/results", icon: <RiFileList3Line /> },
+    { label: "History", href: "/dashboard/teacher/exams/history", icon: <RiHistoryLine /> },
+  ],
+  student: [
+    { label: "My exams", href: "/dashboard/student/exams", icon: <RiShieldCheckLine /> },
+    { label: "Published results", href: "/dashboard/student/exams/results", icon: <RiBarChartBoxLine /> },
+  ],
+  admin: [
+    { label: "Review center", href: "/dashboard/admin/exams", icon: <RiFileList3Line /> },
+    { label: "Detection lab", href: "/dashboard/admin/examshield-lab", icon: <RiFlaskLine /> },
+  ],
+};
+
+export function ExamShieldRoleNav({ role, className }: { role: ExamShieldRole; className?: string }) {
+  const pathname = usePathname();
+  const destinations = roleDestinations[role];
+  const activeHref = findLongestMatchingRoute(pathname, destinations.map((destination) => destination.href));
+
+  return (
+    <nav aria-label={`${role} ExamShield navigation`} className={cn("rounded-2xl border border-border bg-card/90 p-2 shadow-sm backdrop-blur", className)}>
+      <div className="flex items-center gap-1 overflow-x-auto">
+        <div className="hidden shrink-0 items-center gap-2 px-3 text-[9px] font-black uppercase tracking-[.16em] text-muted-foreground lg:flex">
+          <RiShieldCheckLine className="text-sm text-teal-600" />
+          ExamShield
+        </div>
+        <div className="hidden h-7 w-px shrink-0 bg-border lg:block" />
+        {destinations.map((destination) => {
+          const active = destination.href === activeHref;
+          return (
+            <Link
+              key={destination.href}
+              href={destination.href}
+              aria-current={active ? "page" : undefined}
+              className={cn(
+                "inline-flex h-9 shrink-0 items-center gap-2 rounded-xl px-3 text-[10px] font-extrabold transition-colors",
+                active
+                  ? "bg-teal-600 text-white shadow-md shadow-teal-600/20"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
+              )}
+            >
+              <span className="text-sm">{destination.icon}</span>
+              {destination.label}
+            </Link>
+          );
+        })}
+      </div>
+    </nav>
   );
 }
 

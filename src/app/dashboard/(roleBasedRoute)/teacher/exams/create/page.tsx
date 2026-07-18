@@ -9,6 +9,7 @@ import {
   RiSparklingFill, RiTimeLine,
 } from "react-icons/ri";
 import { toast } from "sonner";
+import { ExamShieldRoleNav } from "@/components/examshield/ExamShieldUI";
 import { examApi } from "@/lib/api";
 import { ClusterOption } from "@/lib/examShield";
 import { examFormSchema, normalizeExamFormInput } from "@/lib/formSchemas";
@@ -205,6 +206,8 @@ export default function CreateExamPage() {
         </button>
       </div>
 
+      <ExamShieldRoleNav role="teacher" className="mb-6" />
+
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_300px]">
         <div className="space-y-5">
           <Section icon={<RiInformationLine />} title="Exam identity" description="Give students clear context before they enter fullscreen mode.">
@@ -224,7 +227,7 @@ export default function CreateExamPage() {
             </div>
           </Section>
 
-          <Section icon={<RiCameraLine />} title="ExamShield mode" description="Regular Mode uses the current browser integrity checks. Pro Mode adds consent, camera preflight, and local face-presence monitoring.">
+          <Section icon={<RiCameraLine />} title="ExamShield mode" description="Regular Mode uses browser integrity checks. Pro Mode adds informed consent, camera readiness, and local no-face, multiple-face, head, eye, phone, and other supported-device monitoring.">
             <div className="grid gap-3 md:grid-cols-2">
               {(["REGULAR", "PRO"] as const).map((mode) => (
                 <button
@@ -234,7 +237,7 @@ export default function CreateExamPage() {
                   className={cn("rounded-2xl border p-4 text-left transition", form.examMode === mode ? "border-teal-500/50 bg-teal-500/10 shadow-sm" : "border-border bg-muted/15 hover:bg-muted/30")}
                 >
                   <div className="flex items-center justify-between gap-3"><p className="text-[12px] font-black">{mode === "REGULAR" ? "Regular Mode" : "Pro Mode"}</p>{form.examMode === mode && <RiCheckLine className="text-teal-600" />}</div>
-                  <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">{mode === "REGULAR" ? "No camera permission. Keeps fullscreen, tab, copy, paste, and page-exit monitoring." : "Requires informed consent and camera preflight. Camera frames stay on the student's device."}</p>
+                  <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">{mode === "REGULAR" ? "No camera permission. Keeps fullscreen, tab, copy, paste, and page-exit monitoring." : "Requires informed consent and camera preflight. Analysis runs locally; only an enabled warning snapshot may be uploaded for review."}</p>
                 </button>
               ))}
             </div>
@@ -249,7 +252,7 @@ export default function CreateExamPage() {
                   <PolicyToggle label="Snapshot evidence" checked={proctorPolicy.snapshotEnabled} onChange={(checked) => setProctorPolicy({ ...proctorPolicy, snapshotEnabled: checked })} />
                   <PolicyToggle label="Rough paper allowed" checked={proctorPolicy.roughPaperAllowed} onChange={(checked) => setProctorPolicy({ ...proctorPolicy, roughPaperAllowed: checked })} />
                 </div>
-                <p className="mt-4 text-[10px] leading-relaxed text-muted-foreground">Pro Mode signals require teacher review and never automatically label a student as cheating. When enabled, sustained suspicious camera signals capture a compressed snapshot and store it as authenticated evidence for proctor review.</p>
+                <p className="mt-4 text-[10px] leading-relaxed text-muted-foreground">Pro Mode checks sustained no-face, multiple-face, head and eye movement, and visible phone or other supported-device signals. Every signal requires teacher review and never automatically labels a student as cheating. When enabled, a compressed warning snapshot is stored as authenticated evidence for that review.</p>
               </div>
             )}
           </Section>

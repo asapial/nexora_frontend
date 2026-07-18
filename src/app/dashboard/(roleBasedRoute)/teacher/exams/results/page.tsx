@@ -14,7 +14,7 @@ import {
   RiUserLine,
 } from "react-icons/ri";
 import { toast } from "sonner";
-import { ExamShieldHeader, ExamStatusBadge, MetricCard } from "@/components/examshield/ExamShieldUI";
+import { ExamShieldHeader, ExamShieldRoleNav, ExamStatusBadge, MetricCard } from "@/components/examshield/ExamShieldUI";
 import { examApi } from "@/lib/api";
 import { ExamDetail, ExamSummary, examPhase, formatExamDate } from "@/lib/examShield";
 
@@ -90,6 +90,7 @@ export default function TeacherExamResultsPage() {
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 p-5 lg:p-8">
       <ExamShieldHeader eyebrow="ExamShield outcomes" title="Publish results & answer sheets" description="Release scores and answer sheets independently, then email every submitted student together or deliver a result to one student at a time. Flagged students receive their violation history instead of an answer sheet." />
+      <ExamShieldRoleNav role="teacher" />
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <MetricCard label="Results published" value={totals.published} note="Visible to students" icon={<RiCheckboxCircleLine />} />
         <MetricCard label="Sheets published" value={totals.sheets} note="For clean attempts" icon={<RiFileList3Line />} accent="violet" />

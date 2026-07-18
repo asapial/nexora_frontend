@@ -8,16 +8,17 @@ import {
   RiGridLine, RiLiveLine, RiRefreshLine, RiShieldCheckLine, RiTimeLine, RiUserLine,
 } from "react-icons/ri";
 import { toast } from "sonner";
-import { ExamShieldHeader, ExamStatusBadge, MetricCard } from "@/components/examshield/ExamShieldUI";
+import { ExamShieldHeader, ExamShieldRoleNav, ExamStatusBadge, MetricCard } from "@/components/examshield/ExamShieldUI";
 import { examApi } from "@/lib/api";
-import { ExamAttempt, ExamDetail, ExamSummary, ProctorEvent, examPhase, formatExamDate } from "@/lib/examShield";
+import { ExamAttempt, ExamDetail, ExamSummary, ProctorEvent, examPhase, formatExamDate, proctorSignalLabel } from "@/lib/examShield";
 import { cn } from "@/lib/utils";
 
 const signalFilters = [
   ["ALL", "All suspicious signals"],
-  ["PHONE_DETECTED", "Mobile detected"],
-  ["HEAD_TURN_HORIZONTAL", "Horizontal head turn"],
-  ["EYE_MOVEMENT_HORIZONTAL", "Horizontal eye movement"],
+  ["PHONE_DETECTED", "Phone visible"],
+  ["DEVICE_DETECTED", "Other device visible"],
+  ["HEAD_TURN_HORIZONTAL", "Head movement"],
+  ["EYE_MOVEMENT_HORIZONTAL", "Eye movement"],
   ["MULTIPLE_FACES", "Multiple faces"],
   ["FACE_NOT_VISIBLE", "Face not visible"],
   ["CAMERA_INTERRUPTED", "Camera interrupted"],
@@ -89,6 +90,7 @@ export default function CombinedExamMonitoringPage() {
       description="Monitor recent evidence snapshots across every active student without streaming or storing continuous video."
       action={{ label: "Open proctor console", href: "/dashboard/teacher/exams/proctoring" }}
     />
+    <ExamShieldRoleNav role="teacher" />
 
     <section className="rounded-2xl border border-border bg-card/90 p-4 shadow-sm">
       <div className="flex flex-wrap items-center gap-3">
@@ -136,7 +138,7 @@ function StudentSnapshotCard({ attempt, events, latest }: { attempt: ExamAttempt
     <div className="relative aspect-video bg-zinc-950">
       {latest?.evidenceUrl ? <a href={latest.evidenceUrl} target="_blank" rel="noreferrer"><Image src={latest.evidenceUrl} alt={`${attempt.user.name} evidence`} fill unoptimized className="object-contain" /></a> : <div className="absolute inset-0 flex flex-col items-center justify-center text-zinc-500"><RiGridLine className="text-3xl" /><p className="mt-2 text-[9px] font-bold">No snapshot evidence yet</p></div>}
       <span className={cn("absolute left-2 top-2 rounded-full px-2 py-1 text-[7px] font-black uppercase tracking-wider text-white", attempt.suspicious ? "bg-rose-600" : warningCount ? "bg-amber-500" : "bg-teal-600")}>{attempt.suspicious ? "Confirmed concern" : warningCount ? "Warning received" : "No warnings"}</span>
-      {latest && <span className="absolute bottom-2 left-2 rounded-full bg-zinc-950/75 px-2 py-1 text-[7px] font-black uppercase text-white backdrop-blur">{latest.type.replaceAll("_", " ")}</span>}
+      {latest && <span className="absolute bottom-2 left-2 rounded-full bg-zinc-950/75 px-2 py-1 text-[7px] font-black uppercase text-white backdrop-blur">{proctorSignalLabel(latest.type, latest.metadata)}</span>}
     </div>
     <div className="p-3">
       <div className="flex items-start justify-between gap-2"><div className="min-w-0"><h3 className="truncate text-[11px] font-black">{attempt.user.name}</h3><p className="mt-0.5 truncate text-[8px] text-muted-foreground">{attempt.user.email}</p></div><ExamStatusBadge value={attempt.status} /></div>

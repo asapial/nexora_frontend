@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { RiAddLine, RiAlarmWarningLine, RiHistoryLine, RiLiveLine, RiQuestionLine, RiTeamLine, RiTimeLine } from "react-icons/ri";
 import { toast } from "sonner";
-import { ExamShieldHeader, ExamStatusBadge, MetricCard } from "@/components/examshield/ExamShieldUI";
+import { ExamShieldHeader, ExamShieldRoleNav, ExamStatusBadge, MetricCard } from "@/components/examshield/ExamShieldUI";
 import { examApi } from "@/lib/api";
 import { ExamSummary, examPhase, formatExamDate } from "@/lib/examShield";
 
@@ -65,6 +65,7 @@ export default function TeacherExamsPage() {
         description="Create, supervise, and review every proctored assessment from focused workspaces designed for the job at hand."
         action={{ label: "Create new exam", href: "/dashboard/teacher/exams/create" }}
       />
+      <ExamShieldRoleNav role="teacher" />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <MetricCard label="Live now" value={stats.live} note="Active exam windows" icon={<RiLiveLine />} accent="rose" />

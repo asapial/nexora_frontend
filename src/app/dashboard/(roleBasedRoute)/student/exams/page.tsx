@@ -17,7 +17,7 @@ import {
   RiTimeLine,
 } from "react-icons/ri";
 import { toast } from "sonner";
-import { ExamStatusBadge, MetricCard } from "@/components/examshield/ExamShieldUI";
+import { ExamShieldRoleNav, ExamStatusBadge, MetricCard } from "@/components/examshield/ExamShieldUI";
 import { examApi } from "@/lib/api";
 import { formatExamDate } from "@/lib/examShield";
 import { cn } from "@/lib/utils";
@@ -253,6 +253,8 @@ export default function StudentExamsPage() {
           </div>
         ) : null}
       </header>
+
+      <ExamShieldRoleNav role="student" />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <MetricCard label="Live now" value={counts.live} note="Available to enter" icon={<RiShieldCheckLine />} accent="rose" />
