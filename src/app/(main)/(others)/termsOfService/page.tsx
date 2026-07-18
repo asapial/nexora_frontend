@@ -81,7 +81,7 @@ If you do not agree to these Terms, do not access or use the Service. We reserve
 
 **Student Consent:** A student must complete the Pro Mode consent and camera preflight before starting a Pro Mode exam. A student who cannot complete Pro Mode because of accessibility, device, or privacy requirements should contact the responsible teacher or institution before the exam.
 
-**Detector Scope:** Where supported, local camera analysis may create sustained signals for no face, multiple faces, head or eye movement, and a visible phone or other supported device. These detectors do not perform identity matching and may be affected by lighting, camera position, movement, or object visibility.
+**Detector Scope:** Where supported, local camera analysis may create sustained signals for no face, multiple faces, head or eye movement, and a visible phone or other supported device. Prescription spectacles are allowed and are not a prohibited-device category. Unreliable iris frames caused by glare or occlusion are ignored, while device candidates must repeat consistently before a warning is created. These detectors do not perform identity matching and may still be affected by lighting, camera position, movement, or object visibility.
 
 **Human Review Required:** Camera and browser integrity events are reviewable signals, not automatic findings of misconduct. A detector signal alone does not prove cheating. Teachers and institutions remain responsible for fair review, any academic-integrity decision, and the related appeal process.
 

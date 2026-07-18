@@ -16,6 +16,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useEffect, useState } from "react";
 import { MascotLoader } from "@/components/mascot";
 import { SessionProvider, useSession } from "@/provider/session-provider";
+import { ExamShieldAlerts } from "@/components/examshield/ExamShieldAlerts";
 
 // ─────────────────────────────────────────
 // TYPES
@@ -103,6 +104,7 @@ function DashboardHeader() {
       </Breadcrumb> */}
 
       <div className="ml-auto flex items-center gap-2">
+        <ExamShieldAlerts />
         <span className="hidden sm:block text-[12.5px] text-muted-foreground">
           {greeting && user?.name ? `${greeting}, ${user.name}` : greeting}
         </span>

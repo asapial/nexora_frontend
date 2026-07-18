@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   calculateFaceMetrics,
   createEmptyVisionSignals,
+  DeviceConfirmationTracker,
   poseFromTransformationMatrix,
   selectDeviceDetections,
 } from "./vision";
@@ -206,6 +207,36 @@ describe("calculateFaceMetrics", () => {
     expect(fallbackMetrics.headYaw).toBeCloseTo(1 / 3, 10);
     expect(fallbackMetrics.headRoll).toBeCloseTo(Math.atan2(0.1, 0.4), 10);
   });
+
+  it("nulls gaze from an iris reflection outside the eye while preserving head pose", () => {
+    const landmarks = makeFaceLandmarks();
+    for (const index of [468, 469, 470, 471, 472]) {
+      landmarks[index] = { x: 0.8, y: 0.45 };
+    }
+
+    const metrics = calculateFaceMetrics(landmarks);
+
+    expect(metrics.headYaw).not.toBeNull();
+    expect(metrics.leftEyeHorizontal).toBeNull();
+    expect(metrics.leftEyeVertical).toBeNull();
+    expect(metrics.rightEyeHorizontal).not.toBeNull();
+    expect(metrics.eyeHorizontal).toBeNull();
+    expect(metrics.eyeVertical).toBeNull();
+    expect(metrics.eyeAgreement).toBeNull();
+  });
+
+  it("nulls a closed or occluded eye instead of manufacturing a centered gaze", () => {
+    const landmarks = makeFaceLandmarks();
+    landmarks[159] = { x: 0.4, y: 0.449 };
+    landmarks[145] = { x: 0.4, y: 0.451 };
+
+    const metrics = calculateFaceMetrics(landmarks);
+
+    expect(metrics.leftEyeHorizontal).toBeNull();
+    expect(metrics.leftEyeVertical).toBeNull();
+    expect(metrics.eyeHorizontal).toBeNull();
+    expect(metrics.eyeVertical).toBeNull();
+  });
 });
 
 describe("selectDeviceDetections", () => {
@@ -296,6 +327,9 @@ describe("selectDeviceDetections", () => {
       boxAspectRatio: 2,
       boxAreaRatio: 0.04,
       faceOverlap: 0.25,
+      eyeBandOverlap: 0,
+      confirmationFrames: 1,
+      spectacleRisk: false,
       box: { x: 0.1, y: 0.4, width: 0.2, height: 0.2 },
       model: "geometry-model",
     });
@@ -312,6 +346,45 @@ describe("selectDeviceDetections", () => {
 
     expect(selected).toHaveLength(1);
     expect(selected[0]?.faceOverlap).toBe(1);
+  });
+
+  it("marks a small wide phone candidate across the eye band as a spectacle false-positive risk", () => {
+    const selected = selectDeviceDetections(
+      [detection("cell phone", 0.82, { originX: 300, originY: 280, width: 300, height: 100 })],
+      1000,
+      1000,
+      { left: 200, top: 100, right: 800, bottom: 800 },
+      "spectacle-model",
+      { left: 250, top: 250, right: 750, bottom: 450 },
+    );
+
+    expect(selected[0]).toMatchObject({
+      category: "cell phone",
+      boxAspectRatio: 3,
+      boxAreaRatio: 0.03,
+      faceOverlap: 1,
+      eyeBandOverlap: 1,
+      confirmationFrames: 1,
+      spectacleRisk: true,
+    });
+  });
+
+  it("does not mark a plausible portrait phone with partial face overlap as spectacle risk", () => {
+    const selected = selectDeviceDetections(
+      [detection("cell phone", 0.75, { originX: 100, originY: 180, width: 80, height: 200 })],
+      1000,
+      1000,
+      { left: 150, top: 100, right: 650, bottom: 800 },
+      "portrait-model",
+      { left: 180, top: 220, right: 620, bottom: 400 },
+    );
+
+    expect(selected).toHaveLength(1);
+    expect(selected[0]).toMatchObject({
+      boxAspectRatio: 0.4,
+      spectacleRisk: false,
+      confirmationFrames: 1,
+    });
   });
 
   it.each([
@@ -336,5 +409,89 @@ describe("selectDeviceDetections", () => {
     ];
 
     expect(selectDeviceDetections(invalid, 1000, 1000, null, "model")).toEqual([]);
+  });
+});
+
+describe("DeviceConfirmationTracker", () => {
+  const makeCandidate = (overrides: Partial<ReturnType<typeof selectDeviceDetections>[number]> = {}) => ({
+    category: "cell phone" as const,
+    label: "Phone",
+    confidence: 0.8,
+    boxAspectRatio: 0.5,
+    boxAreaRatio: 0.02,
+    faceOverlap: 0.2,
+    eyeBandOverlap: 0,
+    confirmationFrames: 1,
+    spectacleRisk: false,
+    box: { x: 0.1, y: 0.15, width: 0.1, height: 0.2 },
+    model: "fixture-model",
+    ...overrides,
+  });
+
+  it("confirms an ordinary device after two spatially consistent scans", () => {
+    const tracker = new DeviceConfirmationTracker();
+    const candidate = makeCandidate();
+
+    expect(tracker.update([candidate], 0)).toEqual([]);
+    expect(tracker.update([{ ...candidate, confidence: 0.76 }], 180)).toEqual([
+      expect.objectContaining({ category: "cell phone", confidence: 0.76, confirmationFrames: 2, spectacleRisk: false }),
+    ]);
+  });
+
+  it("requires four consistent high-confidence scans for an eye-band spectacle risk", () => {
+    const tracker = new DeviceConfirmationTracker();
+    const candidate = makeCandidate({
+      confidence: 0.8,
+      boxAspectRatio: 3,
+      faceOverlap: 1,
+      eyeBandOverlap: 1,
+      spectacleRisk: true,
+      box: { x: 0.3, y: 0.28, width: 0.3, height: 0.1 },
+    });
+
+    expect(tracker.update([candidate], 0)).toEqual([]);
+    expect(tracker.update([candidate], 180)).toEqual([]);
+    expect(tracker.update([candidate], 360)).toEqual([]);
+    expect(tracker.update([candidate], 540)).toEqual([
+      expect.objectContaining({ confirmationFrames: 4, spectacleRisk: true }),
+    ]);
+  });
+
+  it("does not confirm a low-confidence spectacle-like candidate even when it persists", () => {
+    const tracker = new DeviceConfirmationTracker();
+    const candidate = makeCandidate({ confidence: 0.67, spectacleRisk: true });
+
+    for (const timestamp of [0, 180, 360, 540, 720]) {
+      expect(tracker.update([candidate], timestamp)).toEqual([]);
+    }
+  });
+
+  it("does not combine distant boxes into evidence for one physical device", () => {
+    const tracker = new DeviceConfirmationTracker();
+    const first = makeCandidate();
+    const distant = makeCandidate({ box: { x: 0.75, y: 0.7, width: 0.1, height: 0.2 } });
+
+    expect(tracker.update([first], 0)).toEqual([]);
+    expect(tracker.update([distant], 180)).toEqual([]);
+  });
+
+  it("does not combine category jitter into a confirmed device", () => {
+    const tracker = new DeviceConfirmationTracker();
+    const phone = makeCandidate();
+    const remote = makeCandidate({ category: "remote", label: "Remote device" });
+
+    expect(tracker.update([phone], 0)).toEqual([]);
+    expect(tracker.update([remote], 180)).toEqual([]);
+    expect(tracker.update([phone], 360)).toEqual([]);
+  });
+
+  it("keeps one missed scan only after a device has already been confirmed", () => {
+    const tracker = new DeviceConfirmationTracker();
+    const candidate = makeCandidate();
+
+    tracker.update([candidate], 0);
+    expect(tracker.update([candidate], 180)).toHaveLength(1);
+    expect(tracker.update([], 360)).toHaveLength(1);
+    expect(tracker.update([], 540)).toEqual([]);
   });
 });

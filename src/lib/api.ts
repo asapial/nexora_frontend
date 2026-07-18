@@ -1,5 +1,6 @@
 // ─── Core fetch wrapper ───────────────────────────────────
 import { emitMascotEvent } from "@/lib/mascot/eventBus";
+import type { ProctorEventPage } from "@/lib/examshield-live";
 
 type ApiErrorSource = {
   path?: string;
@@ -181,6 +182,8 @@ export const studentApi = {
 export const examApi = {
   teacherList: () => apiFetch<any[]>("/api/exams/teacher"),
   teacherDetail: (id: string) => apiFetch<any>(`/api/exams/teacher/${id}`),
+  teacherProctorEvents: (id: string, cursor?: string, limit = 50) =>
+    apiFetch<ProctorEventPage>(`/api/exams/teacher/${id}/proctor-events${qs({ cursor, limit })}`),
   proctorSocketTicket: (id: string) => apiFetch<{ socketUrl: string; expiresInSeconds: number; }>(`/api/exams/teacher/${id}/proctor-socket-ticket`, { method: "POST" }),
   create: (body: any) => apiFetch<any>("/api/exams/teacher", { method: "POST", body: JSON.stringify(body) }),
   update: (id: string, body: any) => apiFetch<any>(`/api/exams/teacher/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
@@ -202,6 +205,23 @@ export const examApi = {
   reviewProctorEvent: (id: string, eventId: string, body: { decision: "DISMISSED" | "CONFIRMED_CONCERN" | "NEEDS_FOLLOW_UP"; note?: string; }) => apiFetch<any>(`/api/exams/teacher/${id}/proctor-events/${eventId}/review`, { method: "PATCH", body: JSON.stringify(body) }),
   clearProctorFeed: (id: string, attemptId: string) => apiFetch<any>(`/api/exams/teacher/${id}/proctor-feed/clear`, { method: "POST", body: JSON.stringify({ attemptId }) }),
   result: (id: string) => apiFetch<any>(`/api/exams/student/${id}/result`),
+};
+
+export const notificationApi = {
+  list: (params?: { type?: string; unread?: "true" | "false"; limit?: number }) => apiFetch<{
+    notifications: Array<{
+      id: string;
+      userId: string;
+      type: string;
+      title: string;
+      body: string | null;
+      isRead: boolean;
+      link: string | null;
+      createdAt: string;
+    }>;
+    unreadCount: number;
+  }>(`/api/notifications${qs(params)}`),
+  markRead: (id: string) => apiFetch<any>(`/api/notifications/${id}/read`, { method: "PATCH" }),
 };
 
 export const settingsApi = {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -11,6 +11,12 @@ import { toast } from "sonner";
 import { ExamShieldHeader, ExamShieldRoleNav, ExamStatusBadge, MetricCard } from "@/components/examshield/ExamShieldUI";
 import { examApi } from "@/lib/api";
 import { ExamAttempt, ExamDetail, ExamSummary, examPhase, formatExamDate, proctorSignalLabel } from "@/lib/examShield";
+import {
+  applyLiveProctorEvent,
+  ProctorAlertRegistry,
+  reconcileProctorDetail,
+  type LiveProctorEvent,
+} from "@/lib/examshield-live";
 import { cn } from "@/lib/utils";
 
 type ConnectionState = "CONNECTING" | "LIVE" | "FALLBACK";
@@ -25,18 +31,6 @@ const signalFilters = [
   ["FULLSCREEN_EXIT", "Fullscreen exit"],
   ["TAB_HIDDEN", "Tab switch"],
 ] as const;
-type LiveProctorEvent = ExamAttempt["proctorEvents"][number] & {
-  action: "CREATED" | "REVIEWED" | "FEED_CLEARED" | "EVIDENCE_UPDATED";
-  attemptId: string;
-  student: string;
-  studentEmail: string;
-  suspicious?: boolean;
-  suspiciousCount?: number;
-  feedClearedAt?: string;
-  deletedEventIds?: string[];
-  evidenceDeletionFailures?: number;
-};
-
 export default function ExamProctoringPage() {
   const [exams, setExams] = useState<ExamSummary[]>([]);
   const [selectedId, setSelectedId] = useState("");
@@ -48,50 +42,132 @@ export default function ExamProctoringPage() {
   const [selectedAttemptId, setSelectedAttemptId] = useState("");
   const [connectionState, setConnectionState] = useState<ConnectionState>("CONNECTING");
   const [signalFilter, setSignalFilter] = useState("ALL");
+  const [highlightedEventId, setHighlightedEventId] = useState("");
+  const detailRef = useRef<ExamDetail | null>(null);
+  const selectedIdRef = useRef("");
+  const requestedAttemptIdRef = useRef("");
+
+  useEffect(() => {
+    selectedIdRef.current = selectedId;
+  }, [selectedId]);
 
   useEffect(() => {
     examApi.teacherList()
       .then((response) => {
         const rows = response.data as ExamSummary[];
         const monitorable = rows.filter((exam) => exam.status === "APPROVED");
+        const query = new URLSearchParams(window.location.search);
+        const requestedExamId = query.get("examId") ?? "";
+        requestedAttemptIdRef.current = query.get("attemptId") ?? "";
+        setHighlightedEventId(query.get("eventId") ?? "");
         setExams(monitorable);
-        setSelectedId(monitorable.find((exam) => examPhase(exam) === "LIVE")?.id ?? monitorable[0]?.id ?? "");
+        setSelectedId(
+          monitorable.find((exam) => exam.id === requestedExamId)?.id
+          ?? monitorable.find((exam) => examPhase(exam) === "LIVE")?.id
+          ?? monitorable[0]?.id
+          ?? "",
+        );
       })
       .catch((error: unknown) => toast.error(error instanceof Error ? error.message : "Could not load exams"))
       .finally(() => setLoading(false));
   }, []);
 
-  const refresh = useCallback(async (quiet = false) => {
-    if (!selectedId) return;
+  const refresh = useCallback(async (quiet = false, targetExamId = selectedId) => {
+    if (!targetExamId) return null;
     if (!quiet) setRefreshing(true);
     try {
-      const response = await examApi.teacherDetail(selectedId);
-      setDetail(response.data as ExamDetail);
+      const response = await examApi.teacherDetail(targetExamId);
+      if (selectedIdRef.current !== targetExamId) return null;
+      const merged = reconcileProctorDetail(detailRef.current, response.data as ExamDetail);
+      detailRef.current = merged;
+      setDetail(merged);
+      return merged;
     } catch (error: unknown) {
       if (!quiet) toast.error(error instanceof Error ? error.message : "Could not refresh proctoring data");
+      return null;
     } finally {
       if (!quiet) setRefreshing(false);
     }
   }, [selectedId]);
 
+  const showCreatedAlert = useCallback((event: LiveProctorEvent) => {
+    const isDevice = event.type === "PHONE_DETECTED" || event.type === "DEVICE_DETECTED";
+    const label = proctorSignalLabel(event.type, event.metadata);
+    const confidence = typeof event.confidence === "number" ? `${Math.round(event.confidence * 100)}% confidence` : null;
+    const model = typeof event.metadata?.model === "string" ? event.metadata.model : null;
+    const eyewearGuard = event.metadata?.spectacleRisk === true ? "eyewear guard applied" : null;
+    toast.warning(`${event.student}: ${label}`, {
+      id: `examshield-${event.id}`,
+      duration: isDevice ? 15_000 : 6_000,
+      description: isDevice ? [confidence, eyewearGuard, model].filter(Boolean).join(" · ") || "Device warning requires review" : undefined,
+      action: isDevice ? {
+        label: "Review",
+        onClick: () => {
+          setSelectedAttemptId(event.attemptId);
+          setSignalFilter(event.type);
+          setHighlightedEventId(event.id);
+        },
+      } : undefined,
+    });
+  }, []);
+
   useEffect(() => {
     if (!selectedId) return;
-    refresh();
+    const targetExamId = selectedId;
+    detailRef.current = null;
+    setDetail(null);
     setConnectionState("CONNECTING");
+    const alerts = new ProctorAlertRegistry();
+    let cursor: string | undefined;
+    let pollInFlight = false;
     let socket: WebSocket | undefined;
     let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
     let disposed = false;
-    let fallbackTimer: ReturnType<typeof setInterval> | undefined;
-    const reconcileTimer = setInterval(() => refresh(true), 30000);
-    const stopFallback = () => {
-      if (fallbackTimer) clearInterval(fallbackTimer);
-      fallbackTimer = undefined;
+    let pollTimer: ReturnType<typeof setInterval> | undefined;
+    let reconcileTimer: ReturnType<typeof setInterval> | undefined;
+
+    const ingest = (events: LiveProctorEvent[], notify: boolean) => {
+      if (disposed || selectedIdRef.current !== targetExamId) return;
+      let created: LiveProctorEvent[] = [];
+      if (notify) created = alerts.ingest(events);
+      else alerts.seed(events);
+      let current = detailRef.current;
+      let needsDetailRefresh = false;
+      for (const event of events) {
+        const result = applyLiveProctorEvent(current, event);
+        current = result.detail;
+        if (!result.matchedAttempt) needsDetailRefresh = true;
+      }
+      if (current !== detailRef.current) {
+        detailRef.current = current;
+        setDetail(current);
+      }
+      created.forEach(showCreatedAlert);
+      if (needsDetailRefresh) void refresh(true, targetExamId);
     };
-    const startFallback = () => {
-      if (!fallbackTimer) fallbackTimer = setInterval(() => refresh(true), 1500);
+
+    const pollIncremental = async (seed = false) => {
+      if (pollInFlight || disposed) return;
+      pollInFlight = true;
+      try {
+        let hasMore = false;
+        let pageCount = 0;
+        do {
+          const response = await examApi.teacherProctorEvents(targetExamId, cursor, 50);
+          if (disposed || selectedIdRef.current !== targetExamId) return;
+          ingest(response.data.events, !seed);
+          cursor = response.data.cursor ?? cursor;
+          hasMore = response.data.hasMore;
+          pageCount += 1;
+        } while (hasMore && pageCount < 10 && !disposed);
+      } catch {
+        // The full-detail reconcile remains available if an incremental poll fails.
+      } finally {
+        pollInFlight = false;
+      }
     };
+
     const onReady = () => {
-      stopFallback();
       setConnectionState("LIVE");
     };
     const onEvent = (message: MessageEvent<string>) => {
@@ -106,43 +182,7 @@ export default function ExamProctoringPage() {
         onReady();
         return;
       }
-      const event = payload as LiveProctorEvent;
-      setDetail((current) => {
-        if (!current) return current;
-        return {
-          ...current,
-          attempts: current.attempts.map((attempt) => {
-            if (attempt.id !== event.attemptId) return attempt;
-            if (event.action === "FEED_CLEARED") {
-              return {
-                ...attempt,
-                proctorFeedClearedAt: event.feedClearedAt ?? attempt.proctorFeedClearedAt,
-                proctorEvents: attempt.proctorEvents.filter((item) => !event.deletedEventIds?.includes(item.id)),
-              };
-            }
-            if (event.action === "REVIEWED") {
-              return {
-                ...attempt,
-                suspicious: event.suspicious ?? attempt.suspicious,
-                suspiciousCount: event.suspiciousCount ?? attempt.suspiciousCount,
-                proctorEvents: attempt.proctorEvents.map((item) => item.id === event.id ? { ...item, reviewDecision: event.reviewDecision, reviewNote: event.reviewNote } : item),
-              };
-            }
-            if (event.action === "EVIDENCE_UPDATED") {
-              return {
-                ...attempt,
-                proctorEvents: attempt.proctorEvents.map((item) => item.id === event.id ? { ...item, evidenceUrl: event.evidenceUrl } : item),
-              };
-            }
-            if (attempt.proctorEvents.some((item) => item.id === event.id)) return attempt;
-            return {
-              ...attempt,
-              proctorEvents: [event, ...attempt.proctorEvents],
-            };
-          }),
-        };
-      });
-      if (event.action === "CREATED") toast.warning(`${event.student}: ${proctorSignalLabel(event.type, event.metadata)}`);
+      ingest([payload as LiveProctorEvent], true);
     };
     const connect = async () => {
       try {
@@ -153,34 +193,50 @@ export default function ExamProctoringPage() {
         socket.onmessage = onEvent;
         socket.onerror = () => {
           setConnectionState("FALLBACK");
-          startFallback();
         };
         socket.onclose = () => {
           if (disposed) return;
           setConnectionState("FALLBACK");
-          startFallback();
           reconnectTimer = setTimeout(connect, 2000);
         };
       } catch {
         if (disposed) return;
         setConnectionState("FALLBACK");
-        startFallback();
         reconnectTimer = setTimeout(connect, 2000);
       }
     };
-    void connect();
+
+    void (async () => {
+      const hydrated = await refresh(false, targetExamId);
+      if (disposed) return;
+      alerts.seedDetail(hydrated);
+      // Historical rows are already seeded from detail. Anything present only
+      // in this first poll was created in the hydration race window and alerts.
+      await pollIncremental();
+      if (disposed) return;
+      pollTimer = setInterval(() => void pollIncremental(), 2_000);
+      reconcileTimer = setInterval(() => void refresh(true, targetExamId), 30_000);
+      void connect();
+    })();
+
     return () => {
       disposed = true;
       socket?.close();
       if (reconnectTimer) clearTimeout(reconnectTimer);
-      stopFallback();
-      clearInterval(reconcileTimer);
+      if (pollTimer) clearInterval(pollTimer);
+      if (reconcileTimer) clearInterval(reconcileTimer);
     };
-  }, [refresh, selectedId]);
+  }, [refresh, selectedId, showCreatedAlert]);
 
   const attempts = useMemo(() => detail?.attempts ?? [], [detail?.attempts]);
   useEffect(() => {
     if (!attempts.length) return setSelectedAttemptId("");
+    const requestedAttemptId = requestedAttemptIdRef.current;
+    if (requestedAttemptId && attempts.some((attempt) => attempt.id === requestedAttemptId)) {
+      requestedAttemptIdRef.current = "";
+      setSelectedAttemptId(requestedAttemptId);
+      return;
+    }
     if (!attempts.some((attempt) => attempt.id === selectedAttemptId)) setSelectedAttemptId(attempts[0].id);
   }, [attempts, selectedAttemptId]);
   const submitted = attempts.filter((attempt) => attempt.status !== "IN_PROGRESS").length;
@@ -197,6 +253,14 @@ export default function ExamProctoringPage() {
   const filteredAttempts = useMemo(() => attempts.filter((attempt) =>
     signalFilter === "ALL" || visibleProctorEvents(attempt).some((event) => event.type === signalFilter),
   ), [attempts, signalFilter]);
+
+  useEffect(() => {
+    if (!highlightedEventId || !selectedEvents.some((event) => event.id === highlightedEventId)) return;
+    const frame = window.requestAnimationFrame(() => {
+      document.getElementById(`proctor-event-${highlightedEventId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [highlightedEventId, selectedEvents]);
 
   const reviewEvent = async (eventId: string, decision: "DISMISSED" | "CONFIRMED_CONCERN") => {
     if (!selectedId) return;
@@ -219,14 +283,17 @@ export default function ExamProctoringPage() {
       const response = await examApi.clearProctorFeed(selectedId, selectedAttempt.id);
       const feedClearedAt = response.data.feedClearedAt as string | undefined;
       const deletedEventIds = response.data.deletedEventIds as string[];
-      setDetail((current) => current ? {
+      const current = detailRef.current;
+      const next = current ? {
         ...current,
         attempts: current.attempts.map((attempt) => attempt.id === selectedAttempt.id ? {
           ...attempt,
           proctorFeedClearedAt: feedClearedAt ?? attempt.proctorFeedClearedAt,
           proctorEvents: attempt.proctorEvents.filter((event) => !deletedEventIds.includes(event.id)),
         } : attempt),
-      } : current);
+      } : current;
+      detailRef.current = next;
+      setDetail(next);
       if (response.data.evidenceDeletionFailures) {
         toast.error(`${response.data.evidenceDeletionFailures} snapshots could not be deleted and remain in the warning feed.`);
       } else {
@@ -277,7 +344,7 @@ export default function ExamProctoringPage() {
               <div><div className="flex items-center gap-2"><ExamStatusBadge value={examPhase(detail)} /><span className="text-[10px] font-bold text-muted-foreground">{detail.type}</span><span className={cn("rounded-full px-2 py-0.5 text-[8px] font-extrabold uppercase tracking-wider", detail.examMode === "PRO" ? "bg-violet-500/10 text-violet-600" : "bg-muted text-muted-foreground")}>{detail.examMode} Mode</span></div><h2 className="mt-3 text-xl font-black">{detail.title}</h2><p className="mt-1 text-[11px] text-muted-foreground">{detail.cluster?.name ?? "No cluster"} · {formatExamDate(detail.startTime)} to {formatExamDate(detail.endTime)}</p></div>
               <div className={cn("flex items-center gap-2 rounded-full border px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-widest", connectionState === "LIVE" ? "border-teal-500/20 bg-teal-500/10 text-teal-600" : "border-amber-500/20 bg-amber-500/10 text-amber-600")}>
                 <span className={cn("h-2 w-2 animate-pulse rounded-full", connectionState === "LIVE" ? "bg-teal-500" : "bg-amber-500")} />
-                {connectionState === "LIVE" ? "WebSocket connected" : connectionState === "FALLBACK" ? "Fast refresh fallback" : "Connecting WebSocket"}
+                {connectionState === "LIVE" ? "WebSocket + polling active" : connectionState === "FALLBACK" ? "Incremental polling active" : "Connecting live alerts"}
               </div>
             </div>
           </div>
@@ -308,7 +375,7 @@ export default function ExamProctoringPage() {
               {selectedEvents.length === 0 ? <Empty text={selectedAttempt ? "No new warnings in this student's visible feed." : "Select a student to review their warnings."} /> : (
                 <div className="max-h-[600px] space-y-3 overflow-y-auto pr-1">
                   {selectedEvents.map((event) => (
-                    <div key={event.id} className={cn("rounded-xl border p-3", event.reviewDecision === "CONFIRMED_CONCERN" ? "border-rose-500/40 bg-rose-500/10" : "border-amber-500/25 bg-amber-500/5")}>
+                    <div id={`proctor-event-${event.id}`} key={event.id} className={cn("rounded-xl border p-3 transition-shadow", event.reviewDecision === "CONFIRMED_CONCERN" ? "border-rose-500/40 bg-rose-500/10" : "border-amber-500/25 bg-amber-500/5", highlightedEventId === event.id && "ring-2 ring-teal-500/70 ring-offset-2 ring-offset-background")}>
                       <div className="flex items-start justify-between gap-2"><p className={cn("text-[11px] font-extrabold", event.reviewDecision === "CONFIRMED_CONCERN" ? "text-rose-700 dark:text-rose-300" : "text-amber-700 dark:text-amber-300")}>{proctorSignalLabel(event.type, event.metadata)}</p><RiAlarmWarningLine className={cn("shrink-0", event.reviewDecision === "CONFIRMED_CONCERN" ? "text-rose-500" : "text-amber-500", (event.type === "PHONE_DETECTED" || event.type === "DEVICE_DETECTED") && "animate-pulse")} /></div>
                       <p className="mt-2 flex items-center gap-1 text-[10px] text-muted-foreground"><RiTimeLine /> {formatExamDate(event.occurredAt)}</p>
                       <EventDetails event={event} />
@@ -334,9 +401,22 @@ function EventDetails({ event }: { event: ExamAttempt["proctorEvents"][number] }
   const axis = typeof event.metadata?.axis === "string" ? event.metadata.axis : null;
   const category = typeof event.metadata?.label === "string" ? event.metadata.label : null;
   const model = typeof event.metadata?.model === "string" ? event.metadata.model : null;
+  const confirmationFrames = typeof event.metadata?.confirmationFrames === "number" ? event.metadata.confirmationFrames : null;
+  const spectacleRisk = event.metadata?.spectacleRisk === true;
+  const eyeBandOverlap = typeof event.metadata?.eyeBandOverlap === "number" ? `${Math.round(event.metadata.eyeBandOverlap * 100)}% eye-area overlap` : null;
   const duration = event.durationMs ? `${(event.durationMs / 1000).toFixed(1)}s sustained` : null;
   const confidence = typeof event.confidence === "number" ? `${Math.round(event.confidence * 100)}% confidence` : null;
-  const details = [category ? `Object: ${category}` : null, axis ? `Axis: ${axis}` : null, direction ? `Direction: ${direction}` : null, duration, confidence, model ? `Model: ${model}` : null].filter(Boolean);
+  const details = [
+    category ? `Object: ${category}` : null,
+    axis ? `Axis: ${axis}` : null,
+    direction ? `Direction: ${direction}` : null,
+    duration,
+    confidence,
+    confirmationFrames ? `${confirmationFrames}-scan confirmation` : null,
+    spectacleRisk ? "Eyewear false-positive guard applied" : null,
+    spectacleRisk ? eyeBandOverlap : null,
+    model ? `Model: ${model}` : null,
+  ].filter(Boolean);
   if (details.length === 0) return null;
   return <p className="mt-2 rounded-lg bg-card/70 px-2.5 py-2 text-[9px] font-bold capitalize text-muted-foreground">{details.join(" | ")}</p>;
 }

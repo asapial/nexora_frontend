@@ -11,6 +11,8 @@ export type ProctorBaseline = {
   rightEyeHorizontal: number;
   leftEyeVertical: number;
   rightEyeVertical: number;
+  /** False when neutral head pose is usable but glare/occlusion prevented reliable iris calibration. */
+  eyeTrackingAvailable?: boolean;
 };
 
 export type ProctorSignalType =
@@ -90,6 +92,9 @@ const deviceMetadata = (device: VisionDeviceDetection | null, fallback: Partial<
   boxAspectRatio: device?.boxAspectRatio ?? fallback.boxAspectRatio ?? null,
   boxAreaRatio: device?.boxAreaRatio ?? fallback.boxAreaRatio ?? null,
   faceOverlap: device?.faceOverlap ?? fallback.faceOverlap ?? null,
+  eyeBandOverlap: device?.eyeBandOverlap ?? fallback.eyeBandOverlap ?? null,
+  confirmationFrames: device?.confirmationFrames ?? fallback.confirmationFrames ?? null,
+  spectacleRisk: device?.spectacleRisk ?? fallback.spectacleRisk ?? null,
 });
 
 export const evaluateProctorSignals = (
@@ -123,6 +128,13 @@ export const evaluateProctorSignals = (
     leftVertical: baseline && signals.leftEyeVertical !== null ? signals.leftEyeVertical - baseline.leftEyeVertical : 0,
     rightVertical: baseline && signals.rightEyeVertical !== null ? signals.rightEyeVertical - baseline.rightEyeVertical : 0,
   };
+  const eyeTrackingAvailable = Boolean(baseline && baseline.eyeTrackingAvailable !== false);
+  const eyeLandmarksReliable = exactlyOneFace && [
+    signals.leftEyeHorizontal,
+    signals.rightEyeHorizontal,
+    signals.leftEyeVertical,
+    signals.rightEyeVertical,
+  ].every((value) => value !== null && Number.isFinite(value));
   const horizontalAgreement = Math.abs(eyeDifferences.leftHorizontal - eyeDifferences.rightHorizontal);
   const verticalAgreement = Math.abs(eyeDifferences.leftVertical - eyeDifferences.rightVertical);
   const horizontalMovement = Math.min(Math.abs(eyeDifferences.leftHorizontal), Math.abs(eyeDifferences.rightHorizontal));
@@ -141,7 +153,14 @@ export const evaluateProctorSignals = (
   const allowedDownwardEyeMovement = context.roughPaperAllowed
     && eyeAxis === "vertical"
     && eyeDifference > 0;
-  const eyeMovementActive = Boolean(baseline && exactlyOneFace && !headMovementActive && eyeRatio >= 1 && !allowedDownwardEyeMovement);
+  const eyeMovementActive = Boolean(
+    baseline
+    && eyeTrackingAvailable
+    && eyeLandmarksReliable
+    && !headMovementActive
+    && eyeRatio >= 1
+    && !allowedDownwardEyeMovement,
+  );
 
   const phone = bestDevice(signals, "phone");
   const legacyPhoneConfidence = signals.phoneConfidence;
@@ -192,6 +211,8 @@ export const evaluateProctorSignals = (
         verticalMovement,
         horizontalAgreement,
         verticalAgreement,
+        eyeTrackingAvailable,
+        eyeLandmarksReliable,
       },
     },
     {

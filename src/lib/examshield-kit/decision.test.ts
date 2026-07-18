@@ -78,6 +78,9 @@ const makeDevice = (
   boxAspectRatio: 0.5,
   boxAreaRatio: 0.08,
   faceOverlap: 0.1,
+  eyeBandOverlap: 0,
+  confirmationFrames: 2,
+  spectacleRisk: false,
   box: { x: 0.1, y: 0.2, width: 0.2, height: 0.4 },
   model: "fixture-model",
   ...overrides,
@@ -274,6 +277,45 @@ describe("evaluateProctorSignals", () => {
     expect(decision.metadata).toMatchObject({ axis, direction });
   });
 
+  it("suppresses eye warnings for a head-only spectacles calibration while preserving head detection", () => {
+    const headOnlyBaseline: ProctorBaseline = { ...BASELINE, eyeTrackingAvailable: false };
+    const decisions = evaluate(
+      signalsAtBaseline(headOnlyBaseline, {
+        headYaw: 0.12,
+        eyeHorizontal: 0.65,
+        leftEyeHorizontal: 0.65,
+        rightEyeHorizontal: 0.65,
+      }),
+      "STANDARD",
+      headOnlyBaseline,
+    );
+
+    expect(decisionOf(decisions, "HEAD_TURN_HORIZONTAL").active).toBe(true);
+    expect(decisionOf(decisions, "EYE_MOVEMENT_HORIZONTAL")).toMatchObject({
+      active: false,
+      metadata: { eyeTrackingAvailable: false, eyeLandmarksReliable: true },
+    });
+  });
+
+  it("reports unavailable live iris landmarks without creating an eye warning", () => {
+    const decision = decisionOf(
+      evaluate(signalsAtBaseline(BASELINE, {
+        eyeHorizontal: null,
+        eyeVertical: null,
+        leftEyeHorizontal: null,
+        rightEyeHorizontal: null,
+        leftEyeVertical: null,
+        rightEyeVertical: null,
+      })),
+      "EYE_MOVEMENT_HORIZONTAL",
+    );
+
+    expect(decision).toMatchObject({
+      active: false,
+      metadata: { eyeTrackingAvailable: true, eyeLandmarksReliable: false },
+    });
+  });
+
   it("rejects disagreeing gaze and suppresses gaze while head movement is active", () => {
     const disagreeing = decisionOf(
       evaluate(signalsAtBaseline(BASELINE, {
@@ -324,7 +366,12 @@ describe("evaluateProctorSignals", () => {
       detectedDevices: [
         makeDevice("cell phone", 0.43, { model: "phone-low" }),
         makeDevice("tablet", 0.61, { model: "tablet-model" }),
-        makeDevice("cell phone", 0.81, { model: "phone-high" }),
+        makeDevice("cell phone", 0.81, {
+          model: "phone-high",
+          confirmationFrames: 4,
+          spectacleRisk: true,
+          eyeBandOverlap: 0.92,
+        }),
         makeDevice("laptop", 0.78, { model: "laptop-model" }),
       ],
     }));
@@ -334,7 +381,13 @@ describe("evaluateProctorSignals", () => {
     expect(phone).toMatchObject({
       active: true,
       confidence: 0.81,
-      metadata: { category: "cell phone", model: "phone-high" },
+      metadata: {
+        category: "cell phone",
+        model: "phone-high",
+        confirmationFrames: 4,
+        spectacleRisk: true,
+        eyeBandOverlap: 0.92,
+      },
     });
     expect(otherDevice).toMatchObject({
       active: true,

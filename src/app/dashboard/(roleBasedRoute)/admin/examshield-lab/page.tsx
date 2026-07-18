@@ -114,7 +114,9 @@ export default function ExamShieldLabPage() {
     setBaseline(result.baseline);
     trackerRef.current.reset();
     setEvents([]);
-    toast.success(`Neutral position calibrated from ${result.sampleCount} stable frames`);
+    toast.success(result.eyeTrackingAvailable
+      ? `Neutral position calibrated from ${result.sampleCount} stable frames`
+      : "Head baseline calibrated; eye decisions are disabled because glare or occlusion made iris tracking unreliable.");
   };
 
   const resetTimeline = () => {
@@ -223,7 +225,7 @@ export default function ExamShieldLabPage() {
             </div>
             <div className="rounded-xl border border-violet-500/20 bg-violet-500/5 p-4">
               <p className="text-[10px] font-extrabold uppercase tracking-widest text-violet-600">Neutral calibration</p>
-              <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">{baseline ? "Baseline captured. Decisions compare movement against this position." : "Look naturally at the screen, then capture your neutral position."}</p>
+              <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">{baseline ? baseline.eyeTrackingAvailable === false ? "Head baseline captured. Eye decisions are safely disabled for unreliable iris tracking; spectacles remain allowed." : "Head and eye baseline captured. Decisions compare movement against this position." : "Look naturally at the screen, then capture your neutral position. Spectacles are supported."}</p>
               <button onClick={calibrate} disabled={labState !== "RUNNING" || signals.faceCount !== 1} className="mt-4 inline-flex h-9 w-full items-center justify-center gap-2 rounded-xl bg-violet-600 text-[10px] font-bold text-white disabled:opacity-40"><RiFocus3Line /> {baseline ? "Recalibrate" : "Calibrate now"}</button>
             </div>
           </div>
@@ -250,12 +252,15 @@ export default function ExamShieldLabPage() {
             <RawValue label="Left eye vertical" value={decimal(signals.leftEyeVertical)} note={`Movement boundary ±${config.eyeVerticalDelta}`} />
             <RawValue label="Right eye vertical" value={decimal(signals.rightEyeVertical)} note={`Movement boundary ±${config.eyeVerticalDelta}`} />
             <RawValue label="Eye agreement" value={decimal(signals.eyeAgreement)} note={`Must be ≤ ${config.maxEyeDisagreement}`} />
+            <RawValue label="Eye decision status" value={baseline?.eyeTrackingAvailable === false ? "Limited" : signals.eyeHorizontal === null ? "Unreliable" : "Available"} note="Glare or occlusion suppresses eye warnings only" />
             <RawValue label="Phone confidence" value={percentage(signals.phoneConfidence)} note={`Decision boundary ${Math.round(config.phoneConfidence * 100)}%`} />
             <RawValue label="Device detector" value={signals.deviceModel ?? deviceModel ?? "Waiting"} note={`${Math.round(1000 / signals.deviceScanIntervalMs)} scans/sec target`} />
             <RawValue label="Top device" value={primaryDevice?.label ?? "Not detected"} note={`Other-device boundary ${Math.round(config.deviceConfidence * 100)}%`} />
-            <RawValue label="Device confidence" value={percentage(primaryDevice?.confidence ?? null)} note={`${signals.detectedDevices.length} plausible device box(es)`} />
+            <RawValue label="Device confidence" value={percentage(primaryDevice?.confidence ?? null)} note={`${signals.detectedDevices.length} confirmed device track(s)`} />
+            <RawValue label="Confirmation scans" value={String(primaryDevice?.confirmationFrames ?? 0)} note="Same category and location must repeat" />
             <RawValue label="Device frame area" value={percentage(primaryDevice?.boxAreaRatio ?? null)} note="Implausibly tiny or oversized boxes are ignored" />
-            <RawValue label="Device / face overlap" value={percentage(primaryDevice?.faceOverlap ?? null)} note="Reported for teacher context, not rejected" />
+            <RawValue label="Device / face overlap" value={percentage(primaryDevice?.faceOverlap ?? null)} note="Near-face candidates receive additional checks" />
+            <RawValue label="Eye-band overlap" value={percentage(primaryDevice?.eyeBandOverlap ?? null)} note={primaryDevice?.spectacleRisk ? "Spectacle-risk safeguard active" : "No spectacle-like geometry"} />
             <RawValue label="Frame processing" value={`${signals.processingTimeMs.toFixed(1)} ms`} note="Face frame plus scheduled device scan" />
             <RawValue label="Face count" value={String(signals.faceCount)} note="Expected: exactly 1" />
             <RawValue label="Baseline yaw" value={decimal(baseline?.headYaw ?? null)} note="Neutral reference" />

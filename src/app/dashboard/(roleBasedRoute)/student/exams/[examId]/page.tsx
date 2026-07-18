@@ -15,6 +15,7 @@ import { examApi } from "@/lib/api";
 import { ProctorPolicy } from "@/lib/examShield";
 import { ProctorCalibrationBuffer } from "@/lib/examshield-kit/calibration";
 import { ProctorBaseline, ProctorDecision, ProctorDecisionTracker } from "@/lib/examshield-kit/decision";
+import { deliverProctorEvent } from "@/lib/examshield-kit/delivery";
 import { startVideoFrameLoop } from "@/lib/examshield-kit/frame-loop";
 import { ExamShieldVision, VisionSignals } from "@/lib/examshield-kit/vision";
 import { cn } from "@/lib/utils";
@@ -102,7 +103,7 @@ export default function ExamRunnerPage() {
         && snapshotEventTypes.has(type)
         ? captureSnapshot()
         : undefined;
-      await examApi.violation(examId, {
+      const payload = {
         clientEventId: crypto.randomUUID(),
         type,
         pageUrl: location.href,
@@ -111,7 +112,8 @@ export default function ExamRunnerPage() {
         durationMs,
         confidence,
         snapshotDataUrl,
-      });
+      };
+      await deliverProctorEvent(payload, (stablePayload) => examApi.violation(examId, stablePayload));
     } catch (error: unknown) {
       const now = Date.now();
       if (now - lastDeliveryError.current >= 20000) {
@@ -199,7 +201,9 @@ export default function ExamRunnerPage() {
     baselineRef.current = baseline;
     setPreflightBaseline(baseline);
     decisionTrackerRef.current.reset();
-    toast.success(`Pro Mode tracking calibrated from ${result.sampleCount} stable frames`);
+    toast.success(result.eyeTrackingAvailable
+      ? `Pro Mode tracking calibrated from ${result.sampleCount} stable frames`
+      : "Head tracking calibrated. Eye warnings are disabled because iris tracking is unreliable; spectacles remain allowed.");
   }, []);
 
   const analyzeVision = useCallback(() => {
@@ -310,11 +314,12 @@ export default function ExamRunnerPage() {
           consent: true,
           cameraReady: true,
           faceCount: detectorSupported ? faceCount : undefined,
-          calibration: {
-            cameraWidth: settings?.width ?? 640,
-            cameraHeight: settings?.height ?? 480,
-            detectorSupported,
-          },
+           calibration: {
+             cameraWidth: settings?.width ?? 640,
+             cameraHeight: settings?.height ?? 480,
+             detectorSupported,
+             eyeTrackingAvailable: preflightBaseline.eyeTrackingAvailable !== false,
+           },
         });
         preflightToken = preflight.data.preflightToken;
       }
@@ -412,17 +417,18 @@ function ExamEntry({ access, begin, calibrate, cameraState, consent, detectorSup
   const pro = access.exam.examMode === "PRO";
   const cameraReady = cameraState === "READY";
   const faceReady = cameraReady && detectorSupported && faceCount === 1;
-  const calibrationReady = liveSignals !== null
+  const headTrackingReady = liveSignals !== null
     && liveSignals.headYaw !== null
     && liveSignals.headPitch !== null
-    && liveSignals.headRoll !== null
+    && liveSignals.headRoll !== null;
+  const eyeTrackingReady = liveSignals !== null
     && liveSignals.eyeHorizontal !== null
     && liveSignals.eyeVertical !== null
     && liveSignals.leftEyeHorizontal !== null
     && liveSignals.rightEyeHorizontal !== null
     && liveSignals.leftEyeVertical !== null
     && liveSignals.rightEyeVertical !== null;
-  const trackingReady = cameraReady && detectorSupported && calibrationReady;
+  const trackingReady = cameraReady && detectorSupported && headTrackingReady;
   const deviceReady = cameraReady && deviceDetectionSupported;
   const calibrated = trackingReady && preflightBaseline !== null;
   const ready = !pro || (consent && cameraReady && faceReady && trackingReady && deviceReady && calibrated);
@@ -474,8 +480,8 @@ function ExamEntry({ access, begin, calibrate, cameraState, consent, detectorSup
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <RuleCard icon={<RiComputerLine />} title="Browser integrity" text="Tab switching, window changes, copy or paste attempts, page refreshes, and page exits are recorded for teacher review." tone="violet" />
               <RuleCard icon={<RiUserLine />} title="Camera position" text="Keep exactly one face visible with your full head in frame, good lighting, and no other person nearby." />
-              <RuleCard icon={<RiEyeLine />} title="Head and eye movement" text={`Sustained horizontal movement may create a warning. ${policy?.roughPaperAllowed ? "Looking down for permitted rough work is allowed." : "Rough-paper use is not permitted for this exam."}`} tone="amber" />
-              <RuleCard icon={<RiPhoneLine />} title="Phones and devices" text="Keep phones, smart devices, headphones, notes, and unrelated materials outside the camera frame and out of reach." tone="rose" />
+              <RuleCard icon={<RiEyeLine />} title="Head, eyes, and spectacles" text={`Prescription spectacles are allowed and are not treated as a prohibited device. Reduce strong lens glare when possible; unreliable iris frames are ignored instead of becoming an eye warning. ${policy?.roughPaperAllowed ? "Looking down for permitted rough work is allowed." : "Rough-paper use is not permitted for this exam."}`} tone="amber" />
+              <RuleCard icon={<RiPhoneLine />} title="Phones and devices" text="Keep phones, smart devices, headphones, notes, and unrelated materials outside the camera frame and out of reach. Device warnings require repeated, spatially consistent detections." tone="rose" />
               <RuleCard icon={<RiLockLine />} title="Privacy and evidence" text={policy?.snapshotEnabled ? `Camera analysis runs on this device. A compressed snapshot is uploaded only with a sustained warning and retained for ${policy.evidenceRetentionDays ?? 30} days.` : "Camera analysis runs on this device. Snapshot evidence is disabled for this exam."} />
               <RuleCard icon={<RiShieldCheckLine />} title="Human review" text="Warnings do not automatically fail your exam or declare misconduct. Your teacher reviews and confirms any suspected violation." tone="violet" />
               <RuleCard icon={<RiWifiLine />} title="Before starting" text="Use a stable connection, connect your charger, silence notifications, and close every unrelated tab and application." tone="amber" />
@@ -496,7 +502,7 @@ function ExamEntry({ access, begin, calibrate, cameraState, consent, detectorSup
         <aside className="space-y-4 lg:sticky lg:top-5">
           <section className="overflow-hidden rounded-3xl border border-border bg-card shadow-lg">
             <div className="p-5">
-              <SectionHeading icon={<RiCameraLine />} eyebrow="Step 3 of 4" title="Camera readiness check" description="Center your face and look naturally at the screen." compact />
+              <SectionHeading icon={<RiCameraLine />} eyebrow="Step 3 of 4" title="Camera readiness check" description="Center your face and look naturally at the screen. Spectacles are supported; reposition strong reflections if you can." compact />
             </div>
             <div className="relative aspect-[4/3] overflow-hidden border-y border-border bg-zinc-950">
               <video ref={videoRef} muted playsInline className="h-full w-full object-contain" />
@@ -507,15 +513,17 @@ function ExamEntry({ access, begin, calibrate, cameraState, consent, detectorSup
               <div className="grid grid-cols-2 gap-2">
                 <ReadinessItem label="Camera" ready={cameraReady} />
                 <ReadinessItem label="One face" ready={faceReady} />
-                <ReadinessItem label="Head & eyes" ready={trackingReady} />
+                <ReadinessItem label="Head tracking" ready={trackingReady} />
+                <ReadinessItem label={eyeTrackingReady ? "Eye tracking" : "Eye tracking limited"} ready={eyeTrackingReady} limited={trackingReady && !eyeTrackingReady} />
                 <ReadinessItem label="Device detector" ready={deviceReady} />
                 <ReadinessItem label="Calibrated" ready={calibrated} />
               </div>
               {visionError && <div className="flex gap-2 rounded-xl border border-rose-500/25 bg-rose-500/10 p-3 text-[10px] font-bold leading-4 text-rose-700 dark:text-rose-300"><RiAlertLine className="shrink-0" />{visionError}</div>}
               {cameraReady && !visionError && faceCount !== 1 && <div className="flex gap-2 rounded-xl border border-amber-500/25 bg-amber-500/10 p-3 text-[10px] font-bold leading-4 text-amber-700 dark:text-amber-300"><RiLightbulbLine className="shrink-0" />{faceCount === 0 ? "No face detected. Improve lighting and center yourself." : "More than one face is visible. Only the student should remain in frame."}</div>}
+              {faceReady && trackingReady && !eyeTrackingReady && <div className="flex gap-2 rounded-xl border border-sky-500/25 bg-sky-500/10 p-3 text-[10px] font-bold leading-4 text-sky-700 dark:text-sky-300"><RiEyeLine className="shrink-0" />Iris tracking is limited by glare or occlusion. You can still calibrate and start; head, face, and device safeguards remain active, while unreliable eye frames are ignored.</div>}
               <button onClick={requestCamera} disabled={cameraState === "REQUESTING"} className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-teal-500/30 bg-teal-500/10 text-[11px] font-black text-teal-700 transition-colors hover:bg-teal-500/15 disabled:opacity-50 dark:text-teal-300">{cameraState === "REQUESTING" ? <RiLoader4Line className="animate-spin" /> : <RiCameraLine />}{cameraState === "READY" ? "Run camera check again" : "Run camera readiness check"}</button>
               <button onClick={calibrate} disabled={!faceReady || !trackingReady} className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-violet-600 text-[11px] font-black text-white transition-colors hover:bg-violet-700 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"><RiRestartLine />{calibrated ? "Recalibrate direction tracking" : "Calibrate direction tracking"}</button>
-              <p className="text-center text-[9px] leading-4 text-muted-foreground">{calibrated ? "Calibration is ready. Recalibrate if you move your chair or camera." : "Sit naturally, face the screen, then calibrate your neutral position."}</p>
+              <p className="text-center text-[9px] leading-4 text-muted-foreground">{calibrated ? preflightBaseline?.eyeTrackingAvailable === false ? "Head calibration is ready. Eye warnings are safely disabled for this attempt because iris tracking was unreliable." : "Calibration is ready. Recalibrate if you move your chair or camera." : "Sit naturally, face the screen, then calibrate your neutral position. Spectacles do not need to be removed."}</p>
             </div>
           </section>
 
@@ -564,8 +572,8 @@ function RuleCard({ icon, title, text, tone = "teal" }: { icon: React.ReactNode;
   return <div className="flex gap-3 rounded-2xl border border-border bg-muted/[.12] p-4"><div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-base", tones[tone])}>{icon}</div><div><h3 className="text-[11px] font-black">{title}</h3><p className="mt-1 text-[9px] leading-[1.15rem] text-muted-foreground">{text}</p></div></div>;
 }
 
-function ReadinessItem({ label, ready }: { label: string; ready: boolean }) {
-  return <div className={cn("flex items-center gap-2 rounded-xl border px-3 py-2.5 text-[9px] font-black", ready ? "border-teal-500/20 bg-teal-500/10 text-teal-700 dark:text-teal-300" : "border-border bg-muted/20 text-muted-foreground")}><span className={cn("h-2 w-2 rounded-full", ready ? "bg-teal-500" : "bg-muted-foreground/40")} />{label}</div>;
+function ReadinessItem({ label, ready, limited = false }: { label: string; ready: boolean; limited?: boolean }) {
+  return <div className={cn("flex items-center gap-2 rounded-xl border px-3 py-2.5 text-[9px] font-black", ready ? "border-teal-500/20 bg-teal-500/10 text-teal-700 dark:text-teal-300" : limited ? "border-sky-500/20 bg-sky-500/10 text-sky-700 dark:text-sky-300" : "border-border bg-muted/20 text-muted-foreground")}><span className={cn("h-2 w-2 rounded-full", ready ? "bg-teal-500" : limited ? "bg-sky-500" : "bg-muted-foreground/40")} />{label}</div>;
 }
 
 function StartRequirement({ label, complete }: { label: string; complete: boolean }) {

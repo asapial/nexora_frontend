@@ -37,14 +37,25 @@ const offsetSignals = (offset: number): VisionSignals => stableSignals({
   rightEyeVertical: 0.5 + offset,
 });
 
+const unreliableEyeSignals = (): VisionSignals => stableSignals({
+  eyeHorizontal: null,
+  eyeVertical: null,
+  leftEyeHorizontal: null,
+  rightEyeHorizontal: null,
+  leftEyeVertical: null,
+  rightEyeVertical: null,
+  eyeAgreement: null,
+  eyeVerticalAgreement: null,
+});
+
 describe("buildProctorBaseline", () => {
-  test("requires the requested number of complete, exactly-one-face samples", () => {
+  test("requires the requested number of complete head-pose, exactly-one-face samples", () => {
     const result = buildProctorBaseline([
       stableSignals(),
       stableSignals({ faceCount: 0 }),
       stableSignals({ faceCount: 2 }),
       stableSignals({ headPitch: null }),
-      stableSignals({ leftEyeVertical: Number.NaN }),
+      stableSignals({ headYaw: Number.NaN }),
     ], 2);
 
     expect(result).toEqual({
@@ -73,7 +84,10 @@ describe("buildProctorBaseline", () => {
       rightEyeHorizontal: 0.5,
       leftEyeVertical: 0.5,
       rightEyeVertical: 0.5,
+      eyeTrackingAvailable: true,
     });
+    expect(result.eyeSampleCount).toBe(11);
+    expect(result.eyeTrackingAvailable).toBe(true);
     expect(result.stability).toBe(1);
   });
 
@@ -102,7 +116,7 @@ describe("buildProctorBaseline", () => {
     });
   });
 
-  test("rejects a window with excessive bilateral eye noise", () => {
+  test("calibrates head tracking but disables eye warnings when bilateral eye samples are noisy", () => {
     const samples = Array.from({ length: 10 }, (_, index) => {
       const eye = index < 5 ? 0.4 : 0.6;
       return stableSignals({
@@ -113,9 +127,69 @@ describe("buildProctorBaseline", () => {
     });
     const result = buildProctorBaseline(samples);
 
-    expect(result.ok).toBe(false);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
     expect(result.sampleCount).toBe(10);
-    if (!result.ok) expect(result.reason).toContain("too unsteady");
+    expect(result.eyeSampleCount).toBe(10);
+    expect(result.eyeTrackingAvailable).toBe(false);
+    expect(result.baseline.eyeTrackingAvailable).toBe(false);
+    expect(result.stability).toBe(1);
+  });
+
+  test("does not block calibration when spectacles glare makes every iris sample unavailable", () => {
+    const result = buildProctorBaseline(Array.from({ length: 10 }, unreliableEyeSignals));
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.sampleCount).toBe(10);
+    expect(result.eyeSampleCount).toBe(0);
+    expect(result.eyeTrackingAvailable).toBe(false);
+    expect(result.baseline).toMatchObject({
+      headYaw: 0,
+      headPitch: 0,
+      headRoll: 0,
+      eyeHorizontal: 0.5,
+      eyeVertical: 0.5,
+      eyeTrackingAvailable: false,
+    });
+    expect(result.stability).toBe(1);
+  });
+
+  test("keeps eye warnings disabled when reliable iris samples are only intermittent", () => {
+    const samples = [
+      ...Array.from({ length: 9 }, () => stableSignals()),
+      ...Array.from({ length: 11 }, unreliableEyeSignals),
+    ];
+    const result = buildProctorBaseline(samples);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.sampleCount).toBe(20);
+    expect(result.eyeSampleCount).toBe(9);
+    expect(result.eyeTrackingAvailable).toBe(false);
+  });
+
+  test("calibrates a stable spectacles-specific iris baseline when landmarks remain reliable", () => {
+    const samples = Array.from({ length: 10 }, () => stableSignals({
+      eyeHorizontal: 0.61,
+      eyeVertical: 0.54,
+      leftEyeHorizontal: 0.6,
+      rightEyeHorizontal: 0.62,
+      leftEyeVertical: 0.53,
+      rightEyeVertical: 0.55,
+    }));
+    const result = buildProctorBaseline(samples);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.eyeTrackingAvailable).toBe(true);
+    expect(result.baseline).toMatchObject({
+      eyeHorizontal: 0.61,
+      eyeVertical: 0.54,
+      leftEyeHorizontal: 0.6,
+      rightEyeHorizontal: 0.62,
+      eyeTrackingAvailable: true,
+    });
   });
 });
 
@@ -144,6 +218,17 @@ describe("ProctorCalibrationBuffer", () => {
     buffer.push(stableSignals());
     buffer.push(stableSignals({ faceCount: 2 }));
     expect(buffer.sampleCount).toBe(0);
+  });
+
+  test("retains stable head samples when iris tracking is temporarily unavailable", () => {
+    const buffer = new ProctorCalibrationBuffer();
+    buffer.push(unreliableEyeSignals());
+    buffer.push(unreliableEyeSignals());
+
+    expect(buffer.sampleCount).toBe(2);
+    const result = buffer.createBaseline(2);
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.eyeTrackingAvailable).toBe(false);
   });
 
   test("reset removes every collected sample", () => {

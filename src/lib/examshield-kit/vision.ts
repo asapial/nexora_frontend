@@ -16,6 +16,9 @@ export type VisionDeviceDetection = {
   boxAspectRatio: number;
   boxAreaRatio: number;
   faceOverlap: number;
+  eyeBandOverlap?: number;
+  confirmationFrames?: number;
+  spectacleRisk?: boolean;
   box: VisionBox;
   model: string;
 };
@@ -126,17 +129,43 @@ export const createEmptyVisionSignals = (): VisionSignals => ({
   frameHeight: 0,
 });
 
-const ratio = (value: number, first: number, second: number) => {
+const validatedRatio = (value: number, first: number, second: number, minimumSpan: number, margin = 0.15) => {
+  if (![value, first, second].every(Number.isFinite)) return null;
   const minimum = Math.min(first, second);
   const width = Math.abs(first - second);
-  return width > 0.001 ? (value - minimum) / width : 0.5;
+  if (width < minimumSpan) return null;
+  const result = (value - minimum) / width;
+  return result >= -margin && result <= 1 + margin ? result : null;
 };
 
 const center = (landmarks: Landmark[], indexes: number[], axis: "x" | "y") => {
   const points = indexes.map((index) => landmarks[index]).filter(Boolean);
-  return points.length === indexes.length
-    ? points.reduce((sum, point) => sum + point[axis], 0) / points.length
-    : null;
+  if (points.length !== indexes.length || points.some((point) => !Number.isFinite(point[axis]))) return null;
+  return points.reduce((sum, point) => sum + point[axis], 0) / points.length;
+};
+
+const calculateEyePosition = (
+  outer: Landmark | undefined,
+  inner: Landmark | undefined,
+  upper: Landmark | undefined,
+  lower: Landmark | undefined,
+  irisX: number | null,
+  irisY: number | null,
+) => {
+  if (!outer || !inner || !upper || !lower || irisX === null || irisY === null) {
+    return { horizontal: null, vertical: null };
+  }
+  const eyeWidth = Math.abs(inner.x - outer.x);
+  const eyeHeight = Math.abs(lower.y - upper.y);
+  const eyeOpenRatio = eyeWidth > 0.001 ? eyeHeight / eyeWidth : 0;
+  if (!Number.isFinite(eyeOpenRatio) || eyeOpenRatio < 0.08) {
+    return { horizontal: null, vertical: null };
+  }
+  const horizontal = validatedRatio(irisX, outer.x, inner.x, 0.003);
+  const vertical = validatedRatio(irisY, upper.y, lower.y, 0.002, 0.2);
+  return horizontal === null || vertical === null
+    ? { horizontal: null, vertical: null }
+    : { horizontal, vertical };
 };
 
 /** Converts MediaPipe's facial transformation matrix into baseline-relative Euler angles. */
@@ -189,10 +218,12 @@ export const calculateFaceMetrics = (
   const rightIrisX = center(landmarks, [473, 474, 475, 476, 477], "x");
   const leftIrisY = center(landmarks, [468, 469, 470, 471, 472], "y");
   const rightIrisY = center(landmarks, [473, 474, 475, 476, 477], "y");
-  const leftEyeHorizontal = leftIrisX !== null && leftOuter && leftInner ? ratio(leftIrisX, leftOuter.x, leftInner.x) : null;
-  const rightEyeHorizontal = rightIrisX !== null && rightOuter && rightInner ? ratio(rightIrisX, rightOuter.x, rightInner.x) : null;
-  const leftEyeVertical = leftIrisY !== null && leftUpper && leftLower ? ratio(leftIrisY, leftUpper.y, leftLower.y) : null;
-  const rightEyeVertical = rightIrisY !== null && rightUpper && rightLower ? ratio(rightIrisY, rightUpper.y, rightLower.y) : null;
+  const leftEye = calculateEyePosition(leftOuter, leftInner, leftUpper, leftLower, leftIrisX, leftIrisY);
+  const rightEye = calculateEyePosition(rightOuter, rightInner, rightUpper, rightLower, rightIrisX, rightIrisY);
+  const leftEyeHorizontal = leftEye.horizontal;
+  const rightEyeHorizontal = rightEye.horizontal;
+  const leftEyeVertical = leftEye.vertical;
+  const rightEyeVertical = rightEye.vertical;
   const eyeHorizontal = leftEyeHorizontal !== null && rightEyeHorizontal !== null ? (leftEyeHorizontal + rightEyeHorizontal) / 2 : null;
   const eyeVertical = leftEyeVertical !== null && rightEyeVertical !== null ? (leftEyeVertical + rightEyeVertical) / 2 : null;
 
@@ -218,6 +249,28 @@ const faceBounds = (landmarks: Landmark[], width: number, height: number): FaceB
   return { left: Math.min(...xs), top: Math.min(...ys), right: Math.max(...xs), bottom: Math.max(...ys) };
 };
 
+const eyeBandBounds = (
+  landmarks: Landmark[],
+  width: number,
+  height: number,
+  face: FaceBounds | null,
+): FaceBounds | null => {
+  if (!face) return null;
+  const points = [33, 133, 159, 145, 362, 263, 386, 374]
+    .map((index) => landmarks[index])
+    .filter((point): point is Landmark => Boolean(point));
+  if (points.length !== 8 || points.some((point) => !Number.isFinite(point.x) || !Number.isFinite(point.y))) return null;
+  const faceWidth = face.right - face.left;
+  const faceHeight = face.bottom - face.top;
+  const xs = points.map((point) => point.x * width);
+  const ys = points.map((point) => point.y * height);
+  const left = Math.max(face.left, Math.min(...xs) - faceWidth * 0.08);
+  const right = Math.min(face.right, Math.max(...xs) + faceWidth * 0.08);
+  const top = Math.max(face.top, Math.min(...ys) - faceHeight * 0.08);
+  const bottom = Math.min(face.bottom, Math.max(...ys) + faceHeight * 0.08);
+  return right > left && bottom > top ? { left, top, right, bottom } : null;
+};
+
 const normalizedBox = (box: PixelBox, width: number, height: number): VisionBox => ({
   x: box.originX / width,
   y: box.originY / height,
@@ -225,10 +278,10 @@ const normalizedBox = (box: PixelBox, width: number, height: number): VisionBox 
   height: box.height / height,
 });
 
-const overlapRatio = (box: PixelBox, face: FaceBounds | null) => {
-  if (!face) return 0;
-  const overlapWidth = Math.max(0, Math.min(box.originX + box.width, face.right) - Math.max(box.originX, face.left));
-  const overlapHeight = Math.max(0, Math.min(box.originY + box.height, face.bottom) - Math.max(box.originY, face.top));
+const overlapRatio = (box: PixelBox, region: FaceBounds | null) => {
+  if (!region) return 0;
+  const overlapWidth = Math.max(0, Math.min(box.originX + box.width, region.right) - Math.max(box.originX, region.left));
+  const overlapHeight = Math.max(0, Math.min(box.originY + box.height, region.bottom) - Math.max(box.originY, region.top));
   return (overlapWidth * overlapHeight) / (box.width * box.height);
 };
 
@@ -247,6 +300,7 @@ export const selectDeviceDetections = (
   frameHeight: number,
   face: FaceBounds | null,
   model: string,
+  eyeBand: FaceBounds | null = null,
 ): VisionDeviceDetection[] => {
   if (frameWidth <= 0 || frameHeight <= 0) return [];
   const frameArea = frameWidth * frameHeight;
@@ -261,21 +315,131 @@ export const selectDeviceDetections = (
       const category = categoryResult.normalized;
       const minimumArea = category === "cell phone" || category === "remote" ? 0.0015 : 0.008;
       if (areaRatio < minimumArea || areaRatio > 0.72) return null;
+      const boxAspectRatio = box.width / box.height;
+      const faceOverlap = overlapRatio(box, face);
+      const eyeBandOverlap = overlapRatio(box, eyeBand);
+      const spectacleRisk = (category === "cell phone" || category === "remote")
+        && boxAspectRatio >= 1.6
+        && areaRatio <= 0.075
+        && faceOverlap >= 0.65
+        && (eyeBand ? eyeBandOverlap >= 0.45 : true);
       return {
         category,
         label: DEVICE_LABELS[category],
         confidence: categoryResult.score,
-        boxAspectRatio: box.width / box.height,
+        boxAspectRatio,
         boxAreaRatio: areaRatio,
-        faceOverlap: overlapRatio(box, face),
+        faceOverlap,
+        eyeBandOverlap,
+        confirmationFrames: 1,
+        spectacleRisk,
         box: normalizedBox(box, frameWidth, frameHeight),
         model,
       } satisfies VisionDeviceDetection;
     })
-    .filter((candidate): candidate is VisionDeviceDetection => candidate !== null)
+    .filter((candidate) => candidate !== null)
     .sort((first, second) => second.confidence - first.confidence)
     .slice(0, 4);
 };
+
+type DeviceTrack = {
+  detection: VisionDeviceDetection;
+  missedScans: number;
+  lastSeenAt: number;
+};
+
+const boxArea = (box: VisionBox) => Math.max(0, box.width) * Math.max(0, box.height);
+
+const boxIntersectionOverUnion = (first: VisionBox, second: VisionBox) => {
+  const width = Math.max(0, Math.min(first.x + first.width, second.x + second.width) - Math.max(first.x, second.x));
+  const height = Math.max(0, Math.min(first.y + first.height, second.y + second.height) - Math.max(first.y, second.y));
+  const intersection = width * height;
+  const union = boxArea(first) + boxArea(second) - intersection;
+  return union > 0 ? intersection / union : 0;
+};
+
+const boxesAreSpatiallyConsistent = (first: VisionBox, second: VisionBox) => {
+  if (boxIntersectionOverUnion(first, second) >= 0.18) return true;
+  const firstArea = boxArea(first);
+  const secondArea = boxArea(second);
+  if (firstArea <= 0 || secondArea <= 0) return false;
+  const areaRatio = firstArea / secondArea;
+  if (areaRatio < 0.45 || areaRatio > 2.2) return false;
+  const firstCenterX = first.x + first.width / 2;
+  const firstCenterY = first.y + first.height / 2;
+  const secondCenterX = second.x + second.width / 2;
+  const secondCenterY = second.y + second.height / 2;
+  return Math.hypot(firstCenterX - secondCenterX, firstCenterY - secondCenterY) <= 0.08;
+};
+
+const requiredConfirmationFrames = (detection: VisionDeviceDetection) => detection.spectacleRisk ? 4 : 2;
+const hasEnoughDeviceEvidence = (detection: VisionDeviceDetection) =>
+  (detection.confirmationFrames ?? 1) >= requiredConfirmationFrames(detection)
+  && (!detection.spectacleRisk || detection.confidence >= 0.68);
+
+/** Confirms that repeated detector results describe the same physical object before reporting it. */
+export class DeviceConfirmationTracker {
+  private tracks: DeviceTrack[] = [];
+  private lastTimestamp: number | null = null;
+
+  constructor(
+    private readonly maximumMissedScans = 1,
+    private readonly maximumGapMs = 650,
+  ) {}
+
+  update(candidates: VisionDeviceDetection[], timestamp: number): VisionDeviceDetection[] {
+    if (!Number.isFinite(timestamp)) throw new Error("A finite device timestamp is required");
+    if (this.lastTimestamp !== null && timestamp < this.lastTimestamp) this.reset();
+    this.lastTimestamp = timestamp;
+    const unmatchedTracks = new Set(this.tracks);
+    const nextTracks: DeviceTrack[] = [];
+
+    for (const candidate of [...candidates].sort((first, second) => second.confidence - first.confidence)) {
+      const matched = [...unmatchedTracks]
+        .filter((track) => track.detection.category === candidate.category
+          && timestamp - track.lastSeenAt <= this.maximumGapMs
+          && boxesAreSpatiallyConsistent(track.detection.box, candidate.box))
+        .sort((first, second) =>
+          boxIntersectionOverUnion(second.detection.box, candidate.box)
+          - boxIntersectionOverUnion(first.detection.box, candidate.box))[0];
+      if (!matched) {
+        nextTracks.push({ detection: { ...candidate, confirmationFrames: 1 }, missedScans: 0, lastSeenAt: timestamp });
+        continue;
+      }
+      unmatchedTracks.delete(matched);
+      nextTracks.push({
+        detection: {
+          ...candidate,
+          spectacleRisk: candidate.spectacleRisk || matched.detection.spectacleRisk,
+          confirmationFrames: (matched.detection.confirmationFrames ?? 1) + 1,
+        },
+        missedScans: 0,
+        lastSeenAt: timestamp,
+      });
+    }
+
+    for (const track of unmatchedTracks) {
+      const missedScans = track.missedScans + 1;
+      if (hasEnoughDeviceEvidence(track.detection)
+        && missedScans <= this.maximumMissedScans
+        && timestamp - track.lastSeenAt <= this.maximumGapMs) {
+        nextTracks.push({ ...track, missedScans });
+      }
+    }
+
+    this.tracks = nextTracks;
+    return nextTracks
+      .map((track) => track.detection)
+      .filter(hasEnoughDeviceEvidence)
+      .sort((first, second) => second.confidence - first.confidence)
+      .slice(0, 4);
+  }
+
+  reset() {
+    this.tracks = [];
+    this.lastTimestamp = null;
+  }
+}
 
 const smooth = (previous: number | null, next: number | null, alpha = 0.48) =>
   next === null ? null : previous === null ? next : previous + alpha * (next - previous);
@@ -283,6 +447,7 @@ const smooth = (previous: number | null, next: number | null, alpha = 0.48) =>
 export class ExamShieldVision {
   private faceLandmarker: FaceLandmarker | null = null;
   private objectDetector: { name: string; detector: ObjectDetector } | null = null;
+  private deviceConfirmationTracker = new DeviceConfirmationTracker();
   private lastObjectDetectionAt = Number.NEGATIVE_INFINITY;
   private detectedDevices: VisionDeviceDetection[] = [];
   private smoothedMetrics: FaceMetrics = { ...EMPTY_METRICS };
@@ -363,15 +528,25 @@ export class ExamShieldVision {
     const width = video.videoWidth;
     const height = video.videoHeight;
     const bounds = faceBounds(firstFace ?? [], width, height);
+    const eyeBand = eyeBandBounds(firstFace ?? [], width, height, bounds);
     if (this.objectDetector && timestamp - this.lastObjectDetectionAt >= this.deviceScanIntervalMs) {
       this.lastObjectDetectionAt = timestamp;
       try {
         const result = this.objectDetector.detector.detectForVideo(video, timestamp);
-        this.detectedDevices = selectDeviceDetections(result.detections, width, height, bounds, this.objectDetector.name);
+        const candidates = selectDeviceDetections(
+          result.detections,
+          width,
+          height,
+          bounds,
+          this.objectDetector.name,
+          eyeBand,
+        );
+        this.detectedDevices = this.deviceConfirmationTracker.update(candidates, timestamp);
       } catch {
         this.objectDetector.detector.close();
         this.objectDetector = null;
         this.detectedDevices = [];
+        this.deviceConfirmationTracker.reset();
       }
     }
     const phone = this.detectedDevices.find((device) => device.category === "cell phone") ?? null;
@@ -407,6 +582,7 @@ export class ExamShieldVision {
     this.objectDetector?.detector.close();
     this.faceLandmarker = null;
     this.objectDetector = null;
+    this.deviceConfirmationTracker.reset();
     this.lastObjectDetectionAt = Number.NEGATIVE_INFINITY;
     this.detectedDevices = [];
     this.smoothedMetrics = { ...EMPTY_METRICS };
